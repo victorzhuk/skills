@@ -1,6 +1,6 @@
 # z-* Skill Inventory
 
-Copied 52 `z-*` skills from `~/.agents/skills` into this repo. A further 5
+Copied 51 `z-*` skills from `~/.agents/skills` into this repo. A further 5
 cross-cutting doctrine skills were authored directly (not copied from a
 pre-existing skill) to close the gap between what the technical skills teach
 and the taste/restraint that governed writing them — see "Doctrine skills"
@@ -56,7 +56,6 @@ below.
 | `z-qa-orchestrator` | `qa` | `~/.agents/skills/z-qa-orchestrator` | [`skills/qa/z-qa-orchestrator/SKILL.md`](../skills/qa/z-qa-orchestrator/SKILL.md) |
 | `z-qa-performance` | `qa` | `~/.agents/skills/z-qa-performance` | [`skills/qa/z-qa-performance/SKILL.md`](../skills/qa/z-qa-performance/SKILL.md) |
 | `z-qa-spec-writer` | `qa` | `~/.agents/skills/z-qa-spec-writer` | [`skills/qa/z-qa-spec-writer/SKILL.md`](../skills/qa/z-qa-spec-writer/SKILL.md) |
-| `z-qa-visual` | `qa` | `~/.agents/skills/z-qa-visual` | [`skills/qa/z-qa-visual/SKILL.md`](../skills/qa/z-qa-visual/SKILL.md) |
 | `z-rust-core` | `rust` | `~/.agents/skills/z-rust-core` | [`skills/rust/z-rust-core/SKILL.md`](../skills/rust/z-rust-core/SKILL.md) |
 | `z-rust-gtk4` | `rust` | `~/.agents/skills/z-rust-gtk4` | [`skills/rust/z-rust-gtk4/SKILL.md`](../skills/rust/z-rust-gtk4/SKILL.md) |
 | `z-rust-web` | `rust` | `~/.agents/skills/z-rust-web` | [`skills/rust/z-rust-web/SKILL.md`](../skills/rust/z-rust-web/SKILL.md) |
@@ -85,6 +84,10 @@ generalized so they read as house doctrine rather than personal rules.
 - Replaced absolute local QA delegation paths with local skill references.
 - Replaced a local layer-rules reference in `z-go-sqlc` with generic repository-layer guidance.
 - Removed missing commit-rules references from changelog/npm publishing descriptions.
+- Folded `z-qa-visual` into `z-qa-browser` as a "Visual regression (rare)" section; it had no real project adoption on its own.
+- Replaced employer-specific worked-example terms in `z-creating-flow-doc` with a neutral orders-service domain.
+- Removed project codenames from `z-qa-browser`.
+- Genericized repo names in `z-rust-web`.
 
 ## Not copied
 
