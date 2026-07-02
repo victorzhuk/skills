@@ -8,6 +8,7 @@ description: >
   "service locator", "samber/do", "google/wire", "uber-go/fx", "NewApp", "internal/app".
   Does not cover HTTP handler wiring specifics or database driver setup;
   see [[z-go-database]] for that. For interface design principles see [[z-go-interfaces]].
+  Does not cover aggregate or bounded-context boundaries; see [[z-domain-modeling]].
 ---
 
 # Clean Architecture & DI

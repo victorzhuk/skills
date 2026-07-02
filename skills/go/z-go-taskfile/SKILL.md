@@ -7,7 +7,7 @@ description: Author a Taskfile.yml (go-task) for orchestration around a Go proje
 
 Task owns **orchestration**: docker, databases, data pipelines, CLI shortcuts, E2E
 harnesses — the multi-step, environment-touching commands. The Go inner loop
-(build/test/lint) stays in the Makefile (see `z-go-makefile`); Task delegates to it so
+(build/test/lint) stays in the Makefile (see [[z-go-makefile]]); Task delegates to it so
 each command has exactly one definition.
 
 ## Single source of truth — delegate, don't duplicate

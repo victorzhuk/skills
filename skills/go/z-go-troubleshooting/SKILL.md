@@ -66,7 +66,8 @@ var p *MyType = nil
 var i MyInterface = p  // i != nil — interface has non-nil type
 ```
 Always compare to the concrete type, or return `nil` explicitly from
-functions returning an interface.
+functions returning an interface. Recognize it here; the defense lives in
+[[z-go-safety]].
 
 **Variable shadowing**
 ```go
@@ -82,16 +83,20 @@ Use `=` for the outer variable; only `:=` the new one.
 Detect with `goleak.VerifyNone(t)` in tests.
 
 **Slice aliasing** — `b := a[:2]` shares memory; `append` may overwrite `a[2]`.
-Copy when you don't own the slice: `b = append([]int(nil), a[:2]...)`
+Copy when you don't own the slice: `b = append([]int(nil), a[:2]...)`. Same
+append-aliasing trap [[z-go-safety]] covers as a design-time rule.
 
 **Concurrent map write** — panics at runtime; use `sync.Map` or `sync.RWMutex`.
-`go test -race` catches this.
+`go test -race` catches this. [[z-go-safety]] has the nil-map and concurrent-write
+prevention patterns.
 
 **Error swallowing** — never use `_` for errors; propagate with
-`fmt.Errorf("do thing: %w", err)`.
+`fmt.Errorf("do thing: %w", err)`. [[z-go-errors]] covers the wrapping and
+handling rules this violates.
 
 **defer in a loop** — defers accumulate until the function returns, not the
-iteration. Wrap the body in a closure or extract a helper.
+iteration. Wrap the body in a closure or extract a helper. [[z-go-safety]]
+has the general defer-discipline rule.
 
 ## Race conditions and deadlocks
 

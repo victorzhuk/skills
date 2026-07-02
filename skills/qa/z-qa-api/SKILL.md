@@ -1,6 +1,6 @@
 ---
 name: z-qa-api
-description: "API testing in Go: net/http/httptest for handler-level contract tests (status, JSON body, headers, no real network hop) and testcontainers-go for real-boundary integration against a live Postgres. xh + jaq cover one-off ad-hoc calls; curl piped into jq is a legitimate lightweight smoke/health-check pattern, not an anti-pattern to fix. hurl (.hurl files) is a declarative alternative for multi-step flows but has zero real adoption here — reach for it only if a team already commits to it. Auto-activates for: API testing, REST contract tests, handler test, endpoint health check, auth flow testing, testcontainers integration test. Does not cover browser/UI flows; see [[z-qa-browser]]. Does not cover load/throughput testing; see [[z-qa-performance]]."
+description: "API testing in Go: net/http/httptest for handler-level contract tests and testcontainers-go for real-boundary integration against a live Postgres. Auto-activates for: API testing, REST contract tests, handler test, endpoint health check, auth flow testing, testcontainers integration test. Does not cover browser/UI flows; see [[z-qa-browser]]. Does not cover load/throughput testing; see [[z-qa-performance]]."
 ---
 
 # API QA Skill

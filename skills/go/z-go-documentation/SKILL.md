@@ -7,7 +7,8 @@ description: >
   completeness for a library or application/CLI. Triggers on "godoc", "pkg.go.dev",
   "ExampleXxx", "doc comment", "README", "CHANGELOG", "llms.txt", "go doc".
   Does not cover naming conventions; see [[z-go-naming]]. Does not cover test structure;
-  see [[z-go-testing]].
+  see [[z-go-testing]]. Does not cover general comment discipline; see [[z-zero-comments]].
+  Does not cover CHANGELOG maintenance; see [[z-changelog]].
 ---
 
 # Go Documentation
@@ -94,39 +95,21 @@ func ExampleOrderRepository_Create() {
 Output comments are mandatory for the test runner to verify them. Omit only when output
 is non-deterministic (add `// Unordered output:` for set results).
 
-## README Structure
+## README
 
-| # | Section | Notes |
-|---|---|---|
-| 1 | Title | `# PackageName` |
-| 2 | Badges | Go version, license, CI, coverage |
-| 3 | Summary | 1-2 sentences: what it does |
-| 4 | Demo | Code snippet, GIF, or screenshot |
-| 5 | Getting Started | Install + minimal working example |
-| 6 | Features | Detailed feature list or spec |
-| 7 | Contributing | Link to CONTRIBUTING.md |
-| 8 | License | Name + link |
-
-Common badges:
-
-```markdown
-[![Go Version](https://img.shields.io/github/go-mod/go-version/{owner}/{repo})](https://go.dev/)
-[![License](https://img.shields.io/github/license/{owner}/{repo})](./LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/test.yml)](https://github.com/{owner}/{repo}/actions)
-[![Go Reference](https://pkg.go.dev/badge/github.com/{owner}/{repo}.svg)](https://pkg.go.dev/github.com/{owner}/{repo})
-```
+Title, badges (Go version, license, CI, pkg.go.dev), 1-2 sentence summary, install +
+minimal working example, features, link to CONTRIBUTING, license. Order matters more
+than exhaustiveness — a reader should hit a working example before a feature list.
 
 ## CONTRIBUTING
 
-Help a contributor run tests and submit a PR in under 10 minutes. Include:
-prerequisites, clone, build, test, PR process. If setup takes longer, fix it first
-(Makefile, Taskfile, devcontainer).
+Get a contributor running tests and opening a PR in under 10 minutes: prerequisites,
+clone, build, test, PR process. If setup takes longer, fix the tooling first (Makefile,
+Taskfile, devcontainer).
 
 ## CHANGELOG
 
-Follow [Keep a Changelog](https://keepachangelog.com/) or use GitHub Releases.
-Each entry answers *what changed for the user* — internal refactors without visible
-impact belong in commit history only.
+Does not cover CHANGELOG maintenance; see [[z-changelog]].
 
 ## Library vs Application Docs
 

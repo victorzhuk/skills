@@ -1,6 +1,6 @@
 ---
 name: z-qa-browser
-description: "Autonomous browser testing with playwright-cli, a ref-based token-efficient CLI for agents — snapshot once, then click/fill by ref (e5), not by selector. Auto-activates for: E2E tests, browser automation, UI testing, visual regression, screenshot capture, web flows. Does not cover HTTP-only contract testing; see [[z-qa-api]]. Does not cover WCAG remediation; see [[accessibility]]."
+description: "Autonomous browser testing with playwright-cli, a ref-based token-efficient CLI for agents — snapshot once, then click/fill by ref (e5), not by selector. Auto-activates for: E2E tests, browser automation, UI testing, visual regression, screenshot capture, web flows. Does not cover HTTP-only contract testing; see [[z-qa-api]]. Does not cover WCAG remediation; see the accessibility skill."
 ---
 
 # Browser QA Skill
@@ -44,7 +44,7 @@ playwright-cli state-load ./auth.json
 
 ## Selectors — a different layer
 
-CLI targeting is by ref (`e5`), pulled straight from the Snapshot — no selector strategy needed there. Selectors matter one layer up: when hand-writing locators and `expect()` assertions into the generated `.spec.ts` file, prefer `text=`, `role=`, or `data-testid=` over brittle CSS (confirmed pattern in olymathus and impresario).
+CLI targeting is by ref (`e5`), pulled straight from the Snapshot — no selector strategy needed there. Selectors matter one layer up: when hand-writing locators and `expect()` assertions into the generated `.spec.ts` file, prefer `text=`, `role=`, or `data-testid=` over brittle CSS (confirmed pattern in real projects).
 
 ## Running Generated Tests
 
@@ -90,7 +90,29 @@ playwright-cli open https://app.example.com/products        # reload under the m
 # confirm "Test Product" in the Snapshot, then write the expect() in the .spec.ts
 ```
 
-Screenshot-diff visual regression is a separate concern with its own real setup — see [[z-qa-visual]] (`toHaveScreenshot()`), not a `playwright-cli` command.
+## Visual regression (rare)
+
+No project here does automated visual regression — nothing runs pixelmatch, shot-scraper, axe-core CLI, or ImageMagick diffing, and one API-only service explicitly ruled it out of scope already. Treat this as a deliberate gap, not something to backfill by default.
+
+If a project genuinely needs it, reach for Playwright's own `toHaveScreenshot()` — it's already the E2E tool above, no new dependency:
+
+```typescript
+// tests/visual.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('home page visual regression', async ({ page }) => {
+  await page.goto('https://app.example.com');
+  await expect(page).toHaveScreenshot('home.png', {
+    maxDiffPixels: 100,
+    threshold: 0.2,
+  });
+});
+```
+
+```bash
+npx playwright test --update-snapshots   # capture/update baselines
+npx playwright test tests/visual.spec.ts
+```
 
 ## Do not
 
@@ -100,10 +122,14 @@ Screenshot-diff visual regression is a separate concern with its own real setup 
 - Run headed in CI — keep CI runs headless.
 - Share one global session across parallel test suites — give each suite its own `-s=` session.
 - Hardcode `sleep()` between navigation and interaction — resolve the flow through the Snapshot instead.
+- Introduce pixelmatch, shot-scraper, axe-core CLI, or ImageMagick for visual regression — `toHaveScreenshot()` covers the real need.
+- Add visual regression to an API-only service — it was explicitly scoped out once already; don't reopen that without asking.
+- Assume automated accessibility CI checks are existing convention — the real practice here is a manual DevTools spot-check.
+- Compare screenshots without tolerance — bare pixel-equality breaks on font antialiasing; use `maxDiffPixels`/`threshold`.
 
 ## Verify
 
 - `playwright-cli --help` matches the commands you're about to script — this doc mirrors observed usage in real projects, not a published spec.
 - `npx playwright test --reporter=line` passes for a written flow before treating it as a regression guard.
 
-See [[z-go-bdd]] for turning a verified flow into a behavior contract, [[z-qa-api]] for HTTP-only contract checks that don't need a browser, and [[z-qa-visual]] for screenshot-diff regression.
+See [[z-go-bdd]] for turning a verified flow into a behavior contract and [[z-qa-api]] for HTTP-only contract checks that don't need a browser.

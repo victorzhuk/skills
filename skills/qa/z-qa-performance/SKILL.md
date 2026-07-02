@@ -1,6 +1,6 @@
 ---
 name: z-qa-performance
-description: "Load and throughput testing with k6 — flat vus/duration or stages for the load shape, http_req_duration percentile thresholds, http_req_failed rate gating, wired through Makefile targets (test-load-smoke/test-load/test-load-stress/test-load-spike). Locust covers non-HTTP/worker-queue load k6 can't reach (worker and callback simulation). Auto-activates for: load testing, performance benchmarks, latency profiling, SLA validation, API throughput testing. Does not cover Core Web Vitals; see [[core-web-vitals]]. Does not cover single-request API contract checks; see [[z-qa-api]]."
+description: "Load and throughput testing with k6 — flat vus/duration or stages for the load shape, http_req_duration percentile thresholds, http_req_failed rate gating, wired through Makefile targets (test-load-smoke/test-load/test-load-stress/test-load-spike). Auto-activates for: load testing, performance benchmarks, latency profiling, SLA validation, API throughput testing. Does not cover Core Web Vitals; see [[core-web-vitals]]. Does not cover single-request API contract checks; see [[z-qa-api]]."
 ---
 
 # Performance QA Skill
@@ -104,26 +104,21 @@ export default function () {
 
 ## k6 — stress and spike (stages, pushed harder)
 
-Same `stages` shape, different curve. Maps to `test-load-stress` (ramp up and hold at a high plateau to find where thresholds start failing) and `test-load-spike` (slam to a burst, then recover):
+Same `stages`/`thresholds` shape as load.js, different curve. Maps to `test-load-stress` (ramp up and hold at a high plateau to find where thresholds start failing) and `test-load-spike` (slam to a burst, then recover). `tests/perf/stress.js` reuses the load.js shape and just keeps ramping up and holding; `tests/perf/spike.js` differs in the numbers:
 
 ```javascript
-// tests/perf/spike.js
-export const options = {
-  stages: [
-    { duration: '10s', target: 10 },   // warm up
-    { duration: '30s', target: 500 },  // spike
-    { duration: '10s', target: 10 },   // recover
-    { duration: '30s', target: 10 },   // observe recovery
-    { duration: '10s', target: 0 },
-  ],
-  thresholds: {
-    http_req_failed: ['rate<0.05'],    // tolerate more errors during the spike
-    http_req_duration: ['p(95)<2000'], // relaxed SLA during the spike
-  },
-};
+stages: [
+  { duration: '10s', target: 10 },   // warm up
+  { duration: '30s', target: 500 },  // spike
+  { duration: '10s', target: 10 },   // recover
+  { duration: '30s', target: 10 },   // observe recovery
+  { duration: '10s', target: 0 },
+],
+thresholds: {
+  http_req_failed: ['rate<0.05'],    // tolerate more errors during the spike
+  http_req_duration: ['p(95)<2000'], // relaxed SLA during the spike
+},
 ```
-
-`tests/perf/stress.js` reuses this shape but keeps ramping up and holding instead of spiking and recovering.
 
 ## k6 CLI commands
 
@@ -139,12 +134,12 @@ k6 run -e BASE_URL=https://staging.api.example.com \
 # quick override for a one-off smoke run
 k6 run --vus 1 --iterations 1 tests/perf/load.js
 
-# JSON output for post-processing
-k6 run --out json=results/k6-output.json tests/perf/load.js
+# summary JSON for post-processing — --out json= streams raw per-sample NDJSON, not this shape
+k6 run --summary-export=results/k6-summary.json tests/perf/load.js
 
-# parse thresholds/percentiles out of the JSON
+# parse thresholds/percentiles out of the summary
 jaq '.metrics.http_req_duration.values | {p50: .["p(50)"], p95: .["p(95)"], p99: .["p(99)"]}' \
-  < results/k6-output.json
+  < results/k6-summary.json
 ```
 
 ## Makefile wiring

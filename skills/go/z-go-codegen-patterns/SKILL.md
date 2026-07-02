@@ -157,6 +157,6 @@ If any step fails, abandon the entire generation run — never leave a partially
 
 ## Related Skills
 
-- `z-go-style` — formatting, naming, structure of the generated code itself
-- `z-go-testing` — table-driven tests, golden file patterns, test helpers
-- `z-go-errors` — error wrapping at pipeline stage boundaries
+- [[z-go-style]] — formatting, naming, structure of the generated code itself
+- [[z-go-testing]] — table-driven tests, golden file patterns, test helpers
+- [[z-go-errors]] — error wrapping at pipeline stage boundaries

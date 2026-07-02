@@ -8,7 +8,7 @@ A safe pipeline prevents partial writes and inconsistent output:
 2. **Validate** that every injection target exists — fail before writing any files.
 3. **Sort** injections by priority (lower number = applied first).
 4. **Group** injections by target file.
-5. **Parse** each target file once using `dst.ParseFile` (preserves comments).
+5. **Parse** each target file once using `dst.ParseFile` — `dst` here, not `go/parser`, because injection must preserve comments.
 6. **Apply** typed injectors (`import`, `field`, `code`, `struct`).
 7. **Print and write** formatted Go only when the file was modified.
 

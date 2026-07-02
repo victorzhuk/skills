@@ -8,7 +8,9 @@ description: >
   post, email, blog, anything between. Use when the user says "fuck slop",
   "f*ck slop", "deslop", "de-slop this", "remove the AI tells", "humanize this",
   "make this not sound like AI", invokes /z-fuck-slop, or asks for voice/genre
-  cleanup. Also use before publishing any agent-drafted prose.
+  cleanup. Also use before publishing any agent-drafted prose. Does not cover
+  terse technical docs/comments in their native register; see
+  [[z-concise-human-docs]].
 ---
 
 # F*ck Slop

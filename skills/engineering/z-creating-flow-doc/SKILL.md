@@ -45,24 +45,24 @@ Translate all heading text to the project's working language. Variants A, B, and
 ### `# NN. Title`
 
 The operation name in prose. Matches the filename minus the ordinal.
-Example: `# 03. Approve продавца`.
+Example: `# 03. Approve заказа`.
 
 ### What happens (Что происходит)
 
 1–2 sentences: initiating actor + core state change. No lists.
 
-> `"Approve seller в \`pending\` переводит его в \`approved\`, если seller не blocked по \`blockType\`."`
+> `"Approve order в \`pending\` переводит его в \`approved\`, если order не blocked по \`holdType\`."`
 
 ### Who participates (Кто участвует)
 
 Bullets: human actor(s) first, then services in call order, then storage, then message bus.
 
 ```
-- Модератор.
-- Internal handler в `adventures-office`.
-- Moderation service в `office`.
+- Оператор.
+- Internal handler в `orders-api`.
+- Order service в `orders`.
 - MongoDB.
-- Kafka seller events.
+- Kafka order events.
 ```
 
 ### Preconditions (Перед стартом) — variants A / B
@@ -70,11 +70,11 @@ Bullets: human actor(s) first, then services in call order, then storage, then m
 Bullets in order: feature flag → auth → required headers → entity existence → entity state.
 
 ```
-- `enableAdventuresModeration` включен.
+- `enableOrderApproval` включен.
 - Есть service auth.
 - Передан header `admin-id`.
-- Seller существует.
-- Seller в `moderationStatus=pending`.
+- Order существует.
+- Order в `orderStatus=pending`.
 ```
 
 ### When triggered (Когда запускается) — variant C only
@@ -96,18 +96,18 @@ Gap-docs document a mismatch between documented/expected behaviour and what's ac
 Variants A/C: one mutation per bullet — field assignments, best-effort side-writes, conditional Kafka emissions, negative side effects.
 
 ```
-- `moderationStatus=approved`.
-- `blockType=none`.
-- `isBanned=false`.
+- `orderStatus=approved`.
+- `holdType=none`.
+- `isBlocked=false`.
 - History action `approve` пишется без отката основной операции.
-- Seller state event публикуется в Kafka, если seller имеет валидный `supplierId`.
+- Order state event публикуется в Kafka, если order имеет валидный `customerId`.
 ```
 
 Variant B: describes the return shape (pagination, enrichment, optional best-effort loads).
 
 ```
 - Возвращается список элементов очереди и `totalCount`.
-- Для product queue имена seller подтягиваются отдельно, без падения основного ответа.
+- Для order queue имена customer подтягиваются отдельно, без падения основного ответа.
 ```
 
 ### Sequence (Последовательность)
@@ -132,18 +132,18 @@ mermaid `stateDiagram-v2` + plantuml twin. Label transitions with the RPC name; 
 Bullets: `` `GrpcCode`: <condition> ``. List every non-success code the caller can receive.
 
 ```
-- `Unimplemented`: moderation flag выключен.
+- `Unimplemented`: order approval flag выключен.
 - `PermissionDenied`: нет service auth.
 - `InvalidArgument`: нет uuid или `admin-id`.
-- `NotFound`: seller не найден.
-- `FailedPrecondition`: seller не `pending`, blocked по `blockType`.
+- `NotFound`: order не найден.
+- `FailedPrecondition`: order не `pending`, blocked по `holdType`.
 ```
 
 ### Caveats / Edge cases (На что смотреть / Краевые случаи)
 
 2–4 bullets: things the flow does NOT do, race windows, downstream-only effects, interactions with other flows.
 
-> `"Force unblock seller ставит \`skipAutoBlock=true\`, чтобы этот флоу не заблокировал seller сразу обратно."`
+> `"Force unblock order ставит \`skipAutoHold=true\`, чтобы этот флоу не заблокировал order сразу обратно."`
 
 ## Conventions
 
@@ -159,7 +159,7 @@ This is not universal — mirror local convention instead of assuming it. Some p
 
 ### Service-naming pattern
 
-Name each service two ways where relevant: deployment name and logical name. Example: `Internal handler в \`adventures-office\`` + `Moderation service в \`office\``. Both backticked.
+Name each service two ways where relevant: deployment name and logical name. Example: `Internal handler в \`orders-api\`` + `Order service в \`orders\``. Both backticked.
 
 ### No source-code citations
 

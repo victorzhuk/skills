@@ -18,7 +18,7 @@ description: >
 | Zero-value local | `var x T` |
 | Non-zero local | `x := val` |
 | Struct literal | Always field names; omit zero fields |
-| iota start | `iota + 1` so zero == invalid/unset |
+| iota start | Plain `iota` from 0 with a real state at zero (default); `iota + 1` only when zero-as-invalid genuinely matters |
 | `any` | Default; `interface{}` only where an external signature or genuinely arbitrary JSON forces it |
 | if-init | Use when var is only needed for the check |
 | Guard clause | Handle error/edge first; happy path unindented |
@@ -50,7 +50,7 @@ Group related declarations; separate unrelated blocks:
 
 ```go
 const (
-    Add Operation = iota + 1
+    Add Operation = iota
     Subtract
     Multiply
 )

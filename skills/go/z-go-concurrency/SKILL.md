@@ -82,7 +82,6 @@ func (w *Worker) run(ctx context.Context) {
 g, ctx := errgroup.WithContext(ctx)
 g.SetLimit(10)
 for _, item := range items {
-    item := item
     g.Go(func() error {
         return process(ctx, item)
     })

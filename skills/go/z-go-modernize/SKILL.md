@@ -26,13 +26,13 @@ on it.
 | `math/rand` + `rand.Seed` | `math/rand/v2` | 1.22 |
 | Loop variable re-used in goroutine/subtest | Remove shadow copy — fixed by runtime | 1.22 |
 | `reflect.SliceHeader` / `StringHeader` | `unsafe.Slice` / `unsafe.String` | 1.21 |
-| `crypto/elliptic` | `crypto/ecdh` | 1.21 |
+| `crypto/elliptic` | `crypto/ecdh` | 1.20 |
 | `runtime.SetFinalizer` | `runtime.AddCleanup` | 1.24 |
 | `crypto/cipher.NewOFB`, `NewCFB*` | AEAD / `NewCTR` | 1.24 |
 | `golang.org/x/crypto/{sha3,hkdf,pbkdf2}` | `crypto/{sha3,hkdf,pbkdf2}` | 1.24 |
 | `os.Root` missing on user-supplied paths | Add `os.Root` to prevent path traversal | 1.24 |
 | `rsa.EncryptPKCS1v15` for new code | `rsa.EncryptOAEP` or HPKE/KEM | 1.26 |
-| `net/http/httputil.ReverseProxy.Director` | `.Rewrite` | 1.26 |
+| `net/http/httputil.ReverseProxy.Director` | `.Rewrite` | 1.20 |
 
 Run `govulncheck ./...` as part of any modernization pass.
 

@@ -53,10 +53,6 @@ npm test                              # e.g. vitest run
 | `DEPENDENCY` | `connection refused` / `dial tcp` / container startup error | inspect testcontainers/compose/k8s; not a code bug |
 | `FLAKY` | passes and fails across runs | prefer framework-level retry; else the 3-run rule |
 
-This classification and the `QA_REPORT.md` template below are this skill's own proposed
-structure — not yet cross-validated against a real large-scale failure set. Use them as a
-starting shape, not an established standard.
-
 ## Stack-Specific Triage
 
 ```bash
@@ -165,15 +161,15 @@ Command: `{{cmd}}` | Env: {{env}}
 - Backlog: ...
 ```
 
-## Anti-Patterns
+## Do not
 
-- ❌ Running with `-x` / `-failfast` — hides the full failure landscape; run everything
-- ❌ Classifying FLAKY on a single failure — a framework's own `retries` config already absorbs
+- Run with `-x` / `-failfast` — hides the full failure landscape; run everything
+- Classify FLAKY on a single failure — a framework's own `retries` config already absorbs
   transient failures; where none exists, require 3 runs of evidence first
-- ❌ Diagnosing TIMEOUT before checking dependency health — for Go, check testcontainers-go/Ryuk
+- Diagnose TIMEOUT before checking dependency health — for Go, check testcontainers-go/Ryuk
   before blaming the code; a dead dependency looks like a code bug
-- ❌ Merging with an open PANIC — `panic`/segfault is always blocking
-- ❌ Reporting a failure without a root cause + code path — every row cites file:line and a fix
+- Merge with an open PANIC — `panic`/segfault is always blocking
+- Report a failure without a root cause + code path — every row cites file:line and a fix
 
 Runs the stubs from [[z-qa-spec-writer]] against the priorities in [[z-qa-analyst]]'s
 `TEST_PLAN.md`; feeds the [[z-qa-orchestrator]] summary report.
