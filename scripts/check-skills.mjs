@@ -28,8 +28,17 @@ function frontmatter(file) {
   const fm = match[1];
   const name = fm.match(/^name:\s*(.+)$/m)?.[1]?.trim().replace(/^['"]|['"]$/g, "") ?? "";
   const descLine = fm.match(/^description:\s*(.+)$/m)?.[1]?.trim() ?? "";
-  let description = descLine.replace(/^['"]|['"]$/g, "");
-  if ([">", "|", ">-", "|-"].includes(description)) {
+  let description = descLine;
+  let style = "plain";
+  const singleQuoted = /^'[\s\S]*'$/.test(descLine);
+  const doubleQuoted = /^"[\s\S]*"$/.test(descLine);
+  if (singleQuoted) {
+    description = descLine.slice(1, -1).replace(/''/g, "'");
+    style = "single";
+  } else if (doubleQuoted) {
+    description = descLine.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+    style = "double";
+  } else if ([">", "|", ">-", "|-"].includes(descLine)) {
     const lines = fm.split("\n");
     const start = lines.findIndex((line) => line.startsWith("description:"));
     const block = [];
@@ -38,8 +47,9 @@ function frontmatter(file) {
       block.push(lines[i].trim());
     }
     description = block.filter(Boolean).join(" ");
+    style = "block";
   }
-  return { name, description };
+  return { name, description, descLine, style };
 }
 
 const files = walk(skillsRoot);
@@ -60,6 +70,9 @@ for (const file of skillFiles) {
   if (meta.name.length > 64) errors.push(`${rel}: name exceeds 64 chars`);
   if (!meta.description.trim()) errors.push(`${rel}: missing description`);
   if (meta.description.length > 1024) errors.push(`${rel}: description exceeds 1024 chars`);
+  if (meta.style === "plain" && meta.descLine.includes(": ")) {
+    errors.push(`${rel}: description has unquoted ": " — breaks strict YAML parsers, quote the value`);
+  }
   if (basename(dirname(file)) !== meta.name) {
     errors.push(`${rel}: directory basename must match frontmatter name`);
   }
