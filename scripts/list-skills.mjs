@@ -22,7 +22,12 @@ function frontmatter(file) {
   const fm = match[1];
   const name = fm.match(/^name:\s*(.+)$/m)?.[1]?.trim() ?? "";
   const descLine = fm.match(/^description:\s*(.+)$/m)?.[1]?.trim() ?? "";
-  let description = descLine.replace(/^['"]|['"]$/g, "");
+  let description = descLine;
+  if (/^'[\s\S]*'$/.test(descLine)) {
+    description = descLine.slice(1, -1).replace(/''/g, "'");
+  } else if (/^"[\s\S]*"$/.test(descLine)) {
+    description = descLine.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  }
   if ([">", "|", ">-", "|-"].includes(description)) {
     const lines = fm.split("\n");
     const start = lines.findIndex((line) => line.startsWith("description:"));
