@@ -21,7 +21,7 @@ CI (`.github/workflows/check.yml`) runs `npm run check` on Node 22 for every pus
 ## Layout
 
 ```
-skills/<domain>/z-<name>/SKILL.md   # domain ∈ engineering | go | qa | rust | writing
+skills/<domain>/z-<name>/SKILL.md   # domain ∈ engineering | go | qa | rust | typescript | writing
   ├── references/   # bulk/rare detail, loaded only when the body links to it
   ├── scripts/      # deterministic code the agent runs (not reads)
   └── assets/       # templates copied into output

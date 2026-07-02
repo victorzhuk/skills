@@ -8,6 +8,7 @@ description: >
   Triggers on "database/sql", "sqlx", "pgx", "QueryContext", "sql.ErrNoRows",
   "rows.Close", "BeginTx", "connection pool", "SetMaxOpenConns", "goose", "golang-migrate".
   Does not cover SQL schema design or sqlc codegen; see [[z-go-sqlc]] for the latter.
+  Does not cover Redis caching or ClickHouse OLAP access; see [[z-go-caching]] and [[z-go-clickhouse]].
   See also: [[z-go-errors]] (error wrapping, sentinel translation), [[z-go-clean-arch-di]] (repository layer wiring).
 ---
 
