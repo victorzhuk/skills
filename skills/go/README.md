@@ -6,23 +6,31 @@ Go engineering discipline: architecture, testing, database, observability, secur
 
 Model- or user-reachable via skill name and trigger phrasing.
 
+- **[z-go-api-design](./z-go-api-design/SKILL.md)** — REST API contract design for an OpenAPI-first Go shop — path versioning, keyset/cursor pagination, Idempotency-Key, RFC 9457 problem+json errors, PUT vs PATCH semantics, and ETag/If-Match concurrency.
 - **[z-go-bdd](./z-go-bdd/SKILL.md)** — Go BDD and executable behavior contracts — two real patterns, pick by audience: ginkgo/gomega for engineer-only scenarios, Gherkin/godog when non-engineers must read or author them.
+- **[z-go-caching](./z-go-caching/SKILL.md)** — Redis caching and rate limiting patterns for Go services — cache-aside as the default (read-through, delete-on-write invalidation, TTL with jitter), singleflight before a distributed lock for stampede protection, fail-open on…
 - **[z-go-ci](./z-go-ci/SKILL.md)** — GitHub Actions CI/CD for Go projects — test matrix, race detection, golangci-lint, govulncheck, CodeQL, GoReleaser, Dependabot/Renovate, and Docker image pipelines.
 - **[z-go-clean-arch-di](./z-go-clean-arch-di/SKILL.md)** — Clean architecture wiring, layer direction enforcement, and dependency injection patterns for Go services.
+- **[z-go-clickhouse](./z-go-clickhouse/SKILL.md)** — ClickHouse analytics access from Go — append-only OLAP modeling, batch/async insert discipline, and MergeTree engine selection.
 - **[z-go-cobra-patterns](./z-go-cobra-patterns/SKILL.md)** — Cobra command-tree patterns for Go CLIs — command/subcommand shape, RunE vs Run, PersistentPreRunE hook chain, args validators, flag binding, provider interfaces, JSON/human output, shell…
 - **[z-go-codegen-patterns](./z-go-codegen-patterns/SKILL.md)** — Use when authoring Go code generators, scaffold tools, AST manipulation, template-based codegen, golden-file tests, or YAML-driven generation pipelines. Also use when debugging generated…
 - **[z-go-concurrency](./z-go-concurrency/SKILL.md)** — Goroutines, channels, sync primitives, worker pools, and pipeline patterns for production Go.
 - **[z-go-context](./z-go-context/SKILL.md)** — Idiomatic context.Context usage in Go — propagation, cancellation, timeouts, deadlines, WithoutCancel, and request-scoped values.
 - **[z-go-database](./z-go-database/SKILL.md)** — Safe, explicit database access in Go — parameterized queries, NULLable columns, transactions, isolation levels, connection pool, and migration tooling.
+- **[z-go-dockerfile](./z-go-dockerfile/SKILL.md)** — Multi-stage Dockerfile authoring for Go services — a deps layer cached separately from source, BuildKit cache mounts, CGO_ENABLED=0 static builds, and the scratch vs distroless vs alpine final-image call.
 - **[z-go-documentation](./z-go-documentation/SKILL.md)** — Go documentation conventions — godoc comments, package comments, README structure, CONTRIBUTING, CHANGELOG, Example tests, API docs, and llms.txt.
 - **[z-go-env-v11](./z-go-env-v11/SKILL.md)** — Parse environment configuration in Go with caarlos0/env v11 — generics, env.Options, struct tags, custom parsers, and injecting a custom env source for hermetic tests.
 - **[z-go-errors](./z-go-errors/SKILL.md)** — Idiomatic Go error handling, wrapping, inspection, and hygiene — the single handling rule, sentinel vs typed errors, panic discipline, and audit recipes.
 - **[z-go-feature-flags](./z-go-feature-flags/SKILL.md)** — Feature flag lifecycle in a Go service — typed flag constants, a layered Evaluator (env kill-switch → remote provider → default), global vs per-user flag surfacing, fail-open/fail-closed…
 - **[z-go-goose](./z-go-goose/SKILL.md)** — Schema migrations for Go services using goose (github.com/pressly/goose) — numbered SQL files, up/down annotation blocks, PL/pgSQL and multi-statement wrapping with StatementBegin/End, em…
+- **[z-go-grpc](./z-go-grpc/SKILL.md)** — gRPC and protobuf service design in Go — field evolution and wire compatibility, deadline propagation, the status-code/errdetails error model, interceptor chain ordering, and buf as the schema toolchain.
+- **[z-go-http-client](./z-go-http-client/SKILL.md)** — Outbound HTTP client hardening for calling external or third-party APIs from Go — timeouts, transport tuning, body draining, retry discipline with backoff and jitter, and circuit breakers.
 - **[z-go-interfaces](./z-go-interfaces/SKILL.md)** — Interface design, struct embedding, type assertions, compile-time checks, receiver rules, and generics vs interfaces in Go.
 - **[z-go-lint](./z-go-lint/SKILL.md)** — Configure and run golangci-lint, suppress warnings correctly, fix common lint findings, and integrate linting into CI/pre-commit hooks.
 - **[z-go-llm-streaming](./z-go-llm-streaming/SKILL.md)** — Wire an LLM chat feature end-to-end in Go — decorate an SDK's own chat-model interface (or a hand-rolled ChatCompleter when no SDK is in play), a resilience decorator, SDK callback-based…
 - **[z-go-makefile](./z-go-makefile/SKILL.md)** — Author a clean Makefile for a Go project's inner loop — DRY build recipes, build-dir handling, self-documenting help, version stamping, go tool codegen, and test/lint layering.
+- **[z-go-mcp-server](./z-go-mcp-server/SKILL.md)** — MCP (Model Context Protocol) server authoring in Go — SDK choice, transport selection, stdio discipline, tool design, and testing.
+- **[z-go-messaging](./z-go-messaging/SKILL.md)** — At-least-once delivery is the default reality for Go services consuming or producing Kafka, RabbitMQ, or NATS — idempotent-consumer dedup, transactional outbox, consumer-group rebalancing, and poison-message DLQ routing.
 - **[z-go-modernize](./z-go-modernize/SKILL.md)** — Modernize Go code and tooling to current idioms (Go 1.21–1.26). Covers deprecated package replacements, language feature adoption, stdlib upgrades, and test/bench patterns.
 - **[z-go-naming](./z-go-naming/SKILL.md)** — Go naming conventions — MixedCaps, package stuttering, constructors, booleans, acronyms, enums, error strings, receivers, getters, and functional options.
 - **[z-go-observability](./z-go-observability/SKILL.md)** — Production observability for Go services: structured logging with log/slog, Prometheus metrics, OpenTelemetry tracing, pprof profiling, and signal correlation.

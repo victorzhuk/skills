@@ -8,6 +8,8 @@ description: >
   "generated Server interface", "ogen handler", "SecurityHandler", "UnimplementedHandler",
   "ogen codegen". Does not cover raw SQL or database access; see [[z-go-sqlc]].
   Does not cover building a custom code generator; see [[z-go-codegen-patterns]].
+  Does not cover contract-semantics decisions (versioning, pagination, idempotency,
+  error shape) that belong in the spec before codegen; see [[z-go-api-design]].
   See also: [[z-go-clean-arch-di]] for wiring handlers into the composition root.
 ---
 

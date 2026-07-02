@@ -4,6 +4,8 @@ Copied 51 `z-*` skills from `~/.agents/skills` into this repo. A further 5
 cross-cutting doctrine skills were authored directly (not copied from a
 pre-existing skill) to close the gap between what the technical skills teach
 and the taste/restraint that governed writing them — see "Doctrine skills"
+below. A later batch of 10 skills was authored straight into this repo with
+no private-skills staging step at all — see "Phase 2 — authored directly"
 below.
 
 ## Copied skills
@@ -77,6 +79,27 @@ generalized so they read as house doctrine rather than personal rules.
 | `z-no-ai-style-code` | `engineering` | `~/.agents/skills/z-no-ai-style-code` | [`skills/engineering/z-no-ai-style-code/SKILL.md`](../skills/engineering/z-no-ai-style-code/SKILL.md) |
 | `z-clean-output` | `engineering` | `~/.agents/skills/z-clean-output` | [`skills/engineering/z-clean-output/SKILL.md`](../skills/engineering/z-clean-output/SKILL.md) |
 | `z-testing-strategy` | `engineering` | `~/.agents/skills/z-testing-strategy` | [`skills/engineering/z-testing-strategy/SKILL.md`](../skills/engineering/z-testing-strategy/SKILL.md) |
+
+## Phase 2 — authored directly
+
+Ten skills written straight into this repo, not staged first in a private
+skills directory — eight fill Go gaps (messaging, gRPC, outbound HTTP,
+Dockerfiles, MCP servers, API contract design, caching, ClickHouse); two open
+the `typescript/` domain for TypeScript house conventions and Telegram Mini
+App client work.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-go-api-design` | `go` | authored directly in this repo | [`skills/go/z-go-api-design/SKILL.md`](../skills/go/z-go-api-design/SKILL.md) |
+| `z-go-caching` | `go` | authored directly in this repo | [`skills/go/z-go-caching/SKILL.md`](../skills/go/z-go-caching/SKILL.md) |
+| `z-go-clickhouse` | `go` | authored directly in this repo | [`skills/go/z-go-clickhouse/SKILL.md`](../skills/go/z-go-clickhouse/SKILL.md) |
+| `z-go-dockerfile` | `go` | authored directly in this repo | [`skills/go/z-go-dockerfile/SKILL.md`](../skills/go/z-go-dockerfile/SKILL.md) |
+| `z-go-grpc` | `go` | authored directly in this repo | [`skills/go/z-go-grpc/SKILL.md`](../skills/go/z-go-grpc/SKILL.md) |
+| `z-go-http-client` | `go` | authored directly in this repo | [`skills/go/z-go-http-client/SKILL.md`](../skills/go/z-go-http-client/SKILL.md) |
+| `z-go-mcp-server` | `go` | authored directly in this repo | [`skills/go/z-go-mcp-server/SKILL.md`](../skills/go/z-go-mcp-server/SKILL.md) |
+| `z-go-messaging` | `go` | authored directly in this repo | [`skills/go/z-go-messaging/SKILL.md`](../skills/go/z-go-messaging/SKILL.md) |
+| `z-ts-core` | `typescript` | authored directly in this repo | [`skills/typescript/z-ts-core/SKILL.md`](../skills/typescript/z-ts-core/SKILL.md) |
+| `z-ts-telegram-mini-app` | `typescript` | authored directly in this repo | [`skills/typescript/z-ts-telegram-mini-app/SKILL.md`](../skills/typescript/z-ts-telegram-mini-app/SKILL.md) |
 
 ## Public cleanup applied
 

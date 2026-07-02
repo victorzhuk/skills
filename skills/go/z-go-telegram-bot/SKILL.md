@@ -347,4 +347,5 @@ go test -race ./internal/infra/telegram/...
 
 - [[z-go-security]] — constant-time comparison, TLS config, general request hardening
 - [[z-go-env-v11]] — loading bot token and webhook secret from environment
+- [[z-ts-telegram-mini-app]] — the client side: SDK choice, initData retrieval, viewport/theme handling
 - [[z-go-context]] — context propagation through bot method calls
