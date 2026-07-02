@@ -1,0 +1,22 @@
+{
+  "name": "victorzhuk-skills",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable z-prefixed agent skills for software engineering.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/victorzhuk/skills"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "list": "node scripts/list-skills.mjs",
+    "check": "node scripts/check-skills.mjs",
+    "changeset": "changeset",
+    "version": "changeset version"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.30.0"
+  },
+  "packageManager": "npm@10.9.4"
+}

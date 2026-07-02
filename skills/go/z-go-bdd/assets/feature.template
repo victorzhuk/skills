@@ -1,0 +1,11 @@
+@<domain> @<risk> @story:<ID> @type:<unit|integration|e2e>
+Feature: <capability>
+  As a <role>
+  I want <capability>
+  So that <outcome>
+
+  Scenario: <observable outcome>
+    Given <initial state>
+    When <actor performs one action>
+    Then <observable result>
+    And <related observable result>
