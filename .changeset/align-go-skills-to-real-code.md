@@ -1,5 +1,0 @@
----
-"victorzhuk-skills": minor
----
-
-Align all 32 Go skills with what the real codebase actually does, based on an evidence audit against real repos. Notable fixes: `z-go-database` examples rewritten from sqlx to pgx/pgxpool idiom; `z-go-clean-arch-di` states manual constructor DI as the default regardless of scale; `z-go-lint` example updated to the golangci-lint v2 config shape; `z-go-llm-streaming` rewritten around decorating a provider SDK's own interface instead of a custom abstraction; `z-go-pgvector` now leads with the `pgvector-go` client library; `z-go-bdd` documents both ginkgo/gomega and Gherkin/godog as valid patterns; `z-go-testing` demotes testify's `mock.Mock`/`suite.Suite` in favor of hand-rolled fakes, the house default. Several smaller corrections across `z-go-ci`, `z-go-cobra-patterns`, `z-go-codegen-patterns`, `z-go-goose`, `z-go-makefile`, `z-go-modernize`, `z-go-naming`, `z-go-observability`, `z-go-ogen`, `z-go-safety`, `z-go-security`, `z-go-sqlc`, `z-go-style`, `z-go-taskfile`, and `z-go-telegram-bot`.
