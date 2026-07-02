@@ -1,6 +1,6 @@
 ---
 name: z-qa-orchestrator
-description: "Runs a project's own test suite as three sequential phases -- smoke, regression, full -- stopping at the first failure by default (opt out with --continue-on-failure). Wraps native tooling (go test -race, vitest, playwright, govulncheck) through the project's make/task/npm runner instead of a fixed script roster, and defers to a project's own QA-cycle skill or command when one already exists. Auto-activates for: 'run full QA suite', 'test the app', 'QA report', 'regression testing', '/qa:run'. Does not delegate to per-domain z-qa-* skills as sub-agents -- for depth in one domain use [[z-qa-browser]], [[z-qa-api]], [[z-qa-performance]], [[z-qa-analyst]], [[z-qa-spec-writer]], [[z-qa-debugger]], or [[z-qa-visual]] directly."
+description: "Runs a project's own test suite as three sequential phases -- smoke, regression, full -- stopping at the first failure by default (opt out with --continue-on-failure). Wraps native tooling (go test -race, vitest, playwright, govulncheck) through the project's make/task/npm runner instead of a fixed script roster, and defers to a project's own QA-cycle skill or command when one already exists. Auto-activates for: 'run full QA suite', 'test the app', 'QA report', 'regression testing', '/qa-run'. Does not delegate to per-domain z-qa-* skills as sub-agents -- for depth in one domain use [[z-qa-browser]], [[z-qa-api]], [[z-qa-performance]], [[z-qa-analyst]], [[z-qa-spec-writer]], or [[z-qa-debugger]] directly."
 ---
 
 # QA Orchestrator
@@ -9,7 +9,7 @@ Run one project's test suite through three phases -- smoke, regression, full -- 
 
 ## Discover before running
 
-Before picking commands: find the project's runner (Makefile, Taskfile, `package.json` scripts -- see [[z-go-makefile]], [[z-go-taskfile]]), the test frameworks actually wired in (Go `testing` + testcontainers-go, vitest, playwright, pytest), and whether the project already has its own QA-cycle skill or command (a project-local `/qa:run` or `<project>-regression` skill). If one exists, use it -- most projects run tests directly through `go test`/`vitest`/`pytest` wired into CI with no dedicated QA layer at all; only build the phased flow yourself when nothing project-local covers it.
+Before picking commands: find the project's runner (Makefile, Taskfile, `package.json` scripts -- see [[z-go-makefile]], [[z-go-taskfile]]), the test frameworks actually wired in (Go `testing` + testcontainers-go, vitest, playwright, pytest), and whether the project already has its own QA-cycle skill or command (a project-local `/qa-run` or `<project>-regression` skill). If one exists, use it -- most projects run tests directly through `go test`/`vitest`/`pytest` wired into CI with no dedicated QA layer at all; only build the phased flow yourself when nothing project-local covers it.
 
 ## Phases
 
@@ -53,7 +53,7 @@ The phases above cover running the suite. Reach for a narrower skill when the ta
 - Building a P0/P1/P2 test plan from scratch -> [[z-qa-analyst]]
 - Generating test stubs or BDD specs from a plan -> [[z-qa-spec-writer]]
 - Classifying failures, flaky-test triage, writing a QA report -> [[z-qa-debugger]]
-- Visual regression or screenshot diffing, only if the project actually does it -> [[z-qa-visual]]
+- Visual regression or screenshot diffing, only if the project actually does it -> [[z-qa-browser]]
 - Go behavior contracts, Ginkgo/Gomega or Gherkin/godog -> [[z-go-bdd]]
 - Table-driven tests, testify, goleak patterns -> [[z-go-testing]]
 

@@ -169,26 +169,12 @@ defer func() {
 
 ## Crypto
 
-```go
-import (
-	"crypto/rand"
-	"encoding/hex"
-	"fmt"
-)
+`math/rand` and `math/rand/v2` are deterministic from a seed — never safe for
+keys, tokens, or anything else that must be unpredictable. `crypto/rand` is
+the only safe source; `rand.Int(rand.Reader, max)` covers a bounded integer,
+`rand.Text()` (Go 1.24+) a random string.
 
-func Key() (string, error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", fmt.Errorf("generate key: %w", err)
-	}
-	return hex.EncodeToString(b), nil
-}
-```
-
-`rand.Int(rand.Reader, max)` covers a bounded random integer the same way.
-Go 1.24+ shorthand for the string case: `rand.Text()`.
-
-`math/rand` and `math/rand/v2` are not safe for keys.
+See [[z-go-security]] for the token-generation and encryption snippets.
 
 ---
 

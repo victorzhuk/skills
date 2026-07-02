@@ -76,39 +76,15 @@ func (b *Bot) SendMessage(ctx context.Context, chatID int64, text, parseMode str
 	}
 	return nil
 }
+```
 
-func (b *Bot) SendPhoto(ctx context.Context, chatID int64, photo, caption string) error {
-	body, err := json.Marshal(map[string]any{
-		"chat_id": chatID,
-		"photo":   photo,
-		"caption": caption,
-	})
-	if err != nil {
-		return fmt.Errorf("sendPhoto: marshal: %w", err)
-	}
-	u := "https://api.telegram.org/bot" + b.token + "/sendPhoto"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("sendPhoto: new request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := b.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("sendPhoto: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	var envelope struct {
-		OK          bool   `json:"ok"`
-		Description string `json:"description"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
-		return fmt.Errorf("sendPhoto: decode: %w", err)
-	}
-	if !envelope.OK {
-		return fmt.Errorf("sendPhoto: %s", envelope.Description)
-	}
-	return nil
-}
+`SendPhoto` is the same marshal/request/decode/OK-check shape as `SendMessage`
+above — only the request body and the method name (`sendPhoto`) differ:
+
+```go
+"chat_id": chatID,
+"photo":   photo,
+"caption": caption,
 ```
 
 The `photo` field accepts a `file_id`, a URL, or an `InputFile` upload.

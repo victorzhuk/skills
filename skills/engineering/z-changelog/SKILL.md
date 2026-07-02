@@ -41,9 +41,8 @@ A changelog is a curated, chronological list of notable changes, written for
 ## Do not
 
 - Don't conclude "machine-generated, never hand-edit" from `cliff.toml` or a
-  goreleaser `changelog:` block alone — confirm an actual `-o CHANGELOG.md` /
-  `--output CHANGELOG.md` write target first. Absent one, git-cliff/goreleaser
-  is only feeding the GitHub release-notes body, a separate artifact.
+  goreleaser `changelog:` block alone — see the detection rule under
+  "git-cliff/goreleaser present" above.
 - Don't hand-edit `CHANGELOG.md` directly in a Changesets project — add a
   `.changeset/*.md` file and let `changeset version` write the entry.
 
@@ -109,9 +108,9 @@ bottom. A pulled release stays in the file, tagged
    version` / `pnpm changeset version` / `changeset version`) — it consumes
    pending `.changeset/*.md` files, bumps the version, and writes
    `CHANGELOG.md`. Don't hand-merge `[Unreleased]`.
-3. **git-cliff/goreleaser confirmed writing `CHANGELOG.md`** (a Makefile/CI
-   target actually runs `-o CHANGELOG.md` / `--output CHANGELOG.md`): run
-   that documented command instead of hand-merging.
+3. **git-cliff/goreleaser confirmed writing `CHANGELOG.md`** (per the
+   detection rule above): run that documented command instead of
+   hand-merging.
 
 Use today's date (`date +%F`); confirm it rather than guessing.
 

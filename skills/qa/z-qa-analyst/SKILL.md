@@ -113,4 +113,4 @@ Status is honest, not aspirational: `covered` (the coverage tool confirms it), `
 - Coverage status matches actual coverage-tool output, not a guess.
 - The plan is dated and lives in the project's docs tree, not regenerated as a disposable one-off.
 
-Hand the plan to [[z-qa-spec-writer]] to generate stubs for the gaps; [[z-qa-debugger]] runs and triages the results; [[z-qa-orchestrator]] coordinates the full cycle. For Go test syntax see [[z-go-testing]]; for behavior contracts see [[z-go-bdd]]. Surface-specific execution: [[z-qa-browser]], [[z-qa-api]], [[z-qa-performance]], [[z-qa-visual]].
+Hand the plan to [[z-qa-spec-writer]] to generate stubs for the gaps; [[z-qa-debugger]] runs and triages the results; [[z-qa-orchestrator]] coordinates the full cycle. For Go test syntax see [[z-go-testing]]; for behavior contracts see [[z-go-bdd]]. Surface-specific execution: [[z-qa-browser]], [[z-qa-api]], [[z-qa-performance]].

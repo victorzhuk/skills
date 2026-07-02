@@ -1,11 +1,13 @@
 ---
 name: z-go-bdd
-description: Go BDD and executable behavior contracts — two real patterns, pick by audience. Pattern A is ginkgo/gomega (`Describe`/`When`/`It` plus `Label("p0"/"p1"/"p2")` priority tags), for scenarios only engineers read. Pattern B is Gherkin/godog/gherkingen (`.feature` files, Cucumber JSON), for scenarios non-engineers need to read or author. Use when adding or changing observable Go behavior, writing `.feature` files or `*_bdd_test.go` ginkgo specs, implementing godog steps, generating BDD boilerplate, or asked for BDD/Gherkin/Given-When-Then/acceptance tests.
+description: Go BDD and executable behavior contracts — two real patterns, pick by audience. Pattern A is ginkgo/gomega (`Describe`/`When`/`It` plus `Label("p0"/"p1"/"p2")` priority tags), for scenarios only engineers read. Pattern B is Gherkin/godog/gherkingen (`.feature` files, Cucumber JSON), for scenarios non-engineers need to read or author. Use when adding or changing observable Go behavior, writing `.feature` files or `*_bdd_test.go` ginkgo specs, implementing godog steps, generating BDD boilerplate, or asked for BDD/Gherkin/Given-When-Then/acceptance tests. Does not cover general test-depth classification; see [[z-testing-strategy]]. Does not cover non-BDD unit test patterns; see [[z-go-testing]].
 ---
 
 # Go BDD
 
 Use an executable behavior contract before changing observable behavior. Change the contract first, then the code.
+
+BDD here is opt-in, not the default contract — no project in this corpus ships `.feature` files or godog today. Reach for Pattern A or B when non-engineers must read or author the scenario; otherwise the nearest use-case/integration test already does the job.
 
 ## Workflow
 

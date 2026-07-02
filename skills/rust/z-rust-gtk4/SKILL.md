@@ -1,6 +1,6 @@
 ---
 name: z-rust-gtk4
-description: This skill should be used when the user asks to "build a GTK4 app in Rust", "create a libadwaita UI", "use relm4", "build a Linux desktop app with Rust", "implement a GTK4 widget", "create a preferences dialog", "add system tray", or mentions relm4 components, AdwApplicationWindow, AdwPreferencesPage, gtk rust, adwaita, desktop gui rust, or message-driven GTK4 UI patterns.
+description: Build GTK4 desktop apps in Rust with relm4 and libadwaita — the Elm-style component loop, libadwaita widget hierarchy, preferences dialogs, system tray, and message-driven UI patterns. Use when asked to "build a GTK4 app in Rust", "create a libadwaita UI", "use relm4", "build a Linux desktop app with Rust", "implement a GTK4 widget", "create a preferences dialog", "add system tray", or when the request mentions relm4 components, AdwApplicationWindow, AdwPreferencesPage, gtk rust, adwaita, desktop gui rust, or message-driven GTK4 UI patterns. Does not cover general Rust ownership/error/async patterns; see [[z-rust-core]].
 ---
 
 # Rust GTK4 (relm4 + libadwaita)
@@ -201,7 +201,7 @@ relm4 re-exports `gtk4` and `libadwaita` — declare it once with the GNOME-runt
 
 ```toml
 [dependencies]
-relm4 = { version = "0.10", features = ["gnome_48", "libadwaita"] }
+relm4 = { version = "0.11", features = ["gnome_49", "libadwaita"] }
 tokio = { version = "1", features = ["full"] }
 ksni  = "0.3"
 ```
@@ -211,7 +211,7 @@ use relm4::gtk;
 use relm4::adw;
 ```
 
-Pick the `gnome_NN` feature matching the minimum GNOME runtime you support (e.g. `gnome_46`, `gnome_48`) — it pulls in the matching gtk4/libadwaita version pin so widget APIs line up with what's actually on the target system.
+Pick the `gnome_NN` feature matching the minimum GNOME runtime you support (e.g. `gnome_46`, `gnome_49`) — it pulls in the matching gtk4/libadwaita version pin so widget APIs line up with what's actually on the target system. `gnome_49`/`gnome_50` is the current feature-flag frontier; older `gnome_NN` values still work for apps pinned to an older runtime.
 
 ## Edge Cases
 

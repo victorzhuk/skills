@@ -57,21 +57,11 @@ Only the content in <answer> tags will be shown to the user.
 
 Best for: Complex tasks requiring visible reasoning or audit trails.
 
-## Claude 4.x Thinking Depth
+## Escalating reasoning effort
 
-Keywords calibrate internal reasoning effort:
+Harder problems justify more reasoning before an answer — say so explicitly rather than trusting the model to guess how much the task warrants: "this is a complex architectural decision, reason through the tradeoffs carefully before recommending an approach."
 
-| Keyword | Depth | Use Case |
-|---------|-------|----------|
-| "think" | Standard | Normal reasoning tasks |
-| "think hard" | Extended | Multi-step problems |
-| "think harder" | Deep | Complex analysis |
-| "ultrathink" | Maximum | Hardest problems |
-
-Example:
-```
-This is a complex architectural decision. Think harder about the tradeoffs before recommending an approach.
-```
+Some harnesses and APIs also expose a thinking-budget setting (a token allowance for reasoning before the visible answer) separate from prompt wording — that's a harness/API configuration knob, not a model behavior to design a skill around. Don't hardcode magic phrases or budget numbers into a skill; they drift with the runtime.
 
 ## Self-Reflection Patterns
 
@@ -187,7 +177,7 @@ Always state confidence level when making factual claims.
 
 - Simple factual questions
 - Direct format conversions
-- Tasks where Claude 4.x's internal reasoning suffices
+- Tasks where the model's default internal reasoning suffices
 - Time-sensitive requests where latency matters
 - Tasks where reasoning process isn't needed for verification
 

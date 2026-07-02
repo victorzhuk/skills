@@ -131,7 +131,7 @@ aren't a real problem in practice.
 
 ### Upgrade path: `goose.NewProvider`
 
-`goose.NewProvider` (v3.18+) replaces the package-level globals with a provider value —
+`goose.NewProvider` (v3.16+) replaces the package-level globals with a provider value —
 useful once a binary embeds more than one migration set or needs per-instance dialect
 control. Nothing here has migrated to it yet; treat it as a deliberate upgrade, not the
 default:
@@ -220,17 +220,17 @@ ALTER TABLE jobs ADD CONSTRAINT jobs_status_check
 
 Update the corresponding Go enum (`Parse*` / `IsValid*`) in the same commit.
 
-## Hard rules
+## Do not
 
-- **Never edit an applied migration.** Once applied anywhere (dev, CI, prod), the file is
+- **Edit an applied migration.** Once applied anywhere (dev, CI, prod), the file is
   immutable. Add a new migration to correct mistakes.
-- **Never reuse a version number.** goose orders by filename; a gap in the sequence is fine,
+- **Reuse a version number.** goose orders by filename; a gap in the sequence is fine,
   a collision is not.
-- **Keep Down in sync with Up.** A Down that does not fully reverse its Up leaves the schema
+- **Let Down drift from Up.** A Down that does not fully reverse its Up leaves the schema
   in an unknown state after rollback.
-- **No heavy data migrations inside schema migrations.** Bulk backfills belong in a separate
+- **Put heavy data migrations inside schema migrations.** Bulk backfills belong in a separate
   admin command or a documented operator runbook with explicit rollback steps.
-- **Apply in CI/CD and dev setup only.** Never trigger migrations from request-handling code.
+- **Trigger migrations from request-handling code.** Apply in CI/CD and dev setup only.
 
 ## Verify
 

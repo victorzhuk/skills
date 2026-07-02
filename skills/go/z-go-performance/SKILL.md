@@ -132,7 +132,7 @@ GOMEMLIMIT=400MiB go run ./cmd/server
 GOGC=200  # default 100; higher = less frequent GC
 
 # Diagnose GC activity
-GODEBUG=gcchkmark=1,gctrace=1 go run ./cmd/server
+GODEBUG=gccheckmark=1,gctrace=1 go run ./cmd/server
 ```
 
 ## CPU hot-path patterns

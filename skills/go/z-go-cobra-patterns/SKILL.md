@@ -11,8 +11,8 @@ description: >
   Triggers on "cobra.Command", "RunE", "PersistentPreRunE", "SilenceUsage",
   "AddCommand", "MatchAll", "ValidArgsFunction", "cmd.OutOrStdout".
   Does not cover HTTP middleware, transport-layer routing, or context
-  propagation; see [[z-go-context]]. Does not cover Viper config layering
-  (flag → env → file → default precedence); see [[z-go-env-v11]].
+  propagation; see [[z-go-context]]. Does not cover env-var config parsing;
+  see [[z-go-env-v11]].
 ---
 
 # Cobra Command Patterns
@@ -179,5 +179,5 @@ go build ./... && go test -race ./internal/cli/...
 - [[z-go-clean-arch-di]] — provider interface placement, composition root, layer direction
 - [[z-go-errors]] — error wrapping conventions, sentinel errors
 - [[z-go-context]] — context propagation through command handlers
-- [[z-go-env-v11]] — Viper-free env config layering
+- [[z-go-env-v11]] — env-var config parsing
 - [[z-go-testing]] — parallel tests, assertion discipline, test isolation
