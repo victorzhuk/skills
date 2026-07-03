@@ -5,6 +5,12 @@ All notable changes to this skills repo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Changesets](https://github.com/changesets/changesets) for release notes.
 
+## 0.3.1
+
+### Patch Changes
+
+- [`30e0c33`](https://github.com/victorzhuk/skills/commit/30e0c331e2d699435a56941f9f48f8b7236980c6) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add final implementation guards to the five product-pipeline skills (`z-grill-with-docs`, `z-design-brief`, `z-design-handoff`, `z-to-prd`, `z-prd-to-openspec`): each now ends by storing its artifact (or printing it in the conversation on request), asking the user before any implementation starts, and routing implementation through the project's apply workflow — the `openspec` CLI's apply step or the project's own apply command — instead of editing source straight from a spec.
+
 ## 0.3.0
 
 ### Minor Changes
