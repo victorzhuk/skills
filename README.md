@@ -33,6 +33,7 @@ cp -R skills/* ~/.agents/skills/
 skills/
   engineering/  # changelog, architecture, tooling, skill authoring
   go/           # Go engineering skills
+  product/      # idea-to-OpenSpec pipeline: grilling, design briefs, PRDs
   qa/           # QA planning and execution skills
   rust/         # Rust skills
   typescript/   # TypeScript skills
@@ -120,6 +121,16 @@ Go engineering discipline: architecture, testing, database, observability, secur
 - **[z-go-telegram-bot](./skills/go/z-go-telegram-bot/SKILL.md)** — Hand-rolled Telegram Bot API client in Go for MarkdownV2/Mini-App/Stars-level control. Covers the minimal Bot struct over net/http, common methods (sendMessage, sendPhoto, answerCallbackQuery)…
 - **[z-go-testing](./skills/go/z-go-testing/SKILL.md)** — Go testing patterns — table-driven tests, testify assert/require/mock/suite, parallelism, goleak, fuzzing, TDD baby steps, and test quality rules.
 - **[z-go-troubleshooting](./skills/go/z-go-troubleshooting/SKILL.md)** — Systematic Go debugging — reproduce, instrument, find root cause, verify fix.
+
+### Product
+
+Idea-to-implementation pipeline: grill an idea into shared understanding, brief and hand off its UI to a cloud design tool, then land it as a PRD and OpenSpec changes.
+
+- **[z-grill-with-docs](./skills/product/z-grill-with-docs/SKILL.md)** — Relentless one-question-at-a-time interview that stress-tests an idea or plan against the project's existing glossary and ADRs, researching the codebase and the web before asking rather than guessing, and updates CONTEXT.md and docs/adr/ inline.
+- **[z-design-brief](./skills/product/z-design-brief/SKILL.md)** — Turns a grilled idea into a design brief by walking through each screen one at a time — what it shows, what a user can click or act on, what state each element can be in, and how screens connect.
+- **[z-design-handoff](./skills/product/z-design-handoff/SKILL.md)** — Turns a design brief into a tool-agnostic handoff package for a cloud design tool such as Figma Make, Google Stitch, v0, or Lovable — a design-system spec, per-screen generation prompts, and a reference list.
+- **[z-to-prd](./skills/product/z-to-prd/SKILL.md)** — Synthesizes the grilled idea, design brief, and any returned prototype into a PRD — problem statement, solution, user stories, implementation decisions, testing decisions, out of scope, and further notes.
+- **[z-prd-to-openspec](./skills/product/z-prd-to-openspec/SKILL.md)** — Decomposes a PRD into OpenSpec change proposals using vertical slices — each slice cuts through every layer end-to-end and is independently verifiable.
 
 ### QA
 

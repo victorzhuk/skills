@@ -101,6 +101,23 @@ App client work.
 | `z-ts-core` | `typescript` | authored directly in this repo | [`skills/typescript/z-ts-core/SKILL.md`](../skills/typescript/z-ts-core/SKILL.md) |
 | `z-ts-telegram-mini-app` | `typescript` | authored directly in this repo | [`skills/typescript/z-ts-telegram-mini-app/SKILL.md`](../skills/typescript/z-ts-telegram-mini-app/SKILL.md) |
 
+## Phase 3 — product pipeline
+
+Five skills opening the `product/` domain: an idea-to-implementation chain
+(grill → design brief → cloud-design handoff → PRD → OpenSpec changes).
+`z-grill-with-docs` is ported from Matt Pocock's skill of the same name (MIT);
+the interview loop of the others and the PRD/slicing workflows are adapted
+from his `grilling`, `to-prd`, and `to-issues` skills (MIT), retargeted from
+an issue tracker to OpenSpec change directories.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-grill-with-docs` | `product` | ported from [mattpocock/skills grill-with-docs](https://github.com/mattpocock/skills/tree/main/skills/engineering/grill-with-docs) (MIT) | [`skills/product/z-grill-with-docs/SKILL.md`](../skills/product/z-grill-with-docs/SKILL.md) |
+| `z-design-brief` | `product` | authored directly in this repo | [`skills/product/z-design-brief/SKILL.md`](../skills/product/z-design-brief/SKILL.md) |
+| `z-design-handoff` | `product` | authored directly in this repo | [`skills/product/z-design-handoff/SKILL.md`](../skills/product/z-design-handoff/SKILL.md) |
+| `z-to-prd` | `product` | authored directly in this repo (workflow adapted from mattpocock/skills to-prd, MIT) | [`skills/product/z-to-prd/SKILL.md`](../skills/product/z-to-prd/SKILL.md) |
+| `z-prd-to-openspec` | `product` | authored directly in this repo (slicing adapted from mattpocock/skills to-issues, MIT) | [`skills/product/z-prd-to-openspec/SKILL.md`](../skills/product/z-prd-to-openspec/SKILL.md) |
+
 ## Public cleanup applied
 
 - Replaced the personal npm scope example in `z-npm-publish` with `@scope/*`.
@@ -111,6 +128,7 @@ App client work.
 - Replaced employer-specific worked-example terms in `z-creating-flow-doc` with a neutral orders-service domain.
 - Removed project codenames from `z-qa-browser`.
 - Genericized repo names in `z-rust-web`.
+- Stripped `license`/`metadata` frontmatter fields from the `z-grill-with-docs` port; MIT attribution moved to a credit line in its two `references/` format files and the provenance row above.
 
 ## Not copied
 
