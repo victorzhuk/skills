@@ -24,13 +24,15 @@ Decompose a PRD into OpenSpec change proposals, one per vertical slice. Each sli
 
 Present the breakdown as a numbered list — per slice: title, blocked-by, user stories covered. Ask whether the granularity feels right, the dependencies are correct, and anything should merge or split. Iterate until approved; only then write.
 
+Take the testing flow — TDD or tests-after — from the PRD's Testing decisions. When the PRD doesn't record one, ask before writing any change; never default silently.
+
 ## Write each change
 
 Per approved slice, in dependency order so blocked-by references point at real change ids:
 
 - `proposal.md` — why and what changes; end-to-end behavior, not layer-by-layer steps.
 - `design.md` — technical approach, only where the slice needs one.
-- `tasks.md` — implementation checklist with acceptance criteria.
+- `tasks.md` — implementation checklist with acceptance criteria, ordered by the testing flow: TDD puts each slice's failing test before its implementation tasks ([[z-tdd]]); tests-after puts test tasks last.
 - `specs/` — requirement deltas for each capability the slice touches.
 
 No file paths or code snippets unless a prototype pinned a decision — then trim to the decision-rich part.
@@ -56,4 +58,4 @@ Done when every approved slice has a change directory that passes validation. Re
 - Blocked-by references point at real change ids.
 - The project's own openspec validation passes, when the CLI provides it.
 
-see [[z-to-prd]], [[z-testing-strategy]]
+see [[z-to-prd]], [[z-testing-strategy]], [[z-tdd]]

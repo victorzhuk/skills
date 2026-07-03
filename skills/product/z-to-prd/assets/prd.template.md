@@ -18,6 +18,7 @@
 
 ## Testing decisions
 
+- Flow: {TDD (test-first) or tests-after}
 - Seams: {where the feature is tested}
 - {what good tests cover; prior art in the repo}
 
