@@ -29,7 +29,7 @@ Resolve in order, one screen at a time; finish a screen before opening the next.
 
 ## Write the brief
 
-Write `docs/design/<slug>-brief.md` from [assets/brief.template.md](assets/brief.template.md): Overview, Screens (one section each), Flow, Open questions. The brief records what each screen does and contains — not how it looks.
+Write `docs/design/<slug>-brief.md` from [assets/brief.template.md](assets/brief.template.md): Overview, Screens (one section each), Flow, Open questions. The brief records what each screen does and contains — not how it looks. If the user asks to just see it, print the brief in the conversation instead of writing the file.
 
 ## Do not
 
@@ -37,6 +37,7 @@ Write `docs/design/<slug>-brief.md` from [assets/brief.template.md](assets/brief
 - Skip screens because they are "obvious" — empty and error states are where briefs fail.
 - Write the brief before every screen in the inventory is walked.
 - Describe layout pixel-precisely; name regions and hierarchy, not coordinates.
+- Continue past the brief unprompted — [[z-design-handoff]], the PRD, and any implementation start only when the user asks.
 
 ## Verify
 

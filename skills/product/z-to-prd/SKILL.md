@@ -17,7 +17,7 @@ Synthesize what is already decided — grilled idea, glossary, ADRs, design brie
 
 ## Write the PRD
 
-`docs/prd/<slug>.md` from [assets/prd.template.md](assets/prd.template.md), seven sections:
+`docs/prd/<slug>.md` from [assets/prd.template.md](assets/prd.template.md). Print the PRD in the conversation instead when the user asks — but decomposition reads the file, so offer to write it before [[z-prd-to-openspec]]. Seven sections:
 
 1. **Problem statement** — user-centric; the pain, not the feature.
 2. **Solution** — user-centric description of the resolution.
@@ -31,12 +31,17 @@ Synthesize what is already decided — grilled idea, glossary, ADRs, design brie
 
 A section the record can't fill is a gap — list it as an open question in Further notes and point the user back to [[z-grill-with-docs]]. Never fill a gap by inventing a decision.
 
+## Closing
+
+Done when the PRD is written and gaps are flagged. Report the path and the open gaps, then stop. Ask whether to decompose into changes ([[z-prd-to-openspec]]) — implementation starts later still, from applied changes, never straight from the PRD.
+
 ## Do not
 
 - Re-interview — one seam-confirmation question, nothing else.
 - Publish anywhere; the PRD is a file, and decomposition is [[z-prd-to-openspec]]'s job.
 - Include speculative file paths or code no prototype validated.
 - Copy the brief wholesale — the PRD records decisions, not screen walkthroughs.
+- Start implementing from the PRD — code flows from applied change proposals, not from this document.
 
 ## Verify
 

@@ -43,6 +43,7 @@ When the user returns with a prototype — link, exports, screenshots — record
 - Lock prompts to one tool's syntax; keep them prose.
 - Invent brand values no reference supports.
 - Hand off while Open questions still block a screen prompt.
+- Treat the returned prototype as a build order — it feeds [[z-to-prd]]; implementation is not this skill's next step.
 
 ## Verify
 

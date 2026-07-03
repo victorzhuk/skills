@@ -37,7 +37,7 @@ Term and boundary judgment — what deserves a glossary entry, where a context b
 
 ## Closing
 
-Done when every opened branch is resolved and every crystallized term or decision is recorded. Summarize terms added, ADRs written, and open items. Then hand off: [[z-design-brief]] if the idea has a UI surface, [[z-to-prd]] once decisions are thick enough to write down.
+Done when every opened branch is resolved and every crystallized term or decision is recorded. Summarize terms added, ADRs written, and open items. Then hand off: [[z-design-brief]] if the idea has a UI surface, [[z-to-prd]] once decisions are thick enough to write down. Offer the next step and stop — take it only when the user says so; never start designing or implementing off the back of the interview.
 
 ## Do not
 

@@ -35,12 +35,16 @@ Per approved slice, in dependency order so blocked-by references point at real c
 
 No file paths or code snippets unless a prototype pinned a decision — then trim to the decision-rich part.
 
+## Closing
+
+Done when every approved slice has a change directory that passes validation. Report the change ids and stop — changes are proposals, not work in progress. Ask whether to start implementation now; on yes, go through the project's apply workflow — the `openspec` CLI's apply step or the project's own apply command, discovered rather than assumed — one change at a time. Never edit source straight from the PRD or the spec deltas.
+
 ## Do not
 
 - Slice horizontally by layer.
 - Write changes before the user approves the breakdown.
 - Invent requirements the PRD doesn't contain.
-- Apply or implement anything — applying a change is a separate step.
+- Apply or implement anything unprompted — implementation starts only when the user says so, through the apply workflow.
 - Hardcode CLI verbs from memory; discover them.
 
 ## Verify
