@@ -5,6 +5,14 @@ All notable changes to this skills repo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Changesets](https://github.com/changesets/changesets) for release notes.
 
+## 0.3.0
+
+### Minor Changes
+
+- [`cc7fc12`](https://github.com/victorzhuk/skills/commit/cc7fc12e3473cd3b260126f832685a7086298714) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add eight engineering-method skills adapted from mattpocock/skills, obra/superpowers, and addyosmani/agent-skills (all MIT): `z-deep-modules`, `z-tdd`, `z-systematic-debugging`, `z-verify-before-done`, `z-merge-conflicts`, `z-session-handoff`, `z-git-guardrails` (hook script allows worktree cleanup), and `z-security-hardening`.
+
+- [`645b869`](https://github.com/victorzhuk/skills/commit/645b86913df5aea6c9201149151860995a1b30dc) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add the `product/` domain — an idea-to-OpenSpec pipeline of five chained skills: `z-grill-with-docs` (ported from Matt Pocock's skill, MIT), `z-design-brief`, `z-design-handoff`, `z-to-prd`, and `z-prd-to-openspec`.
+
 ## 0.2.0
 
 ### Minor Changes
