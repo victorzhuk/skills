@@ -40,7 +40,7 @@ This is a design lens to apply, not vocabulary teams need to adopt in code or do
 | Implementation | substantial, hidden | thin pass-through |
 | Example | `Pricer.Quote(cart) (Money, error)` | a struct that only forwards calls / getters+setters |
 
-Fixes for a shallow module: merge it into its caller, or deepen it by moving real behaviour behind the interface. A **seam** (interface at a boundary) earns its keep only when it hides substitutable behaviour — for tests, adapters, or a bounded-context edge — not as ceremony.
+Fixes for a shallow module: merge it into its caller, or deepen it by moving real behaviour behind the interface. A **seam** (interface at a boundary) earns its keep only when it hides substitutable behaviour — for tests, adapters, or a bounded-context edge — not as ceremony. The full depth/seam/deletion-test vocabulary lives in [[z-deep-modules]].
 
 ## Process
 
@@ -77,4 +77,4 @@ Fixes for a shallow module: merge it into its caller, or deepen it by moving rea
 - Each aggregate boundary / non-obvious invariant has a record — an ADR, a decision-table entry, or an OpenSpec `design.md`.
 - No domain type is named after a DB column or API field.
 
-see [[z-go-clean-arch-di]], [[z-go-naming]], [[z-creating-flow-doc]]
+see [[z-go-clean-arch-di]], [[z-go-naming]], [[z-creating-flow-doc]], [[z-deep-modules]]

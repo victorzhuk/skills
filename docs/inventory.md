@@ -118,6 +118,34 @@ an issue tracker to OpenSpec change directories.
 | `z-to-prd` | `product` | authored directly in this repo (workflow adapted from mattpocock/skills to-prd, MIT) | [`skills/product/z-to-prd/SKILL.md`](../skills/product/z-to-prd/SKILL.md) |
 | `z-prd-to-openspec` | `product` | authored directly in this repo (slicing adapted from mattpocock/skills to-issues, MIT) | [`skills/product/z-prd-to-openspec/SKILL.md`](../skills/product/z-prd-to-openspec/SKILL.md) |
 
+## Phase 4 — imported methods
+
+Eight language-agnostic engineering-method skills adapted from high-star MIT
+skill repos into the house style (frontmatter contract, Do not/Verify
+sections, `[[wiki-links]]`), rather than copied verbatim. Sources:
+[mattpocock/skills](https://github.com/mattpocock/skills),
+[obra/superpowers](https://github.com/obra/superpowers), and
+[addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — all MIT.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-deep-modules` | `engineering` | adapted from mattpocock/skills `codebase-design` (MIT) | [`skills/engineering/z-deep-modules/SKILL.md`](../skills/engineering/z-deep-modules/SKILL.md) |
+| `z-tdd` | `engineering` | adapted from mattpocock/skills `tdd` (MIT) | [`skills/engineering/z-tdd/SKILL.md`](../skills/engineering/z-tdd/SKILL.md) |
+| `z-systematic-debugging` | `engineering` | merged from obra/superpowers `systematic-debugging` + mattpocock/skills `diagnosing-bugs` (both MIT) | [`skills/engineering/z-systematic-debugging/SKILL.md`](../skills/engineering/z-systematic-debugging/SKILL.md) |
+| `z-verify-before-done` | `engineering` | adapted from obra/superpowers `verification-before-completion` (MIT) | [`skills/engineering/z-verify-before-done/SKILL.md`](../skills/engineering/z-verify-before-done/SKILL.md) |
+| `z-merge-conflicts` | `engineering` | adapted from mattpocock/skills `resolving-merge-conflicts` (MIT) | [`skills/engineering/z-merge-conflicts/SKILL.md`](../skills/engineering/z-merge-conflicts/SKILL.md) |
+| `z-session-handoff` | `engineering` | adapted from mattpocock/skills `handoff` (MIT) | [`skills/engineering/z-session-handoff/SKILL.md`](../skills/engineering/z-session-handoff/SKILL.md) |
+| `z-git-guardrails` | `engineering` | adapted from mattpocock/skills `git-guardrails-claude-code` (MIT); hook script extended to allow worktree cleanup and merged-branch deletion | [`skills/engineering/z-git-guardrails/SKILL.md`](../skills/engineering/z-git-guardrails/SKILL.md) |
+| `z-security-hardening` | `engineering` | adapted from addyosmani/agent-skills `security-and-hardening` (MIT) | [`skills/engineering/z-security-hardening/SKILL.md`](../skills/engineering/z-security-hardening/SKILL.md) |
+
+Reviewed and skipped from the same sources: `writing-great-skills` (near-1:1
+with `z-skill-mastery`), `brainstorming` (covered by the grill flow),
+`implement`/`triage`/`improve-codebase-architecture` (coupled to the author's
+tracker and skill chain), `teach`/`obsidian-vault`/`edit-article` (personal
+workflow), `research` (thin), `setup-pre-commit` (Husky+Prettier conflicts
+with the catalog's Biome default), everything in `anthropics/skills`
+(unlicensed at review time).
+
 ## Public cleanup applied
 
 - Replaced the personal npm scope example in `z-npm-publish` with `@scope/*`.
