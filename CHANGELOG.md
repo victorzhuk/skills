@@ -5,6 +5,16 @@ All notable changes to this skills repo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Changesets](https://github.com/changesets/changesets) for release notes.
 
+## 0.4.0
+
+### Minor Changes
+
+- [`13f06f4`](https://github.com/victorzhuk/skills/commit/13f06f4b161f3dcf6bffaa5e7eca57c22f033755) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add two writing skills: `z-ru-tech-register` — Russian tech prose in the native senior-engineer register, owning the Latin-vs-Cyrillic terminology glossary by theme cluster (Go/backend, DPI-bypass, self-hosted infra, AI coding agents, RF regulatory), serious-register structure, RU neuro-slop tells, and legal framing for circumvention/compliance content — and `z-tg-post` — the author's Telegram post format and voice (user-Markdown formatting, post structure, bilingual register), which defers glossary and register rules to `z-ru-tech-register`.
+
+### Patch Changes
+
+- [`5ad1cc8`](https://github.com/victorzhuk/skills/commit/5ad1cc815f11dcb778ba9b8f94637c1ec2abdec3) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Make the spec pipeline confirm the testing flow — TDD (test-first) or tests-after — before generating anything: `z-to-prd` now asks it as its second allowed interview question (alongside seam confirmation) and records the answer in the PRD's Testing decisions (the PRD template gained a `Flow:` line); `z-prd-to-openspec` reads the flow from the PRD, asks only when the PRD doesn't record one, and orders each slice's `tasks.md` accordingly (TDD puts the failing test before implementation tasks, tests-after puts test tasks last).
+
 ## 0.3.1
 
 ### Patch Changes
