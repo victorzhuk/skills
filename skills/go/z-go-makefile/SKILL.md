@@ -126,7 +126,7 @@ test-integration: ## test-integration: needs docker
 lint:            ## lint: full lint
 	golangci-lint run
 lint-new:        ## lint-new: only changed code
-	golangci-lint run --new-from-rev=main ./...
+	golangci-lint run --new-from-rev=master ./...
 fmt:             ## fmt: format
 	go fmt ./... && golangci-lint fmt
 vet:             ## vet: go vet

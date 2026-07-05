@@ -138,7 +138,7 @@ CI gate — lint every push, breaking-check every PR against the target branch:
 
 ```sh
 buf lint
-buf breaking --against '.git#branch=main'
+buf breaking --against '.git#branch=master'
 ```
 
 `bufbuild/buf-action` runs build+lint+format+breaking in one GitHub Actions job and
@@ -358,7 +358,7 @@ plain-HTTP access without standing up a proxy.
 
 ```sh
 buf lint
-buf breaking --against '.git#branch=main'
+buf breaking --against '.git#branch=master'
 buf generate
 go build ./... && go vet ./...
 grpcurl -plaintext localhost:PORT list   # requires reflection registered

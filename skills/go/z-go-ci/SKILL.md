@@ -146,7 +146,7 @@ jobs:
 
 One `docker/build-push-action` call, one platform. Multi-platform builds, provenance/sbom attestations, and image scanning are real options — see Optional hardening — not part of the baseline.
 
-Repository settings: branch protection on `main` (required status checks, PR approval, no force push); `contents: read` as the default workflow permission; grant write only per-job where needed; credentials in repository secrets, never inline.
+Repository settings: branch protection on `master` (required status checks, PR approval, no force push); `contents: read` as the default workflow permission; grant write only per-job where needed; credentials in repository secrets, never inline.
 
 ## Optional hardening
 

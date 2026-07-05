@@ -16,7 +16,7 @@ npm run changeset  # record a version note (Changesets)
 npm run version    # apply pending changesets to CHANGELOG + package version
 ```
 
-CI (`.github/workflows/check.yml`) runs `npm run check` on Node 22 for every push to `main` and every PR, with no `npm ci` step — `check-skills.mjs` has zero external deps. `release.yml` runs `npm ci` (it needs Changesets), re-runs the check, then opens a "Version" PR via Changesets. Run `npm run check` locally before pushing any skill change.
+CI (`.github/workflows/check.yml`) runs `npm run check` on Node 22 for every push to `master` and every PR, with no `npm ci` step — `check-skills.mjs` has zero external deps. `release.yml` runs `npm ci` (it needs Changesets), re-runs the check, then opens a "Version" PR via Changesets. Run `npm run check` locally before pushing any skill change.
 
 ## Layout
 

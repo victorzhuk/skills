@@ -52,7 +52,7 @@ Worktree-based flows delete branches and worktrees as routine cleanup, so the ho
 5. **Verify** with piped test input:
 
    ```bash
-   echo '{"tool_input":{"command":"git push origin main"}}' | <path-to-script>   # exit 2, BLOCKED on stderr
+   echo '{"tool_input":{"command":"git push origin master"}}' | <path-to-script>   # exit 2, BLOCKED on stderr
    echo '{"tool_input":{"command":"git worktree remove ../wt"}}' | <path-to-script>   # exit 0
    ```
 
