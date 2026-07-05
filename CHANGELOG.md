@@ -5,6 +5,14 @@ All notable changes to this skills repo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Changesets](https://github.com/changesets/changesets) for release notes.
 
+## 0.4.1
+
+### Patch Changes
+
+- [`931766c`](https://github.com/victorzhuk/skills/commit/931766ce36673ed886f1c45bfc852e02285af754) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Interview skills now ask option-case questions with a marked recommendation instead of prose-only questions: when an answer folds into 2–4 concrete options, present them as cases — recommended option first, marked "(Recommended)", one-line trade-off per option — through the harness's structured question tool when one exists (AskUserQuestion or equivalent), falling back to the same structure in prose. `z-grill-with-docs` carries the rule (plus a new "Do not" against bare yes/no option questions); `z-design-brief` inherits it and confirms the screen inventory as a multi-select; `z-to-prd` asks its two allowed questions (test seam, TDD vs tests-after) as option cases; `z-design-handoff` asks unpinned brand/token choices the same way.
+
+- [`9da79dd`](https://github.com/victorzhuk/skills/commit/9da79dd8126e48a3523ac1366a54b36a9c66d361) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Branch-name examples now reference `master` as the default branch instead of `main`: `z-go-grpc` `buf breaking --against` commands, `z-go-ci` branch-protection guidance, `z-go-makefile` `lint-new` target, and the `z-git-guardrails` verify fixture. Repo docs also fix the CI trigger description — `check.yml` runs on pushes to `master`.
+
 ## 0.4.0
 
 ### Minor Changes
