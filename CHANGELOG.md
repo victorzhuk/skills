@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3
+
+### Patch Changes
+
+- Force actual `ask` tool invocation for option-case questions in interview skills. The previous patch told the model to "present" cases through the native `ask` tool, but the model kept emitting the options as prose. Replace "present" with imperative "call the native `ask` tool" and add an explicit "Do not emit the options as prose in the response" rule in `z-grill-with-docs` and `z-design-brief`.
+
 ## 0.4.2
 
 ### Patch Changes

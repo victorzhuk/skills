@@ -11,7 +11,7 @@ Interview the user about every aspect of the idea until shared understanding is 
 
 - One question per turn — bundled questions get shallow answers.
 - Every question ships with a recommended answer and a one-line rationale, never a bare "what do you think?".
-- When the answer folds into 2–4 concrete options, present them as cases through the native `ask` tool: recommended one first, marked "(Recommended)", each option with a one-line trade-off. Use prose only for genuinely open-ended questions.
+- When the answer folds into 2–4 concrete options, call the native `ask` tool with the question and the options as structured choices. Do not emit the options as prose in the response. Recommended option first, marked "(Recommended)", each option with a one-line trade-off. Use prose only for genuinely open-ended questions.
 - If research can answer the question, research instead of asking; present the finding for confirmation.
 - Finish a branch before opening the next. Ask A before B when B depends on A.
 - Track resolved decisions; when a later answer contradicts an earlier one, surface the conflict immediately.
@@ -44,6 +44,7 @@ Done when every opened branch is resolved and every crystallized term or decisio
 
 - Ask what research can answer.
 - Bundle questions or omit the recommended answer.
+- Emit an option question as prose instead of calling the native `ask` tool.
 - Reduce an option question to bare yes/no — options are cases with trade-offs, not confirmation prompts.
 - Batch doc updates for the end of the session.
 - Write ADRs for reversible or obvious decisions.
