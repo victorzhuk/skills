@@ -19,7 +19,7 @@ Derive from the brief plus whatever references the user provides — screenshots
 - **Component inventory** — every element the screens' Actions and States imply: buttons, inputs, cards, lists, dialogs, navigation. For each, the variants and states the brief names.
 - **Voice** — density, tone, platform conventions to follow.
 
-Infer from references; where nothing pins a choice, ask — don't invent a brand.
+Infer from references; where nothing pins a choice, ask — option cases with a recommended default, per [[z-grill-with-docs]] question discipline — don't invent a brand.
 
 ## Per-screen generation prompts
 

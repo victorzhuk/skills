@@ -16,7 +16,7 @@ Synthesize what is already decided — grilled idea, glossary, ADRs, design brie
 - Testing seams — where the feature will be tested. Prefer existing seams over new ones, at the highest level possible, ideally one seam across the codebase; test depth per [[z-testing-strategy]].
 - Testing flow — TDD (test-first, [[z-tdd]]) or tests-after. Never assume; the choice shapes every downstream `tasks.md`.
 
-Confirm both with the user — seam choice and testing flow are the only two interview questions this skill allows.
+Confirm both with the user — seam choice and testing flow are the only two interview questions this skill allows. Ask each as option cases per [[z-grill-with-docs]] question discipline: candidate seams found in the repo, and TDD vs tests-after with the trade-off — recommended option first, one-line rationale per option.
 
 ## Write the PRD
 
