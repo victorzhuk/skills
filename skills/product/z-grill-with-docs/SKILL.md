@@ -11,7 +11,7 @@ Interview the user about every aspect of the idea until shared understanding is 
 
 - One question per turn — bundled questions get shallow answers.
 - Every question ships with a recommended answer and a one-line rationale, never a bare "what do you think?".
-- When the answer folds into 2–4 concrete options, present them as cases: recommended one first, marked "(Recommended)", each option with a one-line trade-off. Ask through the harness's structured question tool when it has one (AskUserQuestion or equivalent); otherwise the same structure in prose. Genuinely open-ended questions stay prose.
+- When the answer folds into 2–4 concrete options, present them as cases through the native `ask` tool: recommended one first, marked "(Recommended)", each option with a one-line trade-off. Use prose only for genuinely open-ended questions.
 - If research can answer the question, research instead of asking; present the finding for confirmation.
 - Finish a branch before opening the next. Ask A before B when B depends on A.
 - Track resolved decisions; when a later answer contradicts an earlier one, surface the conflict immediately.

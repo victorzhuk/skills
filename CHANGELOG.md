@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2
+
+### Patch Changes
+
+- Mandate the native `ask` tool for option-case questions in interview skills: drop the "when it has one" / "if one exists" prose fallback from `z-grill-with-docs` and `z-design-brief`, so 2–4 option questions always render through the harness's structured question tool instead of falling back to free-form user input. `z-design-brief` keeps its multi-select caveat for screen inventory, since multi-select is not universally supported.
+
 All notable changes to this skills repo are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
