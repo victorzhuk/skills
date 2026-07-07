@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- Compress skill descriptions to fit harness context budgets. Harnesses load every skill description into context and skip skills once the total passes ~50 KB; the catalog sat at 49k chars. Rewrite the 45 largest descriptions to the house shape (what → when → at most 5–6 trigger phrases → at most 2 boundary clauses), sync the root and per-domain READMEs to the new wording, and add a `check-skills.mjs` gate that fails past 600 chars per description or 40,000 chars catalog-wide.
+
 ## 0.4.3
 
 ### Patch Changes
