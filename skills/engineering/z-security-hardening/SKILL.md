@@ -1,6 +1,6 @@
 ---
 name: z-security-hardening
-description: Language-agnostic security hardening for code that touches untrusted input, auth, secrets, or external systems — threat-model first (trust boundaries, assets, STRIDE, abuse cases), then the non-negotiables (validate at boundaries, parameterize queries, encode output, hash passwords, security headers), plus SSRF allowlisting, supply-chain hygiene, and treating LLM output as untrusted input. Use when building or reviewing input handling, authn/authz, file uploads, webhooks, secrets management, or AI features, or when the user asks for a security review. Triggers on "threat model", "STRIDE", "SSRF", "prompt injection", "rate limiting", "secrets in git". Does not cover Go-specific hardening recipes; see [[z-go-security]].
+description: Language-agnostic security hardening for untrusted input, auth, secrets, or external systems — threat-model first (trust boundaries, STRIDE, abuse cases), then validate at boundaries, parameterize queries, encode output, hash passwords, SSRF allowlisting, and supply-chain hygiene. Use for input handling, authn/authz, file uploads, webhooks, or a security review. Triggers on "threat model", "STRIDE", "SSRF", "prompt injection". Go-specific hardening is [[z-go-security]].
 ---
 
 # Security hardening

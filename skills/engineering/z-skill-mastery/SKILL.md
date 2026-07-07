@@ -43,7 +43,7 @@ Only three fields, ever: `name`, `description`, optional `allowed-tools`. No `ve
 ```yaml
 ---
 name: z-thing            # dir name, lowercase-hyphens, ≤64 chars, z- prefix if authored
-description: What it does + when to fire + boundary. ≤1024 chars.
+description: What it does + when to fire + boundary. ≤600 chars house cap (spec max 1024).
 allowed-tools: Read Edit Bash(go:*)   # only when the skill is tool-scoped
 ---
 ```
@@ -56,6 +56,7 @@ The `description` is the only thing the agent sees before deciding to load the s
 - Front-load a **Leading Word** — a pretrained concept the model already knows (`red-green-refactor`, `tracer bullet`, `ubiquitous language`, `goroutine leak`). One familiar token anchors behaviour more cheaply than a paragraph of description.
 - End with a boundary: `Does not cover X; see [[other-skill]].` This is how skills in this repo disambiguate overlapping scope — see the `z-go-*` family.
 - Every word is Context Load. If a phrase is already in the body, cut it from the description.
+- Budget is shared across the whole catalog: harnesses load every description into context and some skip skills once the total passes their budget (~50 KB). House caps enforced by `npm run check`: ≤600 chars per description, ≤40,000 aggregate. Aim 300–450; list at most 5–6 trigger phrases, keep at most 2 boundary clauses, no "See also" — that lives in the body.
 
 ## Invocation: skill vs command
 
@@ -127,7 +128,7 @@ Detail and before/after fixes in [[references/anti-patterns.md]].
 
 ## Writing & refactoring checklist
 
-- [ ] `description` states what + when (one trigger phrase per branch) + boundary; ≤1024 chars; `name` ≤64.
+- [ ] `description` states what + when (one trigger phrase per branch) + boundary; ≤600 chars, aim 300–450; `name` ≤64.
 - [ ] Body is imperative, terse, persona-free.
 - [ ] Every line moves behaviour — no No-Ops, no Duplication.
 - [ ] Anti-patterns named (`## Do not`) and the change is checkable (`## Verify`) where the skill produces artifacts.
@@ -140,7 +141,7 @@ Detail and before/after fixes in [[references/anti-patterns.md]].
 | Aspect | Rule |
 |--|--|
 | name | lowercase-hyphens, ≤64, `z-` prefix if authored |
-| description | what + when + boundary, ≤1024, Leading Word first |
+| description | what + when + boundary, ≤600 (aim 300–450), Leading Word first |
 | body | plain Markdown, imperative, persona-free, `## Do not` / `## Verify` |
 | cross-links | `[[skill-name]]` for boundaries and "see also" |
 | XML | embedded verbatim templates only, never the skeleton |

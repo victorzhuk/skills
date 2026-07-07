@@ -1,6 +1,6 @@
 ---
 name: z-rust-gtk4
-description: Build GTK4 desktop apps in Rust with relm4 and libadwaita — the Elm-style component loop, libadwaita widget hierarchy, preferences dialogs, system tray, and message-driven UI patterns. Use when asked to "build a GTK4 app in Rust", "create a libadwaita UI", "use relm4", "build a Linux desktop app with Rust", "implement a GTK4 widget", "create a preferences dialog", "add system tray", or when the request mentions relm4 components, AdwApplicationWindow, AdwPreferencesPage, gtk rust, adwaita, desktop gui rust, or message-driven GTK4 UI patterns. Does not cover general Rust ownership/error/async patterns; see [[z-rust-core]].
+description: Build GTK4 desktop apps in Rust with relm4 and libadwaita — the Elm-style component loop, libadwaita widget hierarchy, preferences dialogs, system tray, message-driven UI patterns. Use when asked to "build a GTK4 app in Rust", "create a libadwaita UI", "use relm4", "implement a GTK4 widget", "add system tray", or the request mentions AdwApplicationWindow, AdwPreferencesPage, or message-driven GTK4 UI. Does not cover general Rust ownership/error/async patterns; see [[z-rust-core]].
 ---
 
 # Rust GTK4 (relm4 + libadwaita)

@@ -1,6 +1,6 @@
 ---
 name: z-go-http-client
-description: Outbound HTTP client hardening for calling external or third-party APIs from Go — timeouts, transport tuning, body draining, retry discipline with backoff and jitter, status handling, and circuit breakers. Use when writing or reviewing a Go client that calls another service, choosing Client.Timeout vs a per-request context deadline, tuning MaxIdleConnsPerHost, adding retry logic, deciding whether a call needs a circuit breaker, wiring otelhttp, or testing outbound calls with httptest.Server. Triggers on "http.Client", "RoundTripper", "MaxIdleConnsPerHost", "retry with backoff", "Retry-After", "idempotency key", "circuit breaker", "otelhttp", "drain response body". Does not cover deadline propagation mechanics; see [[z-go-context]]. Does not cover idempotency keys on your own inbound API; see [[z-go-api-design]]. Does not cover OTel setup beyond the client wrapper; see [[z-go-observability]]. Does not cover testing your own API surface; see [[z-qa-api]].
+description: Outbound HTTP client hardening for Go calling external APIs — timeouts, transport tuning, body draining, retry with backoff/jitter, and circuit breakers. Use when a Go client calls another service. Triggers on "http.Client", "RoundTripper", "MaxIdleConnsPerHost", "retry with backoff", "circuit breaker", "otelhttp". Does not cover deadlines, API design, OTel, or API testing; see [[z-go-context]], [[z-go-api-design]], [[z-go-observability]], [[z-qa-api]].
 ---
 
 # Go HTTP client hardening

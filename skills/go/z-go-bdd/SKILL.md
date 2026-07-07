@@ -1,6 +1,6 @@
 ---
 name: z-go-bdd
-description: Go BDD and executable behavior contracts — two real patterns, pick by audience. Pattern A is ginkgo/gomega (`Describe`/`When`/`It` plus `Label("p0"/"p1"/"p2")` priority tags), for scenarios only engineers read. Pattern B is Gherkin/godog/gherkingen (`.feature` files, Cucumber JSON), for scenarios non-engineers need to read or author. Use when adding or changing observable Go behavior, writing `.feature` files or `*_bdd_test.go` ginkgo specs, implementing godog steps, generating BDD boilerplate, or asked for BDD/Gherkin/Given-When-Then/acceptance tests. Does not cover general test-depth classification; see [[z-testing-strategy]]. Does not cover non-BDD unit test patterns; see [[z-go-testing]].
+description: Go BDD and executable behavior contracts — two patterns, pick by audience. ginkgo/gomega (`Describe`/`When`/`It`, `Label("p0"...)`) suits engineer-only scenarios; Gherkin/godog (`.feature` files) suits non-engineer-readable ones. Use when changing observable Go behavior or writing `.feature`/`*_bdd_test.go` specs. Triggers on "BDD", "Gherkin", "Given-When-Then". Does not cover test-depth classification or non-BDD unit tests; see [[z-testing-strategy]] and [[z-go-testing]].
 ---
 
 # Go BDD

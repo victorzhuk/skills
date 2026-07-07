@@ -1,6 +1,6 @@
 ---
 name: z-npm-publish
-description: Publish a Node/TypeScript package to npm via GitHub Actions with OIDC trusted publishing and provenance. Use when setting up npm publishing, writing .github/workflows/npm-publish.yml, configuring a scoped package, bootstrapping a first publish, or debugging an E404/permission error on publish. Key gotcha — npm OIDC and `npm trust` cannot create a new package; it must be published once manually first. Triggers on "publish to npm", "npm-publish workflow", "trusted publisher", "npm provenance", "npm publish 404", "setup-node registry-url". Does not cover changelog upkeep; see [[z-changelog]]. Does not cover commit message policy.
+description: Publish a Node/TypeScript package to npm via GitHub Actions with OIDC trusted publishing and provenance. Use when setting up npm publishing, writing npm-publish.yml, or debugging an E404/permission error. Key gotcha — npm OIDC and `npm trust` cannot create a new package; publish once manually first. Triggers on "publish to npm", "trusted publisher", "npm provenance", "setup-node registry-url". Does not cover changelog upkeep; see [[z-changelog]].
 allowed-tools: Read Edit Write Bash(npm:*) Bash(gh:*) Bash(git:*)
 ---
 

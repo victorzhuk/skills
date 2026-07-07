@@ -1,15 +1,6 @@
 ---
 name: z-go-goose
-description: >
-  Schema migrations for Go services using goose (github.com/pressly/goose) — numbered SQL files,
-  up/down annotation blocks, PL/pgSQL and multi-statement wrapping with StatementBegin/End,
-  embed.FS embedding, CLI application, bare-text enum pattern, and startup migration-version gating.
-  Use when adding or changing schema migrations, wiring goose into a Go binary, choosing
-  between bare text, text+CHECK, and native enum types, or gating binary startup on a required
-  schema version.
-  Triggers on "goose", "+goose StatementBegin", "goose up", "embed.FS migrations", "goose create".
-  Does not cover sqlc codegen; see [[z-go-sqlc]]. Does not cover repository query patterns; see [[z-go-database]].
-  See also: [[z-go-database]], [[z-go-sqlc]].
+description: Schema migrations for Go using goose (github.com/pressly/goose) — numbered SQL files, up/down blocks, PL/pgSQL wrapping with StatementBegin/End, embed.FS embedding, bare-text enum pattern, and startup version gating. Use when adding migrations, wiring goose into a binary, or choosing enum representation. Triggers on "goose", "+goose StatementBegin", "goose up", "embed.FS migrations". Sqlc is [[z-go-sqlc]]; repository queries [[z-go-database]].
 ---
 
 # Goose migrations

@@ -1,14 +1,6 @@
 ---
 name: z-go-documentation
-description: >
-  Go documentation conventions — godoc comments, package comments, README structure,
-  CONTRIBUTING, CHANGELOG, Example tests, API docs, and llms.txt. Use when writing or
-  reviewing doc comments, adding examples, structuring project docs, or auditing doc
-  completeness for a library or application/CLI. Triggers on "godoc", "pkg.go.dev",
-  "ExampleXxx", "doc comment", "README", "CHANGELOG", "llms.txt", "go doc".
-  Does not cover naming conventions; see [[z-go-naming]]. Does not cover test structure;
-  see [[z-go-testing]]. Does not cover general comment discipline; see [[z-zero-comments]].
-  Does not cover CHANGELOG maintenance; see [[z-changelog]].
+description: Go documentation conventions — godoc comments, package comments, README structure, Example tests, API docs, and llms.txt. Use when writing or reviewing doc comments, adding examples, structuring project docs, or auditing doc completeness for a library or CLI. Triggers on "godoc", "pkg.go.dev", "ExampleXxx", "doc comment", "llms.txt", "go doc". Does not cover naming; see [[z-go-naming]]. Does not cover test structure or comment discipline; see [[z-go-testing]] and [[z-zero-comments]].
 ---
 
 # Go Documentation

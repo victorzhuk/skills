@@ -1,15 +1,6 @@
 ---
 name: z-go-performance
-description: >
-  Go performance optimization — allocation reduction, CPU efficiency, memory layout,
-  GC tuning, pooling, caching, and hot-path patterns. Use when profiling has identified
-  a bottleneck and you need the right pattern to fix it, or during code review to flag
-  structural anti-patterns before measuring. Triggers on "sync.Pool", "escape analysis",
-  "alloc_objects", "GOMEMLIMIT", "fieldalignment", "struct padding", "inlining",
-  "cache locality", "hot path", "pprof", "benchstat", "b.Loop", "BenchmarkX".
-  Does not cover measurement methodology (write/run/compare benchmarks) — see [[z-go-troubleshooting]];
-  does not cover concurrency primitives — see [[z-go-concurrency]];
-  does not cover data-structure choice internals — see [[z-go-safety]] for aliasing pitfalls.
+description: Go performance optimization — allocation reduction, CPU efficiency, memory layout, GC tuning, pooling, caching, hot-path patterns. Use when profiling found a bottleneck, or in review to flag anti-patterns before measuring. Triggers on "sync.Pool", "escape analysis", "GOMEMLIMIT", "fieldalignment", "pprof", "benchstat". Measurement methodology is [[z-go-troubleshooting]]; concurrency [[z-go-concurrency]]; aliasing [[z-go-safety]].
 ---
 
 # Go Performance

@@ -1,16 +1,6 @@
 ---
 name: z-fuck-slop
-description: >
-  De-slop pass for any text: detects and erases the statistical fingerprints of
-  AI writing (negative parallelism / "not X but Y", em-dash abuse, rule-of-three,
-  false ranges, puffery vocabulary, uniform cadence, hedged both-sidesing) and
-  rewrites the text into its target register — academic article, tweet, reddit
-  post, email, blog, anything between. Use when the user says "fuck slop",
-  "f*ck slop", "deslop", "de-slop this", "remove the AI tells", "humanize this",
-  "make this not sound like AI", invokes /z-fuck-slop, or asks for voice/genre
-  cleanup. Also use before publishing any agent-drafted prose. Does not cover
-  terse technical docs/comments in their native register; see
-  [[z-concise-human-docs]].
+description: De-slop pass for any text — detects and erases AI-writing fingerprints (negative parallelism, em-dash abuse, rule-of-three, false ranges, puffery, uniform cadence) and rewrites into its target register — article, tweet, email, blog. Use when the user says "fuck slop", "deslop", "remove the AI tells", "humanize this", or before publishing agent-drafted prose. Terse technical docs are [[z-concise-human-docs]].
 ---
 
 # F*ck Slop

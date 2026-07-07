@@ -1,6 +1,6 @@
 ---
 name: z-domain-modeling
-description: Build and maintain a domain model — ubiquitous language, bounded contexts, aggregates and invariants, and deep vs shallow modules. Use when naming domain concepts, resolving where a term's meaning changes, deciding aggregate/module boundaries, spotting a shallow pass-through module, or recording a naming/boundary decision in a glossary, an ADR, or an OpenSpec spec. Triggers on "ubiquitous language", "bounded context", "domain model", "aggregate boundary", "glossary", "deep module", "seam". Does not cover Go layer wiring or DI; see [[z-go-clean-arch-di]]. Does not cover per-operation behavioural contracts; see [[z-creating-flow-doc]].
+description: Build and maintain a domain model — ubiquitous language, bounded contexts, aggregates and invariants. Use when naming domain concepts, resolving where a term's meaning changes, or deciding aggregate/module boundaries. Triggers on "ubiquitous language", "bounded context", "domain model", "aggregate boundary", "glossary". Does not cover Go layer wiring/DI; see [[z-go-clean-arch-di]].
 ---
 
 # Domain modeling

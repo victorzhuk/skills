@@ -1,14 +1,6 @@
 ---
 name: z-go-interfaces
-description: >
-  Interface design, struct embedding, type assertions, compile-time checks,
-  receiver rules, and generics vs interfaces in Go. Use when designing types,
-  defining interfaces, embedding structs, writing type assertions or switches,
-  choosing receivers, or deciding between interface and generic patterns.
-  Triggers on "accept interfaces return structs", "compile-time interface check",
-  "var _ Interface", "embed", "type assertion", "pointer receiver", "generics vs
-  interface". Also covers the functional-options constructor pattern.
-  Does not cover layer dependency direction or DI wiring; see [[z-go-clean-arch-di]].
+description: Interface design, struct embedding, type assertions, compile-time checks, receiver rules, generics vs interfaces in Go. Use when designing types, defining interfaces, embedding structs, or choosing receivers. Triggers on "accept interfaces return structs", "compile-time interface check", "var _ Interface", "type assertion", "pointer receiver". Also covers functional-options constructors. Does not cover layer direction/DI; see [[z-go-clean-arch-di]].
 ---
 
 # Go Interfaces & Type Design

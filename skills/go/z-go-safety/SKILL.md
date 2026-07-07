@@ -1,7 +1,6 @@
 ---
 name: z-go-safety
-description: >
-  Prevents panics, silent data corruption, and subtle runtime bugs through defensive coding patterns. Use when encountering nil panics, append aliasing, map concurrent write panics, float comparison bugs, numeric conversion overflow, or defer-in-loop resource leaks. Also use when hardening exported API boundaries — copying slices/maps, compile-time interface checks, zero-value design, iota enums, crypto/rand. Triggers on "nil interface", "append alias", "type assertion", "defer in loop", "int overflow", "sync.Once", "var _ Interface", "crypto/rand", "iota". Does not cover error wrapping strategy; see [[z-go-errors]]. Does not cover concurrency primitives; see [[z-go-concurrency]].
+description: Prevents panics, silent data corruption, and runtime bugs through defensive Go coding — nil panics, append aliasing, map concurrent-write panics, float comparison, numeric overflow, defer-in-loop leaks. Also hardens exported API boundaries — copying slices/maps, compile-time interface checks, zero-value design. Triggers on "nil interface", "append alias", "type assertion", "int overflow". Does not cover error wrapping; see [[z-go-errors]]. Concurrency belongs to [[z-go-concurrency]].
 ---
 
 # Go Safety

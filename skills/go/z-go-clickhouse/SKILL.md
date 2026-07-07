@@ -1,6 +1,6 @@
 ---
 name: z-go-clickhouse
-description: ClickHouse analytics access from Go — append-only OLAP modeling, batch/async insert discipline, and MergeTree engine selection. Use when writing or reviewing ClickHouse queries, choosing between clickhouse-go and ch-go, designing ORDER BY/PARTITION BY, batching or async-inserting rows, or reading deduplicated data with FINAL/argMax. Triggers on "ClickHouse", "MergeTree", "ReplacingMergeTree", "PREWHERE", "async_insert", "clickhouse-go", "ch-go", "LowCardinality", "materialized view". Does not cover Postgres/OLTP access patterns; see [[z-go-database]] — ClickHouse has no transactions, row locks, or UPDATE in the OLTP sense.
+description: ClickHouse analytics access from Go — append-only OLAP modeling, batch/async insert discipline, MergeTree engine selection. Use when writing ClickHouse queries, choosing between clickhouse-go and ch-go, or reading deduplicated data with FINAL/argMax. Triggers on "ClickHouse", "MergeTree", "ReplacingMergeTree", "async_insert", "LowCardinality". Does not cover Postgres/OLTP access; see [[z-go-database]].
 ---
 
 # ClickHouse from Go

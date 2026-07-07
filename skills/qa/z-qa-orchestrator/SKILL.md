@@ -1,6 +1,6 @@
 ---
 name: z-qa-orchestrator
-description: "Runs a project's own test suite as three sequential phases -- smoke, regression, full -- stopping at the first failure by default (opt out with --continue-on-failure). Wraps native tooling (go test -race, vitest, playwright, govulncheck) through the project's make/task/npm runner instead of a fixed script roster, and defers to a project's own QA-cycle skill or command when one already exists. Auto-activates for: 'run full QA suite', 'test the app', 'QA report', 'regression testing', '/qa-run'. Does not delegate to per-domain z-qa-* skills as sub-agents -- for depth in one domain use [[z-qa-browser]], [[z-qa-api]], [[z-qa-performance]], [[z-qa-analyst]], [[z-qa-spec-writer]], or [[z-qa-debugger]] directly."
+description: Runs a project's test suite as three phases — smoke, regression, full — stopping at the first failure (opt out with --continue-on-failure). Wraps go test -race, vitest, playwright, and govulncheck through the project's own runner. Auto-activates for "run full QA suite", "test the app", "QA report", "/qa-run". Not a substitute for [[z-qa-browser]], [[z-qa-api]], [[z-qa-performance]], [[z-qa-analyst]], [[z-qa-spec-writer]], or [[z-qa-debugger]].
 ---
 
 # QA Orchestrator

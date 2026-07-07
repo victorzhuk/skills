@@ -56,6 +56,9 @@ const files = walk(skillsRoot);
 const skillFiles = files.filter((file) => basename(file) === "SKILL.md");
 const names = new Set();
 const errors = [];
+const descCap = 600;
+const descBudget = 40000;
+let descTotal = 0;
 
 for (const file of skillFiles) {
   const rel = relative(root, file);
@@ -69,7 +72,10 @@ for (const file of skillFiles) {
   }
   if (meta.name.length > 64) errors.push(`${rel}: name exceeds 64 chars`);
   if (!meta.description.trim()) errors.push(`${rel}: missing description`);
-  if (meta.description.length > 1024) errors.push(`${rel}: description exceeds 1024 chars`);
+  if (meta.description.length > descCap) {
+    errors.push(`${rel}: description is ${meta.description.length} chars, house cap ${descCap} (spec max 1024)`);
+  }
+  descTotal += meta.description.length;
   if (meta.style === "plain" && meta.descLine.includes(": ")) {
     errors.push(`${rel}: description has unquoted ": " — breaks strict YAML parsers, quote the value`);
   }
@@ -94,8 +100,14 @@ for (const file of skillFiles) {
   }
 }
 
+if (descTotal > descBudget) {
+  errors.push(
+    `skills: descriptions total ${descTotal} chars, budget ${descBudget} — harnesses skip skills past ~50 KB, trim the largest descriptions`,
+  );
+}
+
 if (errors.length) {
   console.error(errors.join("\n"));
   process.exit(1);
 }
-console.log(`OK: ${skillFiles.length} skills checked.`);
+console.log(`OK: ${skillFiles.length} skills checked, ${descTotal}/${descBudget} description chars.`);

@@ -1,20 +1,6 @@
 ---
 name: z-ts-telegram-mini-app
-description: >
-  Telegram Mini App client development in TypeScript — SDK choice (@tma.js/sdk,
-  formerly @telegram-apps/sdk, vs raw window.Telegram.WebApp), lifecycle
-  (init/mount/ready, expand, fullscreen), viewport/safe-area handling, theme
-  params to CSS variables, BackButton/MainButton/SecondaryButton wiring,
-  haptics, closing behavior, platform quirks, the Stars payments client flow,
-  and local dev outside a real Telegram client. initData is untrusted on the
-  client — forward it to your backend as an opaque token, never parse it for
-  authorization. Use when building a Mini App frontend, wiring BackButton to a
-  router, driving MainButton state, reacting to viewport/theme changes, or
-  adding Stars payments client-side. Triggers on "telegram mini app", "tma.js",
-  "WebApp.ready", "initData", "BackButton", "MainButton", "openInvoice",
-  "telegram stars client". Does not cover server-side initData validation or
-  Bot API calls; see [[z-go-telegram-bot]]. Does not cover general TypeScript
-  conventions; see [[z-ts-core]].
+description: Telegram Mini App client development in TypeScript — SDK choice (@tma.js/sdk vs raw WebApp), lifecycle/viewport/theme handling, BackButton/MainButton wiring, and Stars payments. initData is untrusted client-side — forward as an opaque token, never parse for authorization. Triggers on "telegram mini app", "tma.js", "WebApp.ready", "initData", "BackButton", "openInvoice". Does not cover server-side validation or TS conventions; see [[z-go-telegram-bot]], [[z-ts-core]].
 ---
 
 # Telegram Mini App (TypeScript)

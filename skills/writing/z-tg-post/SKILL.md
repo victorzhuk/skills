@@ -1,6 +1,6 @@
 ---
 name: z-tg-post
-description: Write, rewrite, or review short-form posts for the author's Telegram tech blog (cross-posted to victorzh.uk/slog) in his voice. Use whenever drafting a Telegram post, TG channel post, or "пост в телегу" on backend/Go, PostgreSQL internals, self-hosted infra, DPI-bypass/circumvention tooling, AI coding agents, or Russian regulatory compliance (152-ФЗ, 54-ФЗ, ОРИ, 236-ФЗ, СБП/Мир). Handles Telegram formatting (user-Markdown when posting as a user; HTML for bot/API), the Russian-prose-with-inline-English-tech-terms register, and the compressed anti-slop voice. Register and terminology glossary live in [[z-ru-tech-register]]. Not for long-form blog articles — those use z-concise-human-docs.
+description: Write, rewrite, or review short-form posts for the author's Telegram tech blog in his voice. Use whenever drafting a Telegram post, TG channel post, or "пост в телегу" on backend/Go, PostgreSQL, self-hosted infra, DPI-bypass tooling, AI coding agents, or Russian regulatory compliance. Handles Telegram formatting and the Russian-prose-with-inline-English-terms register from [[z-ru-tech-register]]. Not for long-form blog articles; see [[z-concise-human-docs]].
 ---
 
 # Telegram Post — Author Voice

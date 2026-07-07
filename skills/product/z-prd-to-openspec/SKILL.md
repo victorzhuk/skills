@@ -1,6 +1,6 @@
 ---
 name: z-prd-to-openspec
-description: Decomposes a PRD into OpenSpec change proposals using vertical slices — each slice cuts through every layer end-to-end and is independently verifiable — then writes openspec/changes/<change-id>/proposal.md, design.md, tasks.md, and spec deltas per slice. Use after [[z-to-prd]] produces docs/prd/<slug>.md, when the user wants a PRD turned into OpenSpec changes, or mentions "open spec this", "break this into changes", or "vertical slices". Does not implement the tasks — applying a change is a separate step run against the resulting openspec/changes/ directory. Does not decide test depth per slice; see [[z-testing-strategy]].
+description: Decomposes a PRD into OpenSpec change proposals using vertical slices — each cuts through every layer end-to-end and is independently verifiable — then writes proposal.md, design.md, tasks.md, and spec deltas per slice. Use after [[z-to-prd]] produces docs/prd/<slug>.md. Triggers on "open spec this", "break this into changes", "vertical slices". Does not implement tasks. Test depth per slice belongs to [[z-testing-strategy]].
 ---
 
 # PRD to OpenSpec

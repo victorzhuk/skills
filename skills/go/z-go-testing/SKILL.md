@@ -1,6 +1,6 @@
 ---
 name: z-go-testing
-description: Go testing patterns — table-driven tests, testify assert/require/mock/suite, parallelism, goleak, fuzzing, TDD baby steps, and test quality rules. Use when writing, reviewing, or auditing Go tests; choosing a testing approach; practicing TDD; or fixing flaky, order-dependent, or over-asserting tests. Triggers on "table-driven", "t.Parallel", "t.Helper", "testify", "require.NoError", "mock.On", "goleak", "t.Context()", "synctest", "fuzz", "red-green-refactor". Does not cover database container setup or HTTP handler patterns; see [[z-go-database]] for integration harness details. Does not cover choosing test depth (MVP vs regression) or when a behavior needs a BDD contract; see [[z-testing-strategy]].
+description: Go testing patterns — table-driven tests, testify assert/require/mock/suite, parallelism, goleak, fuzzing, TDD baby steps. Use when writing, reviewing, or auditing Go tests, or fixing flaky, order-dependent, or over-asserting tests. Triggers on "table-driven", "t.Parallel", "testify", "goleak", "red-green-refactor". Database/HTTP harnesses are [[z-go-database]]; test-depth choice [[z-testing-strategy]].
 ---
 
 # Go Testing

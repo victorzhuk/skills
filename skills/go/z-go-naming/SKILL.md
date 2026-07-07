@@ -1,14 +1,6 @@
 ---
 name: z-go-naming
-description: >
-  Go naming conventions — MixedCaps, package stuttering, constructors, booleans, acronyms,
-  enums, error strings, receivers, getters, and functional options. Use when writing or
-  reviewing Go code and a naming decision is involved: "New vs NewTypeName", "isConnected vs
-  connected", "ErrNotFound vs NotFoundError", "StatusReady at iota 0", "util/helper package
-  names", "ALL_CAPS constants", "Get-prefix on getters", "error string casing". Triggers on
-  "MixedCaps", "snake_case identifier", "stuttering", "receiver name". Does not cover
-  formatting, line-length, or style beyond names; see [[z-go-style]]. Does not cover
-  interface design depth; see [[z-go-interfaces]].
+description: Go naming conventions — MixedCaps, package stuttering, constructors, booleans, acronyms, enums, error strings, receivers, getters, functional options. Use for naming decisions like "New vs NewTypeName", "isConnected vs connected", "ErrNotFound vs NotFoundError". Triggers on "MixedCaps", "snake_case identifier", "stuttering", "receiver name". Does not cover formatting/line-length; see [[z-go-style]]. Interface depth belongs to [[z-go-interfaces]].
 ---
 
 # Go Naming

@@ -1,18 +1,6 @@
 ---
 name: z-go-cobra-patterns
-description: >
-  Cobra command-tree patterns for Go CLIs — command/subcommand shape, RunE vs
-  Run, PersistentPreRunE hook chain, args validators, flag binding, provider
-  interfaces, JSON/human output, shell completions, testing, and signal
-  handling. Use when adding or changing Cobra commands, flags, RunE handlers,
-  option structs, provider interfaces, JSON/human output, or command error
-  wrapping; also when reviewing a command package for anti-patterns
-  (package-level mutable state, business logic in RunE, len(args) in RunE).
-  Triggers on "cobra.Command", "RunE", "PersistentPreRunE", "SilenceUsage",
-  "AddCommand", "MatchAll", "ValidArgsFunction", "cmd.OutOrStdout".
-  Does not cover HTTP middleware, transport-layer routing, or context
-  propagation; see [[z-go-context]]. Does not cover env-var config parsing;
-  see [[z-go-env-v11]].
+description: Cobra command-tree patterns for Go CLIs — command shape, RunE vs Run, PersistentPreRunE hooks, args validators, flag binding, JSON/human output, and signal handling. Use when adding Cobra commands or RunE handlers, or reviewing a command package for anti-patterns. Triggers on "cobra.Command", "RunE", "PersistentPreRunE", "SilenceUsage", "AddCommand", "ValidArgsFunction". Does not cover HTTP middleware or env-var parsing; see [[z-go-context]], [[z-go-env-v11]].
 ---
 
 # Cobra Command Patterns

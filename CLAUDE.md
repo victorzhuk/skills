@@ -39,7 +39,7 @@ docs/inventory.md                   # provenance + public-sanitization log
 - Every `SKILL.md` needs YAML frontmatter (`---` block) with `name` and `description`.
 - `name` must match `^z-[a-z0-9]+(?:-[a-z0-9]+)*$` (lowercase, hyphen-separated, `z-` prefix), ≤ 64 chars, and be unique across the repo.
 - **The skill's directory name must equal its frontmatter `name`** — renaming one means renaming both.
-- `description` is required, ≤ 1024 chars.
+- `description` is required, ≤ 600 chars (house cap under the 1024 spec max), and the catalog-wide description total must stay ≤ 40,000 chars — harnesses skip skills once their budget (~50 KB) is exceeded, so the check fails before that cliff. Aim 300–450 chars per description.
 - `[[z-other-skill]]` wiki-links in a body must resolve to an existing skill `name`.
 - **No personal markers** anywhere under `skills/`: absolute home paths (`/home/...`, `/Users/...`), `~/.agents/references`, or `rules/commits.md`. This is the public-sanitization gate — when copying a private skill in, strip local paths and replace private references with generic or in-repo ones (`docs/inventory.md` records past substitutions).
 

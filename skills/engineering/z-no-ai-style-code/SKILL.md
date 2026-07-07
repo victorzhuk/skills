@@ -1,6 +1,6 @@
 ---
 name: z-no-ai-style-code
-description: Write like a senior maintainer of this specific project, not like a tutorial — natural short names, concise error context, structure that matches the surrounding code's idiom. Use when writing or reviewing any new code, especially in an unfamiliar language or after generating a first draft. Triggers on "applicationConfiguration", "UserServiceInterface"/"UserServiceImpl" pairs, "failed to X in the Y", verbose wrapper names, or a diff that reads noticeably more formal than the file around it. Does not cover comment content; see [[z-zero-comments]]. Does not cover language-specific naming/error conventions; follow that language's own style skill where one exists.
+description: Write like a senior maintainer of this project, not a tutorial — natural short names, concise error context, structure matching the surrounding code's idiom. Use when writing or reviewing new code, especially after a first draft. Triggers on "applicationConfiguration", "UserServiceInterface"/"UserServiceImpl" pairs, "failed to X in the Y", verbose wrapper names, or a diff reading more formal than its file. Does not cover comment content; see [[z-zero-comments]].
 ---
 
 # No AI-style code

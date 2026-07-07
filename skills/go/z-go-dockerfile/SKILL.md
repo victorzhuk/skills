@@ -1,6 +1,6 @@
 ---
 name: z-go-dockerfile
-description: Multi-stage Dockerfile authoring for Go services — a deps layer cached separately from source, BuildKit cache mounts for GOMODCACHE/GOCACHE, CGO_ENABLED=0 static builds, and the scratch vs distroless vs alpine final-image call. Use when writing or reviewing a service Dockerfile, picking a base image, wiring version stamping into a build, or explaining why a container has no shell to exec into. Triggers on "Dockerfile", "multi-stage build", "distroless", "scratch image", "BuildKit cache mount", "CGO_ENABLED=0", "nonroot user", ".dockerignore". Does not cover the pipeline that builds and pushes the image; see [[z-go-ci]]. Does not cover local build/version-stamping parity; see [[z-go-makefile]].
+description: Multi-stage Dockerfile authoring for Go services — a deps layer cached separately from source, BuildKit cache mounts, CGO_ENABLED=0 static builds, and the scratch vs distroless vs alpine call. Use when writing a service Dockerfile, picking a base image, or explaining why a container has no shell. Triggers on "Dockerfile", "multi-stage build", "distroless", "CGO_ENABLED=0". Build/push pipeline is [[z-go-ci]]; local parity [[z-go-makefile]].
 ---
 
 # Go Dockerfile

@@ -1,20 +1,6 @@
 ---
 name: z-go-grpc
-description: >
-  gRPC and protobuf service design in Go — field evolution and wire
-  compatibility, deadline propagation, the status-code/errdetails error
-  model, interceptor chain ordering plus otelgrpc's stats-handler wiring,
-  streaming vs unary, buf as the schema toolchain (lint, breaking,
-  codegen), and keepalive tuning. Use when defining or evolving a .proto
-  service, choosing unary vs streaming, wiring gRPC interceptors or a
-  stats handler, mapping domain errors to gRPC status codes, or setting up
-  buf lint/breaking in CI. Triggers on "protobuf", ".proto", "buf lint",
-  "buf breaking", "grpc-go", "connectrpc", "grpc interceptor",
-  "status.Error", "errdetails", "grpc-timeout". Does not cover context
-  propagation; see [[z-go-context]]. Does not cover OTel span/metric
-  patterns; see [[z-go-observability]]. Does not cover domain error
-  strategy; see [[z-go-errors]]. Does not cover resource/API semantics;
-  see [[z-go-api-design]]. See also: [[z-go-ogen]] (HTTP counterpart).
+description: gRPC and protobuf service design in Go — field evolution, deadline propagation, the status-code/errdetails error model, interceptor ordering, streaming vs unary, and buf as the schema toolchain. Use when evolving a .proto service or setting up buf lint/breaking. Triggers on "protobuf", "buf lint", "buf breaking", "grpc interceptor", "status.Error", "errdetails". Does not cover context, errors, or API semantics; see [[z-go-context]], [[z-go-errors]], [[z-go-api-design]].
 ---
 
 # gRPC services

@@ -1,15 +1,6 @@
 ---
 name: z-go-observability
-description: >
-  Production observability for Go services: structured logging with log/slog,
-  Prometheus metrics, OpenTelemetry tracing, pprof profiling, and signal
-  correlation. Use when instrumenting a service, adding metrics or spans,
-  migrating from zap/logrus/zerolog, correlating logs with trace_id/span_id,
-  or reviewing observability coverage. Triggers on "slog", "prometheus",
-  "opentelemetry", "otel", "pprof", "histogram", "trace_id", "slog.InfoContext",
-  "otelslog", "slog-zerolog", "exemplar". Does not cover performance profiling
-  methodology; see [[z-go-troubleshooting]]. Error handling strategy lives in
-  [[z-go-errors]].
+description: Production observability for Go services — structured logging with log/slog, Prometheus metrics, OpenTelemetry tracing, pprof profiling, signal correlation. Use when instrumenting a service, adding metrics or spans, migrating from zap/logrus/zerolog, or correlating logs with trace_id/span_id. Triggers on "slog", "prometheus", "opentelemetry", "otel", "pprof", "trace_id". Does not cover profiling methodology; see [[z-go-troubleshooting]]. Error handling strategy lives in [[z-go-errors]].
 ---
 
 # Go Observability

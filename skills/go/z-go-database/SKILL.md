@@ -1,15 +1,6 @@
 ---
 name: z-go-database
-description: >
-  Safe, explicit database access in Go — parameterized queries, NULLable columns,
-  transactions, isolation levels, connection pool, and migration tooling.
-  Use when writing or reviewing repository code, choosing between sqlx and pgx,
-  debugging connection leaks, or wiring transactions with SELECT FOR UPDATE.
-  Triggers on "database/sql", "sqlx", "pgx", "QueryContext", "sql.ErrNoRows",
-  "rows.Close", "BeginTx", "connection pool", "SetMaxOpenConns", "goose", "golang-migrate".
-  Does not cover SQL schema design or sqlc codegen; see [[z-go-sqlc]] for the latter.
-  Does not cover Redis caching or ClickHouse OLAP access; see [[z-go-caching]] and [[z-go-clickhouse]].
-  See also: [[z-go-errors]] (error wrapping, sentinel translation), [[z-go-clean-arch-di]] (repository layer wiring).
+description: Safe, explicit database access in Go — parameterized queries, NULLable columns, transactions, isolation levels, connection pool, migration tooling. Use when writing repository code, choosing sqlx vs pgx, debugging connection leaks, or wiring transactions with SELECT FOR UPDATE. Triggers on "sqlx", "pgx", "QueryContext", "sql.ErrNoRows", "BeginTx". Schema design/sqlc is [[z-go-sqlc]]; Redis/ClickHouse access is [[z-go-caching]]/[[z-go-clickhouse]].
 ---
 
 # Go database access

@@ -1,6 +1,6 @@
 ---
 name: z-ts-core
-description: Strict-mode TypeScript house conventions for a Go-first engineer's TS side — tsconfig baseline, zod boundary validation, Error-subclass error handling, and Biome/vitest/pnpm tooling defaults for small tools and minimal frontends. Use when writing or reviewing TypeScript, choosing tsconfig flags, deciding how to validate external data (API responses, env vars, Telegram initData), picking Biome vs ESLint or zod vs valibot, or setting up a new TS package. Triggers on "tsconfig", "strict mode", "zod schema", "discriminated union", "satisfies", "biome", "vitest", "tsx script". Does not cover Telegram Mini App specifics (initData HMAC, theme params, viewport); see [[z-ts-telegram-mini-app]]. Does not cover naming/error-message register; see [[z-no-ai-style-code]]. Does not cover abstraction restraint; see [[z-no-over-engineering]]. Does not cover test-depth classification; see [[z-testing-strategy]].
+description: Strict-mode TypeScript house conventions for a Go-first engineer — tsconfig baseline, zod boundary validation, Error-subclass handling, and Biome/vitest/pnpm defaults. Use when writing TypeScript or picking Biome vs ESLint or zod vs valibot. Triggers on "tsconfig", "strict mode", "zod schema", "satisfies", "biome", "vitest". Does not cover Mini App specifics, naming, or test-depth; see [[z-ts-telegram-mini-app]], [[z-no-ai-style-code]], [[z-testing-strategy]].
 ---
 
 # TypeScript core

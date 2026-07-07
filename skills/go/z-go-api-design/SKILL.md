@@ -1,6 +1,6 @@
 ---
 name: z-go-api-design
-description: REST API contract design for an OpenAPI-first Go shop — the semantics frozen into openapi.yaml before ogen generates the transport layer. Covers path versioning (/v1, additive evolution, breaking-change bump), keyset/cursor pagination over offset, Idempotency-Key on unsafe POST for duplicate-charge protection, RFC 9457 problem+json errors, PUT-replace vs PATCH-merge-patch semantics, plural-noun naming, RFC 3339 timestamps, UUIDv7 ids, and ETag/If-Match concurrency. Use when drafting or reviewing an openapi.yaml contract or resolving a versioning, pagination, idempotency, or error-shape question before code generation. Triggers on "REST versioning", "cursor pagination", "Idempotency-Key", "problem+json", "PATCH vs PUT", "ETag", "If-Match", "ORDER BY tie-breaker". Does not cover spec-to-code generation; see [[z-go-ogen]]. Does not cover resource/aggregate boundaries; see [[z-domain-modeling]]. Does not cover keyset SQL; see [[z-go-database]].
+description: REST API contract design for OpenAPI-first Go, before ogen generates the transport — path versioning, keyset/cursor pagination, Idempotency-Key, RFC 9457 problem+json errors, PATCH-merge-patch semantics, and ETag/If-Match concurrency. Triggers on "REST versioning", "cursor pagination", "Idempotency-Key", "problem+json", "PATCH vs PUT", "ETag". Does not cover codegen, aggregates, or keyset SQL; see [[z-go-ogen]], [[z-domain-modeling]], [[z-go-database]].
 ---
 
 # REST API contract design

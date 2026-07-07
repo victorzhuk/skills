@@ -1,6 +1,6 @@
 ---
 name: z-systematic-debugging
-description: Root-cause-first debugging loop — no fixes before a feedback loop exists and the cause is understood. Build a tight red-capable repro command, minimize it, rank falsifiable hypotheses, instrument one variable at a time, fix at the source, lock it with a regression test. Use for any bug, test failure, performance regression, or unexpected behavior — especially under time pressure, when "just one quick fix" seems obvious, or after a fix that didn't work. Triggers on "debug this", "diagnose", "why is this failing", "still broken". Does not cover Go-specific tooling (pprof, dlv, race detector); see [[z-go-troubleshooting]]. Regression-test placement follows [[z-tdd]].
+description: Root-cause-first debugging loop — no fixes before a feedback loop exists and the cause is understood. Build a tight red-capable repro, minimize it, rank falsifiable hypotheses, instrument one variable at a time, fix at the source. Use for any bug, test failure, or unexpected behavior — especially under time pressure or after a fix that didn't work. Triggers on "debug this", "diagnose", "why is this failing". Does not cover Go tooling (pprof, dlv, race detector); see [[z-go-troubleshooting]].
 ---
 
 # Systematic debugging

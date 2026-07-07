@@ -1,18 +1,6 @@
 ---
 name: z-go-llm-streaming
-description: >
-  Wire an LLM chat feature end-to-end in Go — decorate an SDK's own chat-model
-  interface (or a hand-rolled ChatCompleter when no SDK is in play), a
-  resilience decorator, SDK callback-based instrumentation, and Server-Sent
-  Events streaming with named events to HTTP clients. Use when adding a
-  streaming or non-streaming AI capability, choosing between decorating an SDK
-  interface vs a custom abstraction, wiring eino's callback handler, or
-  streaming named SSE events to a client. Triggers on "llm streaming",
-  "ChatCompleter", "SSE", "text/event-stream", "http.Flusher", "decorator",
-  "resilient chat", "stream chunks", "chat completer", "eino callbacks". Does
-  not cover provider SDK setup (eino, OpenAI client, etc.) or prompt
-  engineering. See also [[z-go-observability]] for OTel span and metrics
-  wiring, [[z-go-context]] for context propagation rules.
+description: Wire an LLM chat feature end-to-end in Go — decorate an SDK's chat-model interface (or a hand-rolled ChatCompleter), a resilience decorator, callback instrumentation, and Server-Sent Events streaming. Use when adding a streaming AI capability. Triggers on "llm streaming", "ChatCompleter", "SSE", "text/event-stream", "eino callbacks", "resilient chat". Does not cover SDK setup or OTel/context wiring; see [[z-go-observability]], [[z-go-context]].
 ---
 
 # LLM Streaming

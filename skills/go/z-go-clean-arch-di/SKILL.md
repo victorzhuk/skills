@@ -1,14 +1,6 @@
 ---
 name: z-go-clean-arch-di
-description: >
-  Clean architecture wiring, layer direction enforcement, and dependency injection patterns for Go services.
-  Use when wiring composition roots, designing service/use-case contract interfaces, choosing a DI approach
-  (manual vs library), phased injection, a blocking Run(ctx) lifecycle, or enforcing layer boundaries.
-  Triggers on "composition root", "DI library", "phased wiring", "constructor injection", "layer direction",
-  "service locator", "samber/do", "google/wire", "uber-go/fx", "NewApp", "internal/app".
-  Does not cover HTTP handler wiring specifics or database driver setup;
-  see [[z-go-database]] for that. For interface design principles see [[z-go-interfaces]].
-  Does not cover aggregate or bounded-context boundaries; see [[z-domain-modeling]].
+description: Clean architecture wiring, layer direction, and dependency injection for Go services. Use when wiring composition roots, designing service/use-case interfaces, choosing a DI approach (manual vs library), phased injection, or a blocking Run(ctx) lifecycle. Triggers on "composition root", "DI library", "constructor injection", "samber/do", "google/wire", "uber-go/fx". Interfaces are [[z-go-interfaces]]; bounded-context boundaries [[z-domain-modeling]].
 ---
 
 # Clean Architecture & DI

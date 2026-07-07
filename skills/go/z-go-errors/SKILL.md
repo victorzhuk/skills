@@ -1,14 +1,6 @@
 ---
 name: z-go-errors
-description: >
-  Idiomatic Go error handling, wrapping, inspection, and hygiene — the single
-  handling rule, sentinel vs typed errors, panic discipline, and audit recipes.
-  Use when creating, wrapping, or inspecting errors; auditing log-and-return
-  patterns; choosing between sentinels and custom types; or designing error
-  boundaries. Triggers on "errors.Is", "errors.As", "%w", "log and return",
-  "double handling", "sentinel error", "custom error type", "error hygiene".
-  Does not cover slog handler ecosystem or oops builder API; see [[z-go-observability]]
-  for structured logging setup and HTTP/gRPC boundary middleware.
+description: Idiomatic Go error handling, wrapping, inspection, and hygiene — the single handling rule, sentinel vs typed errors, panic discipline. Use when creating, wrapping, or inspecting errors; auditing log-and-return patterns; or designing error boundaries. Triggers on "errors.Is", "errors.As", "%w", "log and return", "double handling", "error hygiene". Does not cover slog ecosystem; see [[z-go-observability]].
 ---
 
 # Go errors

@@ -1,16 +1,6 @@
 ---
 name: z-go-ogen
-description: >
-  OpenAPI-first HTTP transport in Go using ogen (github.com/ogen-go/ogen).
-  Use when editing an OpenAPI spec, regenerating the transport layer, implementing
-  handlers against the generated Server interface, or mapping generated request/response
-  types to domain types. Triggers on "ogen", "go tool ogen", "openapi.yaml",
-  "generated Server interface", "ogen handler", "SecurityHandler", "UnimplementedHandler",
-  "ogen codegen". Does not cover raw SQL or database access; see [[z-go-sqlc]].
-  Does not cover building a custom code generator; see [[z-go-codegen-patterns]].
-  Does not cover contract-semantics decisions (versioning, pagination, idempotency,
-  error shape) that belong in the spec before codegen; see [[z-go-api-design]].
-  See also: [[z-go-clean-arch-di]] for wiring handlers into the composition root.
+description: OpenAPI-first HTTP transport in Go using ogen (github.com/ogen-go/ogen). Use when editing an OpenAPI spec, regenerating the transport layer, or implementing handlers against the generated Server interface. Triggers on "ogen", "go tool ogen", "openapi.yaml", "generated Server interface", "SecurityHandler", "UnimplementedHandler". Does not cover database access, custom codegen, or contract semantics; see [[z-go-sqlc]], [[z-go-codegen-patterns]], and [[z-go-api-design]].
 ---
 
 # OpenAPI transport with ogen

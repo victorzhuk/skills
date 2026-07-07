@@ -1,6 +1,6 @@
 ---
 name: z-no-over-engineering
-description: YAGNI discipline for the smallest correct change — no interfaces "for testing", no DTOs when a domain struct suffices, no premature package splits or configuration layers. Use when designing a new type, weighing an abstraction, reviewing a PR for scope creep, or asked to "make it more flexible" or "future-proof" before a second concrete need exists. Triggers on "interface for testing", "just in case", "future flexibility", "what if we need to swap", "extensible". Does not cover which concrete pattern to use once complexity is real; see the domain skill for that (e.g. clean-arch/DI skills for layering, interface-design skills for when an interface earns its keep).
+description: YAGNI discipline for the smallest correct change — no interfaces "for testing", no DTOs when a domain struct suffices, no premature package splits or config layers. Use when designing a new type, weighing an abstraction, or reviewing a PR for scope creep before a second concrete need exists. Triggers on "interface for testing", "just in case", "future flexibility", "extensible". Once complexity is real, the pattern choice belongs to [[z-go-clean-arch-di]] or [[z-go-interfaces]].
 ---
 
 # No over-engineering

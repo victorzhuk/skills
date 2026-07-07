@@ -1,6 +1,6 @@
 ---
 name: z-tdd
-description: Red-green loop discipline that produces tests worth keeping — tests written at pre-agreed seams through public interfaces, expected values from an independent source of truth, one vertical slice per cycle. Use when building a feature or fixing a bug test-first, when the user mentions "TDD" or "red-green-refactor", or when reviewing tests for implementation coupling. Triggers on "test-first", "failing test", "tracer bullet", "tautological test". Does not choose test depth or classify MVP vs regression work; see [[z-testing-strategy]]. Does not cover Go test mechanics; see [[z-go-testing]]. Seam vocabulary lives in [[z-deep-modules]].
+description: Red-green loop discipline that produces tests worth keeping — tests at pre-agreed seams through public interfaces, expected values from an independent source of truth, one vertical slice per cycle. Use when building a feature or fixing a bug test-first. Triggers on "TDD", "red-green-refactor", "test-first", "failing test", "tracer bullet". Does not choose test depth; see [[z-testing-strategy]]. Go mechanics belong to [[z-go-testing]].
 ---
 
 # TDD
