@@ -1,6 +1,6 @@
 ---
 name: z-to-prd
-description: Synthesizes the grilled idea, design brief, and any returned prototype into a PRD — problem statement, solution, user stories, implementation/testing decisions, out of scope — written to docs/prd/<slug>.md. Use after [[z-grill-with-docs]], plus [[z-design-brief]] or [[z-design-handoff]] on UI ideas, once decisions are resolved, or when the user asks for a PRD. Synthesis only, not a reason to re-interview. Does not decompose the PRD into changes; see [[z-prd-to-openspec]].
+description: Synthesizes the grilled idea, design brief, and any returned prototype into a PRD — problem statement, solution, user stories, implementation/testing decisions, out of scope — written to docs/prd/{slug}.md. Use after [[z-grill-with-docs]], plus [[z-design-brief]] or [[z-design-handoff]] on UI ideas, once decisions are resolved, or when the user asks for a PRD. Synthesis only, not a reason to re-interview. Does not decompose the PRD into changes; see [[z-prd-to-openspec]].
 ---
 
 # To PRD

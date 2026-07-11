@@ -1,6 +1,6 @@
 ---
 name: z-design-brief
-description: Turns a grilled idea into a design brief by walking through each screen one at a time — what it shows, what a user can act on, how screens connect — then writes docs/design/<slug>-brief.md. Use when an idea from [[z-grill-with-docs]] has a UI surface. Triggers on "design brief", "what should this look like", "walk through the screens". Skip for backend/CLI-only ideas. Does not build the design system; see [[z-design-handoff]].
+description: Turns a grilled idea into a design brief by walking through each screen one at a time — what it shows, what a user can act on, how screens connect — then writes docs/design/{slug}-brief.md. Use when an idea from [[z-grill-with-docs]] has a UI surface. Triggers on "design brief", "what should this look like", "walk through the screens". Skip for backend/CLI-only ideas. Does not build the design system; see [[z-design-handoff]].
 ---
 
 # Design brief

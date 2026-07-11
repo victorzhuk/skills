@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+### Patch Changes
+
+- Remove angle brackets from skill descriptions — the Claude app rejects them as XML tags on upload. Placeholder tokens (`<slug>`) become `{slug}`, the merge-conflicts trigger drops the literal `<<<<<<< HEAD` marker, and the pgvector description spells out its distance operators instead of using `<->`/`<=>`/`<#>`. `npm run check` now flags any `<`/`>` in a description so the regression can't return.
+
 ## 0.5.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 ---
 name: z-go-pgvector
-description: pgvector-backed similarity search in Go — declaring vector(N) columns, encoding []float32 via pgvector.NewVector, distance operators (<->, <=>, <#>), ORDER BY ... LIMIT k queries, and choosing exact scan vs ivfflat vs hnsw indexes. Use when adding embedding storage or writing ANN queries. Triggers on "pgvector", "vector(1536)", "cosine distance", "<=>", "ivfflat", "pgvector.NewVector". Does not cover general SQL access or migrations; see [[z-go-database]].
+description: pgvector-backed similarity search in Go — declaring vector(N) columns, encoding []float32 via pgvector.NewVector, L2/cosine/inner-product distance operators, ORDER BY ... LIMIT k queries, and choosing exact scan vs ivfflat vs hnsw indexes. Use when adding embedding storage or writing ANN queries. Triggers on "pgvector", "vector(1536)", "cosine distance", "ivfflat", "hnsw", "pgvector.NewVector". Does not cover general SQL access or migrations; see [[z-go-database]].
 ---
 
 # pgvector similarity search in Go

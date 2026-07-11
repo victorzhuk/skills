@@ -1,6 +1,6 @@
 ---
 name: z-merge-conflicts
-description: Resolve an in-progress git merge or rebase conflict by intent, not by picking sides blindly — read both sides' commits, PRs, and tickets, preserve both intents where possible, never abort, and run the project's checks before concluding. Use when a merge, rebase, or cherry-pick stops on conflicts, or when the user asks to resolve conflicts. Triggers on "merge conflict", "rebase conflict", "both modified", "<<<<<<< HEAD".
+description: Resolve an in-progress git merge or rebase conflict by intent, not by picking sides blindly — read both sides' commits, PRs, and tickets, preserve both intents where possible, never abort, and run the project's checks before concluding. Use when a merge, rebase, or cherry-pick stops on conflicts, or when the user asks to resolve conflicts. Triggers on "merge conflict", "rebase conflict", "both modified", "conflict markers".
 ---
 
 # Merge conflicts

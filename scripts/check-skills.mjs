@@ -79,6 +79,9 @@ for (const file of skillFiles) {
   if (meta.style === "plain" && meta.descLine.includes(": ")) {
     errors.push(`${rel}: description has unquoted ": " — breaks strict YAML parsers, quote the value`);
   }
+  if (/[<>]/.test(meta.description)) {
+    errors.push(`${rel}: description contains an angle bracket (< or >) — the Claude app rejects XML tags in descriptions; use {placeholder} or reword`);
+  }
   if (basename(dirname(file)) !== meta.name) {
     errors.push(`${rel}: directory basename must match frontmatter name`);
   }
