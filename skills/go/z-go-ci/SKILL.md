@@ -160,12 +160,13 @@ Each of these is a real, well-known option and worth adding once a specific risk
 | Dependabot (`.github/dependabot.yml`) or Renovate (`renovate.json`) | Automated dependency-bump PRs | Dependency drift has actually caused a problem, or the team wants it hands-off |
 | Multi-platform Docker + `provenance: mode=max` + `sbom: true` + Trivy scan | `linux/amd64,linux/arm64` images, supply-chain attestations, vulnerability scanning | The image ships to more than one architecture, or a consumer requires attestations |
 | `go mod tidy && git diff --exit-code` tidy-check | Catches stale `go.sum` | `go.sum` drift has bitten the project before |
+| OIDC federation (`aws-actions/configure-aws-credentials`, `google-github-actions/auth`, etc.) | Exchanges a short-lived, workflow-scoped identity token for cloud credentials instead of a static key in secrets | A workflow needs to authenticate to a cloud provider — prefer this over long-lived cloud secrets by default, not just for high-risk repos |
 
 ## Do not
 
 - Omit `-race` from the test job — data races are undefined behaviour.
 - Cache integration test results — use `-count=1` for service-backed tests.
-- Use `@master` or `@latest` for action refs — pin to a major version tag (`@v4`).
+- Use `@master` or `@latest` for action refs — pin to a major version tag (`@v4`) as the baseline; pin third-party (non-`actions/`, non-`docker/`) actions to a full commit SHA instead where supply-chain policy requires an immutable reference, since a tag can be moved.
 - Grant `contents: write` globally — scope it to the release job.
 - Add a version matrix, `-shuffle=on`, CodeQL, Dependabot, multi-platform Docker, or a tidy-check by default "just in case" — each is real, useful hardening, but add it for a specific risk, not preemptively.
 

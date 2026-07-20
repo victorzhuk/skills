@@ -45,6 +45,8 @@ linters:
     - bodyclose
     - sqlclosecheck
     - nolintlint         # enforces correct nolint usage
+  exclusions:
+    generated: strict    # default — skips files matching the Go generated-file convention
 
 formatters:
   enable:
@@ -56,6 +58,8 @@ issues:
 ```
 
 Pin the version in CI; never rely on "latest" from CI runners.
+
+Generated code (sqlc, protoc, mockgen, ogen output) doesn't need lint findings acted on — the v2 replacement for the old `issues.exclude-files`/`issues.exclude-dirs` keys is `linters.exclusions.generated` (`strict`/`lax`/`disable`, default `strict`, detected via the `// Code generated ... DO NOT EDIT.` header) plus `linters.exclusions.paths` / `formatters.exclusions.paths` for explicit patterns outside that convention (`zz_generated\..+\.go$`, vendored dirs).
 
 ## Two real tiers, not one allowlist
 

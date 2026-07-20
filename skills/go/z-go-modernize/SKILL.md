@@ -30,6 +30,8 @@ on it.
 | `os.Root` missing on user-supplied paths | Add `os.Root` to prevent path traversal | 1.24 |
 | `rsa.EncryptPKCS1v15` for new code | `rsa.EncryptOAEP` or HPKE/KEM | 1.26 |
 | `net/http/httputil.ReverseProxy.Director` | `.Rewrite` | 1.20 |
+| Injected `rand.Reader` for deterministic `rsa`/`ecdsa`/`ed25519`/`ecdh` keygen | now ignored — real crypto-random is always used; switch to `testing/cryptotest.SetGlobalRandom`, or `GODEBUG=cryptocustomrand=1` as a stopgap | 1.26 |
+| Long-lived cache retaining entries forever | `weak.Pointer[T]` + `runtime.AddCleanup` for eviction | 1.24 |
 
 Run `govulncheck ./...` as part of any modernization pass.
 
@@ -69,6 +71,32 @@ v := sync.OnceValue(compute)()  // new — inline, type-safe
 wg.Add(1)
 go func() { defer wg.Done(); work() }()  // old
 wg.Go(func() { work() })                 // new
+
+// range-over-func / iter.Seq, iter.Seq2 (1.23) — custom iterators
+func Items(m map[string]int) iter.Seq2[string, int] {
+	return func(yield func(string, int) bool) {
+		for k, v := range m {
+			if !yield(k, v) { return }
+		}
+	}
+}
+
+// clear builtin (1.21) — zero a map or slice
+clear(m)                         // deletes all map entries
+clear(s)                         // zeroes slice elements, keeps length
+
+// maps/slices iterator helpers (1.23, slices.Concat 1.22) over manual loops
+for k := range maps.Keys(m) { ... }              // old: for k := range m { _ = k }
+sorted := slices.Sorted(maps.Keys(m))            // old: collect keys + sort.Strings
+collected := slices.Collect(seq)                 // old: manual append loop over an iterator
+merged := slices.Concat(a, b, c)                 // old: append(append(a, b...), c...)
+for chunk := range slices.Chunk(s, 100) { ... }  // old: manual index-slicing loop
+
+// unique.Handle[T] (1.23) — interning high-cardinality keys
+h := unique.Make(s)              // equal values dedupe to one handle, O(1) comparison
+
+// new(expr) (1.26) — allocate + initialize in one step
+ptr := new(true)                 // old: v := true; ptr := &v
 ```
 
 ### Lower — gradual improvement
@@ -96,6 +124,8 @@ for b.Loop() { ... }             // replaces: for i := 0; i < b.N; i++
 
 // testing/synctest (1.24+) for time-dependent concurrent tests
 // Use synctest.Test instead of synctest.Run (1.25)
+// synctest.Wait (1.24) blocks until every goroutine in the bubble is durably
+// idle — use it over a hand-rolled Clock interface for controlling fake time
 ```
 
 Loop-variable capture (`tt := tt`) is unnecessary on Go 1.22+. Remove it.
@@ -115,6 +145,8 @@ coordinate first — this is disruptive.
 - Tool deps in `go.mod` `tool` directives (1.24) instead of `tools.go`.
 - `encoding/json/v2` is experimental (`GOEXPERIMENT=jsonv2`, 1.25+) — do not
   adopt without explicit opt-in from the team.
+- `cmd/doc` and `go tool doc` are deleted (1.26) — `go doc` is the drop-in
+  replacement, same flags and output.
 
 ## Quick Reference
 
@@ -132,6 +164,10 @@ coordinate first — this is disruptive.
 | Benchmark | `for i < b.N` | `for b.Loop()` | 1.24 |
 | Path safety | bare `os.Open(userPath)` | `os.Root` | 1.24 |
 | Finalizers | `runtime.SetFinalizer` | `runtime.AddCleanup` | 1.24 |
+| Caching | strong refs held forever | `weak.Pointer[T]` | 1.24 |
+| Interning | manual dedup map | `unique.Handle[T]` | 1.23 |
+| Iterating | manual append loop | `slices.Collect` / `slices.Sorted` | 1.23 |
+| Pointer init | `v := x; p := &v` | `new(x)` | 1.26 |
 
 ## Do not
 
