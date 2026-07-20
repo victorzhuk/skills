@@ -1,6 +1,6 @@
 ---
 name: z-ru-tech-register
-description: Russian tech prose in the native senior-engineer register — Latin-vs-Cyrillic term choice, serious-register structure, erasing tells that mark a text as machine-written. Use writing or reviewing any Russian technical text — post, article, doc, README, comment. Triggers on "напиши по-русски", "чтобы не выглядело как нейрослоп". Owns the bilingual RU/EN glossary by theme. Telegram voice is [[z-tg-post]]; AI-fingerprint removal [[z-fuck-slop]]; English docs [[z-concise-human-docs]].
+description: Russian tech prose in the native senior-engineer register — Latin-vs-Cyrillic term choice, serious-register structure, erasing tells that mark a text as machine-written. Use writing or reviewing any Russian technical text — post, article, doc, README, comment. Triggers on "напиши по-русски", "чтобы не выглядело как нейрослоп". Owns the bilingual RU/EN glossary by theme. AI-fingerprint removal [[z-fuck-slop]]; English docs [[z-concise-human-docs]].
 ---
 
 # RU Tech Register
@@ -67,4 +67,4 @@ Before delivering:
 - `references/terminology.md` — bilingual RU/EN glossary by theme cluster; the Latin/Cyrillic call per term.
 - `references/register.md` — community register anchors (channels, books), serious-vs-infostyle contrast, legal caveats with current enforcement.
 
-Telegram post format and the author's channel structure: [[z-tg-post]]. Statistical AI fingerprints regardless of language: [[z-fuck-slop]]. Concise English docs: [[z-concise-human-docs]].
+Statistical AI fingerprints regardless of language: [[z-fuck-slop]]. Concise English docs: [[z-concise-human-docs]].

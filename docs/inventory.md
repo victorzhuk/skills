@@ -148,15 +148,13 @@ with the catalog's Biome default), everything in `anthropics/skills`
 
 ## Phase 5 — RU writing register
 
-Two writing skills authored directly in this repo: `z-tg-post` (the author's
-Telegram-post format and voice) and `z-ru-tech-register` (the general RU tech
-register it builds on — the Latin/Cyrillic terminology glossary, community
-register conventions, and legal caveats, factored out of the initial
-`z-tg-post` draft so any RU tech text can use them).
+One writing skill authored directly in this repo: `z-ru-tech-register` — the
+general RU tech register (the Latin/Cyrillic terminology glossary, community
+register conventions, and legal caveats), factored out of a Telegram-post
+skill draft (since removed) so any RU tech text can use it.
 
 | Skill | Category | Origin | Destination |
 |---|---|---|---|
-| `z-tg-post` | `writing` | authored directly in this repo | [`skills/writing/z-tg-post/SKILL.md`](../skills/writing/z-tg-post/SKILL.md) |
 | `z-ru-tech-register` | `writing` | authored directly in this repo | [`skills/writing/z-ru-tech-register/SKILL.md`](../skills/writing/z-ru-tech-register/SKILL.md) |
 
 ## Public cleanup applied
