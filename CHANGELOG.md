@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+### Minor Changes
+
+- [`41208b4`](https://github.com/victorzhuk/skills/commit/41208b49115e6a2837bfa8a9e0ffc5dad532d3e5) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Remove the `z-tg-post` writing skill. Its general RU tech register content lives on in `z-ru-tech-register`; cross-references to `z-tg-post` were dropped from the READMEs, the inventory doc, and `z-ru-tech-register`.
+
 ## 0.5.1
 
 ### Patch Changes
