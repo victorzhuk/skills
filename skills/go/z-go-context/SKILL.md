@@ -2,12 +2,10 @@
 name: z-go-context
 description: >
   Idiomatic context.Context usage in Go — propagation, cancellation, timeouts,
-  deadlines, WithoutCancel, and request-scoped values. Use when designing context
-  propagation across layers, debugging leaked or non-cancelled contexts, choosing
-  between context.Background/TODO/WithoutCancel, or storing values in context.
-  Triggers on "context.WithCancel", "context.WithTimeout", "ctx.Done()",
-  "WithoutCancel", "context.Background in handler", "context value key".
-  Does not cover concurrency patterns; see [[z-go-concurrency]].
+  deadlines, WithoutCancel, request-scoped values. Triggers on
+  "context.WithCancel", "context.WithTimeout", "ctx.Done()", "WithoutCancel",
+  "context.Background in handler", "context value key". Does not cover
+  concurrency patterns; see [[z-go-concurrency]].
 ---
 
 # context.Context

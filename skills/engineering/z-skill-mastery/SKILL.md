@@ -1,6 +1,6 @@
 ---
 name: z-skill-mastery
-description: Author, refactor, and review agent skills in this repo's house style. Use when creating a new skill, editing SKILL.md frontmatter or body, deciding what belongs in the description vs the body vs references/, choosing model-invoked vs user-invoked, or auditing a skill for bloat and drift. Triggers on "write a skill", "new SKILL.md", "improve this skill", "skill description", "progressive disclosure", "does this skill trigger". Covers the writing discipline, not domain content — for a specific domain follow that domain's own z-* skill.
+description: Author, refactor, and review agent skills in this repo's house style. Use when creating a skill, editing frontmatter/body, choosing description vs body vs references/, model- vs user-invoked, or auditing bloat/drift. Triggers on "write a skill", "new SKILL.md", "improve this skill", "skill description", "progressive disclosure". Covers writing discipline, not domain content — see that domain's own z-* skill.
 ---
 
 # Skill authoring

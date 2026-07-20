@@ -1,14 +1,11 @@
 ---
 name: z-go-modernize
 description: >
-  Modernize Go code and tooling to current idioms (Go 1.21–1.26). Covers
-  deprecated package replacements, language feature adoption, stdlib upgrades,
-  and test/bench patterns. Use when reviewing code for old patterns, upgrading
-  a Go version, auditing for security-relevant deprecations, or asked to
-  "modernize", "upgrade Go", or "clean up old code". Triggers on "interface{}",
-  "math/rand", "rand.Seed", "sort.Slice", "ioutil", "testing.T loop", "range
-  over int", "sync.Once pattern", "slog migration". Does not cover linter
-  config (see [[z-go-ci]]) or error wrapping conventions (see [[z-go-errors]]).
+  Modernize Go code and tooling to current idioms (Go 1.21–1.26) — deprecated
+  package replacements, language feature adoption, stdlib upgrades, and
+  test/bench patterns. Triggers on "interface{}", "math/rand", "ioutil",
+  "sort.Slice", "range over int", "slog migration". Does not cover linter
+  config; see [[z-go-ci]]. Does not cover error wrapping; see [[z-go-errors]].
 ---
 
 # Go Modernization

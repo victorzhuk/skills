@@ -1,6 +1,6 @@
 ---
 name: z-grill-with-docs
-description: Relentless one-question-at-a-time interview that stress-tests an idea or plan against the project's existing glossary and ADRs, researching the codebase and the web before asking rather than guessing, and updates CONTEXT.md and docs/adr/ inline as terms and decisions crystallize. Use when the user wants to grill an idea, stress-test a plan, mentions "grill with docs" or "grill me", or asks to sharpen a design before building anything. Does not define bounded contexts or aggregate boundaries; see [[z-domain-modeling]]. Does not turn the resulting idea into a PRD; see [[z-to-prd]].
+description: Relentless one-question-at-a-time interview stress-testing an idea or plan against the project's glossary and ADRs, researching the codebase and web before asking rather than guessing, updating CONTEXT.md and docs/adr/ inline as decisions crystallize. Triggers on "grill with docs", "grill me", stress-test a plan, sharpen a design before building. Does not define bounded contexts/aggregates; see [[z-domain-modeling]]. Does not turn the idea into a PRD; see [[z-to-prd]].
 ---
 
 # Grill with docs

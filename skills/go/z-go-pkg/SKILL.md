@@ -1,6 +1,6 @@
 ---
 name: z-go-pkg
-description: Query the official pkg.go.dev API (v1beta) for Go module and package metadata — package info, module versions, symbols, imported-by, search, and vulnerabilities. Use when you need authoritative, machine-readable data about published Go modules instead of scraping pkg.go.dev HTML or guessing. Triggers include questions about which version of a module is current, listing the symbols a package declares, finding what imports a package, checking whether a module is vulnerable, searching for Go packages by topic, or any tooling/automation that needs Go ecosystem metadata.
+description: Query the official pkg.go.dev API (v1beta) for Go module and package metadata — package info, module versions, symbols, imported-by, search, and vulnerabilities. Use for authoritative, machine-readable Go module data instead of scraping pkg.go.dev HTML or guessing. Triggers on module version lookup, symbol listing, imported-by search, vulnerability check, package search.
 ---
 
 # pkg.go.dev API

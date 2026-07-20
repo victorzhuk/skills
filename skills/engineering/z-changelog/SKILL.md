@@ -1,6 +1,6 @@
 ---
 name: z-changelog
-description: Maintain a Keep a Changelog 1.1.0 CHANGELOG.md — [Unreleased] upkeep, the six change types, the release cut, YANKED, the SemVer note, and the three real project styles (hand-maintained, Changesets, git-cliff/goreleaser) and how they coexist. Use when writing changelog entries, scaffolding a CHANGELOG.md, cutting a release, or asked about "changelog", "release notes", "[Unreleased]", or "changeset". Triggers on "CHANGELOG.md", "keep a changelog", "release notes", "changelog entry", "changeset". Does not cover commit message format.
+description: Maintain a Keep a Changelog 1.1.0 CHANGELOG.md — [Unreleased] upkeep, the six change types, the release cut, YANKED, the SemVer note, and the three real project styles (hand-maintained, Changesets, git-cliff/goreleaser) and how they coexist. Triggers on "CHANGELOG.md", "keep a changelog", "release notes", "changelog entry", "changeset", "[Unreleased]". Does not cover commit message format.
 allowed-tools: Read Edit Write Bash(git:*) Bash(git-cliff:*) Bash(date:*)
 ---
 

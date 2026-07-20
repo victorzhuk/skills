@@ -2,12 +2,10 @@
 name: z-go-security
 description: >
   Go security hardening — injection prevention, crypto, path traversal, secrets,
-  timing safety, and race-free concurrency. Use when writing or reviewing code
-  that handles user input, crypto operations, file I/O, HTTP, auth tokens, or
-  concurrent shared state. Triggers on "sql injection", "exec.Command", "math/rand",
-  "crypto/rand", "path traversal", "ConstantTimeCompare", "gosec", "govulncheck",
-  "hardcoded secret", "race condition". Does not cover database query patterns;
-  see [[z-go-sqlc]]. Does not cover config/secret loading; see [[z-go-env-v11]].
+  timing safety, and race-free concurrency. Triggers on "sql injection",
+  "exec.Command", "crypto/rand", "path traversal", "hardcoded secret", "race
+  condition". Does not cover database query patterns; see [[z-go-sqlc]]. Does
+  not cover config/secret loading; see [[z-go-env-v11]].
 ---
 
 # Go Security

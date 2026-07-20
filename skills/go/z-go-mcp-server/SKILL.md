@@ -1,6 +1,6 @@
 ---
 name: z-go-mcp-server
-description: MCP (Model Context Protocol) server authoring in Go — SDK choice, transport selection, stdio discipline, tool design, and testing. Use when building a Go MCP server, adding tools to one, choosing between the official modelcontextprotocol/go-sdk and mark3labs/mcp-go, picking stdio vs streamable HTTP, or writing tool descriptions and error messages an agent can act on. Does not cover consuming or calling LLMs from Go; see [[z-go-llm-streaming]]. Does not cover general context propagation; see [[z-go-context]].
+description: MCP (Model Context Protocol) server authoring in Go — SDK choice, transport selection, stdio discipline, tool design, and testing. Use when building or extending a Go MCP server — modelcontextprotocol/go-sdk vs mark3labs/mcp-go, stdio vs streamable HTTP, agent-actionable tool/error descriptions. Does not cover consuming/calling LLMs from Go; see [[z-go-llm-streaming]]. Does not cover context propagation; see [[z-go-context]].
 ---
 
 # Go MCP server

@@ -1,6 +1,6 @@
 ---
 name: z-session-handoff
-description: Compact the current conversation into a handoff document a fresh agent can resume from — goal, current state, decisions with their why, next steps, gotchas, and suggested skills — referencing existing artifacts by path instead of duplicating them, with secrets redacted. Use when a session nears its context limit, when handing work to another agent or a teammate, or when the user says "handoff", "write a handoff", or "continue this in a new session". Does not summarize for humans reading later; it briefs an agent that must act next.
+description: Compact the current conversation into a handoff document a fresh agent can resume from — goal, current state, decisions with their why, next steps, gotchas, suggested skills — referencing artifacts by path, secrets redacted. Triggers on context limit approaching, handing off to another agent/teammate, "handoff", "write a handoff", "continue this in a new session". Does not summarize for humans; it briefs an agent that must act next.
 ---
 
 # Session handoff

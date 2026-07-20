@@ -1,6 +1,6 @@
 ---
 name: z-go-ci
-description: GitHub Actions CI/CD for Go projects — test matrix, race detection, golangci-lint, govulncheck, CodeQL, GoReleaser, Dependabot/Renovate, and Docker image pipelines. Use when setting up or auditing CI, adding quality gates, configuring security scanning, or wiring release automation. Triggers on "github actions", "workflow", "golangci-lint ci", "govulncheck", "goreleaser", "dependabot", "renovate", "codecov", "release pipeline". Does not cover lint rule selection; see [[z-go-lint]] for lint configuration.
+description: GitHub Actions CI/CD for Go projects — test matrix, race detection, golangci-lint, govulncheck, CodeQL, GoReleaser, Dependabot/Renovate, Docker image pipelines. Triggers on "github actions", "workflow", "govulncheck", "goreleaser", "dependabot", "release pipeline". Does not cover lint rule selection; see [[z-go-lint]].
 allowed-tools: Read Edit Write Bash(go:*) Bash(golangci-lint:*) Bash(git:*) Bash(goreleaser:*) Bash(gh:*)
 ---
 

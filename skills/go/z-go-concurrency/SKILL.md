@@ -1,13 +1,11 @@
 ---
 name: z-go-concurrency
 description: >
-  Goroutines, channels, sync primitives, worker pools, and pipeline patterns for production Go.
-  Use when writing or reviewing concurrent code — goroutine lifecycle, channel ownership,
-  errgroup, singleflight, fan-out/fan-in, or race-condition audits. Triggers on
-  "goroutine leak", "errgroup", "singleflight", "sync.Mutex", "sync.Pool", "worker pool",
-  "fan-out", "select ctx.Done", "go func", "channel ownership".
-  Does not cover context propagation rules; see [[z-go-context]].
-  Does not cover goroutine leak detection tooling; see [[z-go-troubleshooting]].
+  Goroutines, channels, sync primitives, worker pools, and pipeline patterns for
+  production Go. Triggers on "goroutine leak", "errgroup", "singleflight",
+  "sync.Mutex", "worker pool", "channel ownership". Does not cover context
+  propagation; see [[z-go-context]]. Does not cover leak-detection tooling; see
+  [[z-go-troubleshooting]].
 ---
 
 # Go Concurrency

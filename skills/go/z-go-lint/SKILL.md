@@ -2,13 +2,11 @@
 name: z-go-lint
 description: >
   Configure and run golangci-lint, suppress warnings correctly, fix common lint
-  findings, and integrate linting into CI/pre-commit hooks. Use when configuring
-  .golangci.yml, interpreting lint output, adding nolint directives, adopting
-  linting on a legacy codebase, or running a code review pre-check. Triggers on
-  "golangci-lint", "nolint", "go vet", "staticcheck", "revive", "gosec",
-  "golangci-lint run", ".golangci.yml". Does not cover style rules that linters
-  enforce; see [[z-go-naming]] and [[z-go-safety]] for those. Does not cover CI
-  pipeline setup; see [[z-go-ci]].
+  findings, and integrate linting into CI/pre-commit hooks — legacy-codebase
+  adoption and code-review pre-checks included. Triggers on "golangci-lint",
+  "nolint", "go vet", "staticcheck", "revive", "gosec". Does not cover style
+  rules linters enforce; see [[z-go-naming]], [[z-go-safety]]. Does not cover
+  CI pipeline setup; see [[z-go-ci]].
 ---
 
 # Go Lint

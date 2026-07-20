@@ -1,6 +1,6 @@
 ---
 name: z-verify-before-done
-description: Evidence before completion claims — run the verification command fresh, read its full output, then state the result together with the evidence; "should work" is not a status. Use before claiming anything is done, fixed, or passing, before committing or opening a PR, and before trusting a subagent's success report. Triggers on "done", "fixed", "should work now", "tests pass" stated without output, "looks correct". Does not define what to verify or how deep; see [[z-testing-strategy]]. Bug-fix claims also need the original repro re-run; see [[z-systematic-debugging]].
+description: Evidence before completion claims — run the verification command fresh, read its full output, then state the result together with the evidence; "should work" is not a status. Use before completion claims, commits, PRs, or trusting a subagent's report. Triggers on "done", "fixed", "should work now", "tests pass" without output, "looks correct". Does not define what/how deep to verify; see [[z-testing-strategy]]. Bug-fix claims need the repro re-run; see [[z-systematic-debugging]].
 ---
 
 # Verify before done

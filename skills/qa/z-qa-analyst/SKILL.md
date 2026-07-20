@@ -1,6 +1,6 @@
 ---
 name: z-qa-analyst
-description: "Codebase research and prioritized test-plan authoring — build a requirements-traceability matrix mapping source files to test files, tier risk into P0/P1/P2, and record honest coverage status from the project's own coverage tool. Auto-activates for: test planning, QA analysis, coverage mapping, test priority classification, acceptance traceability, writing or updating a test plan. Does not cover test stub generation; see [[z-qa-spec-writer]]. Does not cover running or triaging tests; see [[z-qa-debugger]]."
+description: "Codebase research and prioritized test-plan authoring — build a requirements-traceability matrix mapping source files to test files, tier risk into P0/P1/P2, and record honest coverage status from the project's own coverage tool. Auto-activates for: test planning, QA analysis, coverage mapping, test priority classification, acceptance traceability. Does not cover test stub generation; see [[z-qa-spec-writer]]. Does not cover running/triaging tests; see [[z-qa-debugger]]."
 ---
 
 # Test Plan Analyst
