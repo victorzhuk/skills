@@ -32,6 +32,7 @@ cp -R skills/* ~/.agents/skills/
 ```text
 skills/
   cpp/          # C++ skills
+  data/         # analytics data pipeline skills
   dotnet/       # .NET skills
   engineering/  # changelog, architecture, tooling, skill authoring
   flutter/      # Flutter skills
@@ -39,6 +40,7 @@ skills/
   infra/        # Kubernetes, Terraform, self-hosted, and deploy-pipeline skills
   lisp/         # embeddable Lisp VM skills
   lua/          # embedded Lua scripting skills
+  network/      # network fundamentals and debugging skills
   php/          # PHP skills
   product/      # idea-to-OpenSpec pipeline: grilling, design briefs, PRDs
   python/       # Python skills
@@ -73,6 +75,12 @@ Changesets handles version notes; GitHub Actions validates skills and opens vers
 Modern C++ for native/perf modules and codegen targets.
 
 - **[z-cpp-core](./skills/cpp/z-cpp-core/SKILL.md)** — Modern C++ for native/perf modules and codegen targets — RAII and rule of zero, smart pointers over raw owning pointers, sanitizers in CI. Baseline C++20; check toolchain before assuming C++23/26.
+
+### Data
+
+Analytics data pipeline discipline — batch ingestion, append-only modeling, and scheduling judgment.
+
+- **[z-data-pipeline](./skills/data/z-data-pipeline/SKILL.md)** — Analytics pipeline discipline — idempotent batch loads, append-only modeling for late-arriving data, incremental vs full-refresh judgment, single metric definitions across dashboards, ingestion quality gates, cron before an orchestrator.
 
 ### .NET
 
@@ -178,6 +186,12 @@ Lua embedded as a sandboxed scripting layer inside Go and Rust hosts.
 
 - **[z-lua-core](./skills/lua/z-lua-core/SKILL.md)** — Lua embedded as sandboxed scripting in Go or Rust hosts — mlua for Rust, gopher-lua for Go (Lua 5.1 VM, not 5.4/5.5). 1-based indexing, nil-hazard table length, metatable-only extension, allowlisted stdlib.
 
+### Network
+
+Network fundamentals and debugging discipline — subnetting, routing, DNS, tunnels, and router config.
+
+- **[z-net-core](./skills/network/z-net-core/SKILL.md)** — Network fundamentals and debugging discipline — subnetting/CIDR judgment, routing-table reads, DNS resolution chain, MTU/fragmentation hazards, mtr/tcpdump/ss/dig triage.
+
 ### PHP
 
 PHP core conventions with Symfony, Laravel, and Yii2 framework depth.
@@ -225,6 +239,7 @@ Rust core, web, and GTK/libadwaita desktop guidance.
 
 TypeScript house conventions and Telegram Mini App client development.
 
+- **[z-react-core](./skills/typescript/z-react-core/SKILL.md)** — React and Next.js conventions beyond TypeScript tooling — App Router, server components by default, server data fetching, URL/server state before client stores, server actions, suspense/error boundaries.
 - **[z-ts-core](./skills/typescript/z-ts-core/SKILL.md)** — Strict-mode TypeScript house conventions for a Go-first engineer — tsconfig baseline, zod boundary validation, Error-subclass handling, and Biome/vitest/pnpm defaults.
 - **[z-ts-telegram-mini-app](./skills/typescript/z-ts-telegram-mini-app/SKILL.md)** — Telegram Mini App client development in TypeScript — SDK choice (@tma.js/sdk vs raw WebApp), lifecycle/viewport/theme handling, BackButton/MainButton wiring, and Stars payments. initData is untrusted…
 
