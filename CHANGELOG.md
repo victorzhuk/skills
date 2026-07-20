@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0
+
+### Minor Changes
+
+- Add three skills: `z-net-core` (networking — routers, routing protocols, tunnels references), `z-data-pipeline` (data pipelines), and `z-react-core` (React).
+
+### Patch Changes
+
+- [`e1c501e`](https://github.com/victorzhuk/skills/commit/e1c501e251119fb9612c6acaf7b7d323fd7ef4d1) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Upstream Go 1.21–1.26 modernization items (`weak.Pointer`, `unique.Handle`, `range-over-func`, `os.Root`, injected-`rand.Reader` removal, `cmd/doc` deletion) into `z-go-modernize`, CI action SHA-pinning and OIDC federation guidance into `z-go-ci`, and the golangci-lint v2 generated-code exclusion config into `z-go-lint`.
+
 ## 0.6.0
 
 ### Minor Changes
