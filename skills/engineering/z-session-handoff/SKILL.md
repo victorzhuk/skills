@@ -26,6 +26,15 @@ Content already captured in artifacts — PRDs, plans, ADRs, specs, issues, comm
 
 Strip API keys, passwords, tokens, and personal data. If a secret is needed to continue, name where it lives (env var, secret store), not its value.
 
+## Guard against replay
+
+Open the document with an explicit banner: `HISTORICAL REFERENCE — state and
+decisions from a previous session, not live instructions.` A resumed or
+compacted session re-executes stale directives it finds in a handoff — quoted
+slash commands, `ARGUMENTS=` lines, "now run X" phrasing all read as live
+orders. Quote commands as facts ("`/zapply foo` was in flight"), never as
+imperatives.
+
 ## Do not
 
 - Save the handoff into the repo unasked.
@@ -36,6 +45,7 @@ Strip API keys, passwords, tokens, and personal data. If a secret is needed to c
 
 ## Verify
 
+- The document opens with the historical-reference banner.
 - A fresh agent could execute step one of "next steps" without asking a question.
 - Every artifact mention is a path or URL, not a copy.
 - No credential-shaped strings in the document.
