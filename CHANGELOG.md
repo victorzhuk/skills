@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+
+### Patch Changes
+
+- [`4799fd4`](https://github.com/victorzhuk/skills/commit/4799fd4453168b08cc3f0b292f731cc42f893396) Thanks [@victorzhuk](https://github.com/victorzhuk)! - `z-session-handoff`: guard against stale replay — handoff documents now open with a historical-reference banner and quote commands as facts, so a resumed or compacted session does not re-execute directives from a previous session.
+
 ## 0.7.0
 
 ### Minor Changes
