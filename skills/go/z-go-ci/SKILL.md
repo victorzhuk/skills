@@ -33,10 +33,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - run: go test -race ./...
+      - run: go test -race -timeout 10m ./...
 ```
 
-Pin one Go version — either `go-version-file: go.mod` (tracks the module automatically) or a literal `go-version: "1.24"`. No version matrix by default. `-count=1` on integration jobs to disable caching for service-backed tests.
+Pin one Go version — either `go-version-file: go.mod` (tracks the module automatically) or a literal `go-version: "1.24"`. No version matrix by default. `-count=1` on integration jobs to disable caching for service-backed tests. Always `-timeout` — a hung test otherwise burns the runner until the job's 6-hour default kills it.
 
 ## Lint workflow
 

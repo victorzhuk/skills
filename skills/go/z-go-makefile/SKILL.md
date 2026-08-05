@@ -116,13 +116,13 @@ prefer `go tool` for anything new, but an `@latest` install elsewhere isn't a bu
 ## Test and lint layering
 
 ```make
-GOTESTFLAGS ?=
+GOTESTFLAGS ?= -timeout 2m
 test:            ## test: all tests
 	go test $(GOTESTFLAGS) ./...
 test-unit:       ## test-unit: fast tests, no external deps
-	go test -short ./...
+	go test -timeout 2m -short ./...
 test-integration: ## test-integration: needs docker
-	go test -run Integration ./...
+	go test -timeout 10m -run Integration ./...
 lint:            ## lint: full lint
 	golangci-lint run
 lint-new:        ## lint-new: only changed code
@@ -134,6 +134,9 @@ vet:             ## vet: go vet
 ```
 
 Keep a `GOTESTFLAGS ?=` passthrough so a Taskfile (or a human) can inject `-run Foo`.
+Default it to `-timeout 2m`, not empty — every target then carries a wall-clock
+cap and a deadlocked test can't stall the loop ([[z-testing-strategy]] has the
+per-runner floor).
 
 ## dotenv and DSN handling
 

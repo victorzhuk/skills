@@ -19,11 +19,11 @@ Run in order. Stop at the first failure unless the caller passes `--continue-on-
 Fast signal before deeper work.
 - Lint changed files only, through the project's linter wrapper (`golangci-lint run --new`, `eslint`, etc.)
 - `go vet ./...` for touched Go packages
-- Unit tests only, no race/coverage: `go test -short ./...`, `vitest run --changed`
+- Unit tests only, no race/coverage: `go test -timeout 2m -short ./...`, `vitest run --changed --maxWorkers=50%`
 
 ### Phase 2: Regression (~15-30 min) -- default depth
 Full behavioral suite across every real boundary the project already exercises. Run this when the caller just says "run QA" or "test the app" without naming a phase.
-- Go: `go test -race -cover ./...` via the repo's Makefile/Taskfile target, not a raw invocation; integration tests spin up real dependencies through testcontainers-go (e.g. Postgres) -- no docker-compose or kubectl step needed
+- Go: `go test -race -cover -timeout 10m ./...` via the repo's Makefile/Taskfile target, not a raw invocation; integration tests spin up real dependencies through testcontainers-go (e.g. Postgres) -- no docker-compose or kubectl step needed
 - JS/TS: full `vitest` run; `playwright test` for first-party E2E specs (see [[z-qa-browser]] for CLI-driven exploratory work, [[z-go-bdd]] for Ginkgo/Gomega or Gherkin behavior contracts)
 - `govulncheck ./...` when it's already wired into CI
 
@@ -37,6 +37,8 @@ Regression plus everything expensive or manual.
 ## Running tests
 
 Always go through the project's own runner -- `make test`, `task test`, `npm test` -- never a raw `go test`/`vitest` call unless no wrapper exists. A wrapper carries build tags, env setup (e.g. `TESTCONTAINERS_RYUK_DISABLED=true`), and coverage flags a raw invocation misses.
+
+Every run is resource-limited -- wall-clock timeout plus a worker cap where the runner parallelizes by default ([[z-testing-strategy]] has the per-runner floor). If the project's runner carries no limits at all, stop before Phase 1: ask the user, land the limits in the runner config (Makefile `GOTESTFLAGS`, vitest/playwright config, pytest `addopts`), then run.
 
 ## Reporting
 

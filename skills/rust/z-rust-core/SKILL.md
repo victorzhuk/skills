@@ -16,7 +16,7 @@ Write idiomatic, zero-cost Rust: make ownership and lifetimes explicit, model er
 5. **Project Layout**: For GUI desktop apps ([[z-rust-gtk4]]), split by concern, not by domain/service/handler layers — a workspace with one crate per feature (`core/`, `subscription/`, `ui/`, ...) or a single crate with modules per concern (`api/`, `app/`, `platform/`, `ui/`, ...). See [[z-rust-web]] for HTTP-service layout.
 6. **Safety**: Minimize `unsafe`; document all safety invariants when unavoidable; use `#[must_use]` on types where ignoring the return is a bug; use `#[non_exhaustive]` on public enums for future compatibility
 7. **Tooling**: Run `cargo fmt` and `cargo clippy` denying default + `clippy::all` in CI (`-D warnings` or `-W clippy::all`); don't reach for `clippy::pedantic` without a concrete reason; use `cargo test -- --nocapture` for debug output
-8. **Testing**: Unit tests in `#[cfg(test)]` module in the same file; integration tests in `tests/`; use `proptest`/`quickcheck` for property-based tests; use `mockall` for mocking traits and `mockito` to stub HTTP responses in adapter/client tests
+8. **Testing**: Unit tests in `#[cfg(test)]` module in the same file; integration tests in `tests/`; use `proptest`/`quickcheck` for property-based tests; use `mockall` for mocking traits and `mockito` to stub HTTP responses in adapter/client tests. `cargo test` has no timeout and spawns one thread per core — run dev suites as `timeout 5m cargo test -- --test-threads=4` (or via a runner target carrying the same limits); [[z-testing-strategy]] has the per-runner floor
 
 ## Do not
 

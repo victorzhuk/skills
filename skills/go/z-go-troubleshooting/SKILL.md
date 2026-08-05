@@ -42,7 +42,7 @@ suspected fault) *before* changing code.
 | Build fails | `go build ./... 2>&1`, then `go vet ./...` |
 | Wrong output / logic | Write a failing test; check error handling, nil, off-by-one |
 | Panic / crash | `GOTRACEBACK=all ./app`, read the full stack |
-| Flaky / race | `go test -race ./...` |
+| Flaky / race | `go test -race -timeout 5m ./...` |
 | Hang / frozen | `curl localhost:6060/debug/pprof/goroutine?debug=2` |
 | High CPU | pprof CPU profile → flamegraph |
 | Memory growing | pprof heap profile (`allocs` vs `inuse_space`) |
@@ -101,8 +101,8 @@ has the general defer-discipline rule.
 ## Race conditions and deadlocks
 
 ```sh
-go test -race ./...
-GORACE="log_path=/tmp/race" go test -race ./...
+go test -race -timeout 5m ./...
+GORACE="log_path=/tmp/race" go test -race -timeout 5m ./...
 ```
 
 For a running service:
@@ -182,7 +182,7 @@ Flaky test? `-count=100 -race` amplifies; `goleak.VerifyNone(t)` for leaks.
 ## Verify
 
 ```sh
-go test -race ./...
+go test -race -timeout 5m ./...
 go vet ./...
 golangci-lint run
 ```

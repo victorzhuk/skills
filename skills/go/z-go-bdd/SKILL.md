@@ -56,7 +56,7 @@ func TestScenarioSuite(t *testing.T) {
 }
 ```
 
-Labels: `p0` (critical, every push), `p1` (important), `p2` (nice-to-have, slow, or infra-gated — e.g. `Label("p2", "container")`). Filter with `go test ./... -ginkgo.label-filter=p0`. Put suites that shell out to a real binary or hit real infra behind a build tag (`//go:build scenarios`) so plain `go test ./...` stays fast; run the tagged suite through its own Make/Task target.
+Labels: `p0` (critical, every push), `p1` (important), `p2` (nice-to-have, slow, or infra-gated — e.g. `Label("p2", "container")`). Filter with `go test -timeout 5m ./... -ginkgo.label-filter=p0`. Put suites that shell out to a real binary or hit real infra behind a build tag (`//go:build scenarios`) so plain `go test ./...` stays fast; run the tagged suite through its own Make/Task target.
 
 `Describe`/`When`/`It` text should still read as behavior, not implementation — the same discipline as Gherkin's `Given`/`When`/`Then` (below), just expressed in Go instead of a separate file.
 

@@ -90,6 +90,7 @@ Plain `@dataclass` for internal domain shapes once validated data has crossed th
 - Fixtures over `setUp`/`tearDown`.
 - `@pytest.mark.parametrize` over copy-pasted test methods.
 - How much to cover isn't a pytest question — see [[z-testing-strategy]].
+- pytest has no timeout of its own — add `pytest-timeout` as a dev dep and pin `timeout = 60` in `addopts`/`pyproject.toml` (or prefix `timeout 10m uv run pytest`); with `pytest-xdist`, cap `-n`, never `-n auto` on a dev machine.
 
 ## Errors
 
@@ -134,7 +135,7 @@ Read the matching reference before writing framework-specific code — this file
 ```bash
 uv run ruff check
 uv run mypy .
-uv run pytest
+uv run pytest --timeout=60   # pytest-timeout; or pin timeout in addopts
 ```
 
 see [[z-testing-strategy]], [[z-no-over-engineering]]

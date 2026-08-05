@@ -27,20 +27,23 @@ failure you can't reliably fix.
 ## Test Execution — Stack Flags
 
 Run the whole suite without fail-fast — no `-x`, no `--failfast`, no early bail. None of these
-tools default to fail-fast, so real invocations stay plain:
+tools default to fail-fast, so real invocations stay plain — but never unbounded: every run
+carries a wall-clock timeout, and a worker cap where the runner parallelizes by default
+([[z-testing-strategy]] has the per-runner floor). Prefer the project's runner if it already
+carries the limits; if it has none, ask and land them in the config first.
 
 ```bash
 # Go — race detector + coverage
-go test -race -cover ./...
+go test -race -cover -timeout 10m ./...
 
-# Rust
-cargo test --workspace --all-targets
+# Rust — no built-in timeout, wrap it
+timeout 10m cargo test --workspace --all-targets -- --test-threads=4
 
-# Python
-pytest
+# Python — pytest-timeout, or a timeout(1) prefix
+pytest --timeout=60
 
-# JS/TS
-npm test                              # e.g. vitest run
+# JS/TS — script should pin maxWorkers/testTimeout in vitest.config
+npm test                              # e.g. vitest run --maxWorkers=50%
 ```
 
 ## Failure Classification
@@ -57,7 +60,7 @@ npm test                              # e.g. vitest run
 
 ```bash
 # Go data race — read the DATA RACE block: two goroutines + the racing lines
-go test -race -cover ./... 2>&1 | rg -A20 'DATA RACE'
+go test -race -cover -timeout 10m ./... 2>&1 | rg -A20 'DATA RACE'
 ```
 
 ### DEPENDENCY failures — Go integration tests
@@ -75,7 +78,7 @@ docker logs $(docker ps -aq --filter name=ryuk) 2>&1 | tail -50
 env | rg TESTCONTAINERS
 
 # the test run's own output carries the real startup error
-go test -race -cover ./... 2>&1 | rg -i 'testcontainers|starting container|failed to start'
+go test -race -cover -timeout 10m ./... 2>&1 | rg -i 'testcontainers|starting container|failed to start'
 ```
 
 Fall back to `docker compose ps` / `kubectl describe pod` only when the failing dependency is a
@@ -119,7 +122,7 @@ For stacks without a framework-level retry option (plain `go test`, `cargo test`
 fall back to the manual rule: re-run only the suspect test 3x, record pass/fail each time.
 
 ```bash
-for i in 1 2 3; do go test -run '^TestSuspect$' ./pkg/...; echo "run $i: exit $?"; done
+for i in 1 2 3; do go test -timeout 2m -run '^TestSuspect$' ./pkg/...; echo "run $i: exit $?"; done
 # Non-deterministic across the 3 runs -> classify FLAKY and quarantine:
 #   t.Skip("FLAKY: tracking #N")
 # A single failure is NOT flaky — it is a real failure until proven otherwise.
@@ -127,7 +130,7 @@ for i in 1 2 3; do go test -run '^TestSuspect$' ./pkg/...; echo "run $i: exit $?
 
 ### Race detection pass (Go)
 ```bash
-go test -race -cover ./... 2>&1 | tee race.log
+go test -race -cover -timeout 10m ./... 2>&1 | tee race.log
 rg -c 'DATA RACE' race.log    # > 0 means real concurrency bugs to trace
 ```
 

@@ -80,7 +80,7 @@ func TestMain(m *testing.M) {
 
 ```bash
 # CI: disable the Ryuk reaper sidecar, not the containers under test
-TESTCONTAINERS_RYUK_DISABLED=true go test -run TestIntegration -v ./internal/infra/store/...
+TESTCONTAINERS_RYUK_DISABLED=true go test -timeout 10m -run TestIntegration -v ./internal/infra/store/...
 ```
 
 `testing.Short()` in `TestMain` lets `go test -short` skip these while a dedicated make target runs the full suite. Self-provisions the database from an image tag — nothing to stand up by hand.
@@ -132,8 +132,8 @@ No project here has adopted `hurl`. It's a fallback for a team that wants readab
 
 ## Verify
 
-- `go test -run TestReadiness ./...` (or the project's handler package) exercises the httptest suite.
-- `TESTCONTAINERS_RYUK_DISABLED=true go test -run TestIntegration ./...` runs the testcontainers suite — needs a running Docker daemon.
+- `go test -timeout 2m -run TestReadiness ./...` (or the project's handler package) exercises the httptest suite.
+- `TESTCONTAINERS_RYUK_DISABLED=true go test -timeout 10m -run TestIntegration ./...` runs the testcontainers suite — needs a running Docker daemon.
 - `curl -s http://localhost:PORT/health | jq -r '.status'` confirms a smoke target is up before a deeper suite runs.
 
 Load/throughput testing: see [[z-qa-performance]]. Browser/UI flows: see [[z-qa-browser]]. General Go test hygiene (table-driven, testify, parallelism): see [[z-go-testing]]. Test planning and priority mapping: see [[z-qa-analyst]]. Running and triaging the suite: see [[z-qa-debugger]].

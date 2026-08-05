@@ -48,9 +48,13 @@ CLI targeting is by ref (`e5`), pulled straight from the Snapshot — no selecto
 
 ## Running Generated Tests
 
+Local runs stay capped — `--workers=2` inline, or `workers` plus `globalTimeout` pinned in
+`playwright.config.ts` so every invocation inherits them ([[z-testing-strategy]] has the
+per-runner floor). Shards are a CI pattern; the runner there is bounded anyway.
+
 ```bash
-npx playwright test --reporter=line
-npx playwright test --reporter=html
+npx playwright test --workers=2 --reporter=line
+npx playwright test --workers=2 --reporter=html
 npx playwright test --shard=1/3      # parallel CI, run all three shards
 npx playwright test --shard=2/3
 npx playwright test --shard=3/3
@@ -110,8 +114,8 @@ test('home page visual regression', async ({ page }) => {
 ```
 
 ```bash
-npx playwright test --update-snapshots   # capture/update baselines
-npx playwright test tests/visual.spec.ts
+npx playwright test --workers=2 --update-snapshots   # capture/update baselines
+npx playwright test --workers=2 tests/visual.spec.ts
 ```
 
 ## Do not
@@ -130,6 +134,6 @@ npx playwright test tests/visual.spec.ts
 ## Verify
 
 - `playwright-cli --help` matches the commands you're about to script — this doc mirrors observed usage in real projects, not a published spec.
-- `npx playwright test --reporter=line` passes for a written flow before treating it as a regression guard.
+- `npx playwright test --workers=2 --reporter=line` passes for a written flow before treating it as a regression guard.
 
 See [[z-go-bdd]] for turning a verified flow into a behavior contract and [[z-qa-api]] for HTTP-only contract checks that don't need a browser.

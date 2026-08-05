@@ -120,6 +120,8 @@ test.each([
 })
 ```
 
+Vitest defaults to one worker per core — cap it. Pin `maxWorkers` (and `testTimeout` past the 5s default where suites hit real IO) in `vitest.config.ts` so every invocation inherits the limits, or pass `--maxWorkers=50%` inline; [[z-testing-strategy]] has the per-runner floor.
+
 No dedicated TS testing skill yet in this catalog — [[z-testing-strategy]] covers depth and when a change needs a contract test, not vitest syntax.
 
 Scripts: `tsx` (esbuild-backed — watch mode, tsconfig path aliases, zero config). Node's built-in type stripping (default since Node 22.18, no flag) covers a throwaway script with only erasable syntax, but drops `enum`, parameter properties, namespaces with runtime code, and import aliases — reach for `tsx` the moment a script needs any of those, or wants watch mode.
@@ -140,7 +142,7 @@ Package manager: match whatever lockfile is already in the repo (`pnpm-lock.yaml
 ```sh
 tsc --noEmit                 # strict flags actually catch what they claim to
 npx biome check .            # or `eslint . && prettier --check .` if that's the project's choice
-vitest run
+vitest run --maxWorkers=50%  # or pin maxWorkers in vitest.config.ts
 ```
 
 Confirm the boundary schema and its inferred type are the only source of truth for that shape — `grep -rn "interface Profile" src` next to a `profileSchema` should turn up nothing.

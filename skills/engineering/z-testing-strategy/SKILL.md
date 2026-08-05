@@ -1,6 +1,6 @@
 ---
 name: z-testing-strategy
-description: Choose test depth by type of work, not a fixed coverage target — MVP/greenfield TDD vs existing-service regression protection, and when behavior needs a Gherkin/BDD contract vs an ordinary test. Use before writing code with observable behavior, or classifying a task as MVP vs existing-service. Triggers on "what should I test", "TDD", "regression test", "is this MVP or production". Language-specific syntax/mocking is the language's own skill, e.g. [[z-go-testing]] or [[z-go-bdd]].
+description: Choose test depth by type of work, not a fixed coverage target — MVP/greenfield TDD vs existing-service regression protection, and when behavior needs a Gherkin/BDD contract vs an ordinary test. Use before writing code with observable behavior, or classifying a task as MVP vs existing-service. Triggers on "what should I test", "TDD", "regression test", "is this MVP or production". Owns the resource-limit floor for dev test runs (timeouts, worker caps). Language-specific syntax/mocking is the language's own skill, e.g. [[z-go-testing]] or [[z-go-bdd]].
 ---
 
 # Testing strategy
@@ -66,6 +66,20 @@ If the project has no BDD harness and the behavior clearly warrants one, use the
 
 Prefer the lowest layer that proves the user-visible behavior; move up only when the lower layer would hide the real risk.
 
+## Resource limits
+
+Never run a suite unbounded on a dev machine — a hung test blocks the session and a parallel storm eats every core. Every test invocation carries a wall-clock timeout, plus a worker cap where the runner parallelizes by default:
+
+| Runner | Limit |
+|---|---|
+| `go test` | `-timeout 2m` unit, `-timeout 10m` integration; `-fuzz` needs `-fuzztime` |
+| `cargo test` | `timeout 5m cargo test -- --test-threads=4` — no built-in timeout |
+| vitest | `--maxWorkers=50%`, or `maxWorkers`/`testTimeout` in vitest.config |
+| playwright | `--workers=2` plus `globalTimeout` in playwright.config |
+| pytest | pytest-timeout `--timeout=60`, or a `timeout 10m` prefix |
+
+Land limits in the project's runner once — Makefile `GOTESTFLAGS`, vitest/playwright config, pytest `addopts` — instead of repeating inline flags. If the project's runner has no limits at all, ask the user, tune the config, then run.
+
 ## Reporting evidence
 
 When a behavior-changing task is done, state: what changed, which test/scenario proves it, the command that ran it, and the report path if one was generated. If no behavior test was added, say why in one sentence — don't leave it implicit.
@@ -78,6 +92,7 @@ When a behavior-changing task is done, state: what changed, which test/scenario 
 - Write Gherkin for a private helper or generated code — it adds ceremony with no audience.
 - Leave a skipped or flaky test without an owner and a reason.
 - Treat "MVP" as license to skip auth/money/permissions/data-loss coverage.
+- Run a suite with no timeout or worker cap — fix the runner config, don't fight the machine.
 
 ## Verify
 

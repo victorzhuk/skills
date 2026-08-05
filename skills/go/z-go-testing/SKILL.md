@@ -148,16 +148,22 @@ slice you can't cover with one end-to-end test is too wide; narrow it.
 
 ## Quick Reference
 
+Always pass `-timeout` — the 10m default is far too long for a dev loop, and a
+deadlocked test otherwise stalls the whole session: `-timeout 2m` for unit runs,
+`-timeout 10m` for integration/testcontainers suites. Bake it into the project's
+Makefile (`GOTESTFLAGS`) rather than retyping it; see [[z-testing-strategy]] for
+the per-runner limit floor.
+
 | Command | Purpose |
 |---|---|
-| `go test ./...` | all tests |
-| `go test -run TestName/subtest ./...` | specific subtest |
-| `go test -race ./...` | race detection |
-| `go test -count=1 ./...` | disable test caching |
-| `go test -tags=integration ./...` | integration build tag |
-| `go test -bench=. -benchmem ./...` | benchmarks |
-| `go test -fuzz=FuzzName ./...` | fuzzing |
-| `go test -coverprofile=c.out ./... && go tool cover -html=c.out` | coverage |
+| `go test -timeout 2m ./...` | all tests |
+| `go test -timeout 2m -run TestName/subtest ./...` | specific subtest |
+| `go test -timeout 5m -race ./...` | race detection |
+| `go test -timeout 2m -count=1 ./...` | disable test caching |
+| `go test -timeout 10m -tags=integration ./...` | integration build tag |
+| `go test -timeout 10m -bench=. -benchmem ./...` | benchmarks |
+| `go test -timeout 10m -fuzz=FuzzName -fuzztime 30s ./...` | fuzzing — `-fuzztime` or it never stops |
+| `go test -timeout 5m -coverprofile=c.out ./... && go tool cover -html=c.out` | coverage |
 
 ## Do not
 
@@ -173,5 +179,5 @@ slice you can't cover with one end-to-end test is too wide; narrow it.
 ## Verify
 
 ```sh
-go test -race ./...
+go test -timeout 5m -race ./...
 ```
