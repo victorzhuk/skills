@@ -31,6 +31,19 @@ benchstat bench-before.txt bench-after.txt
 
 Paste `benchstat` output in the commit body (`perf(scope): ...`). Never claim improvement with `~` (no statistical significance).
 
+For A/B validity traps — interleaving, arm symmetry, control cells, contention-profile attribution — see [[z-go-bench-ab]].
+
+## Verify the premise first
+
+A perf change's premise ("this allocates", "this struct can't shrink without reordering") must come from a compiler or runtime observation, not from reading code — one command settles each claim:
+
+- **Heap claim**: `go build -gcflags=-m` — escape analysis may already stack-allocate the object; pooling it then removes zero allocations. Account for every alloc in the target `-benchmem` cell by name.
+- **Boxing claim**: a constant composite literal converted to an interface never calls `runtime.convT*` — the emitted code references a static symbol. Converting an 8-byte pointer-free value with bit pattern 0..255 is 0-alloc (`runtime.staticuint64s`); negatives **always** allocate, as do values ≥256 and runtime-computed floats. Settle with `go build -gcflags=-S`: look for `convT` vs a `LEAQ` of a static symbol.
+- **Layout claim**: never assert a size/alignment consequence of field order by reasoning — run a throwaway `unsafe.Sizeof`/`unsafe.Offsetof` program over **all** variants under comparison. The failure mode is crediting a size-class crossing to a reorder that contributed nothing; the bytes gate sees size classes, not field counts.
+- **Sizing a win**: profile at `GODEBUG=memprofilerate=1` — the default sampling rate extrapolates and misattributes flat costs (a change sized as a "42-alloc residue" measured 4 of 42 at exact rate). An `AllocsPerRun`-flat test across two sizes cannot discriminate map cost: `make(map, N)` alloc *count* is flat from N≈10 to N≈1000.
+
+When a change pays off through a different mechanism than proposed, correct the premise in the doc instead of letting the wrong causal story stand.
+
 `b.Loop()` (Go 1.24+) is preferred over `b.N` — times only the loop body, keeps results alive:
 
 ```go
@@ -176,6 +189,7 @@ Precompile regexps at init, precompute lookup tables, cache parsed config. For p
 ## Do not
 
 - Optimize without profiling — measure first, always.
+- Write a heap, boxing, or layout claim into a proposal without running the one command that settles it.
 - Change more than one thing between benchmark runs — you won't know what helped.
 - Accept `~` benchstat rows as evidence of improvement.
 - Reach for `unsafe` before exhausting typed alternatives.

@@ -8,6 +8,7 @@ Model- or user-reachable via skill name and trigger phrasing.
 
 - **[z-go-api-design](./z-go-api-design/SKILL.md)** — REST API contract design for OpenAPI-first Go, before ogen generates the transport — path versioning, keyset/cursor pagination, Idempotency-Key, RFC 9457 problem+json errors, PATCH-merge-patch…
 - **[z-go-bdd](./z-go-bdd/SKILL.md)** — Go BDD and executable behavior contracts — two patterns, pick by audience. ginkgo/gomega (`Describe`/`When`/`It`, `Label("p0"...)`) suits engineer-only scenarios; Gherkin/godog (`.feature` files)…
+- **[z-go-bench-ab](./z-go-bench-ab/SKILL.md)** — A/B microbenchmark validity in Go — `-count` never interleaves b.Run arms; repeat inside the parent, equalize arm plumbing, keep a control cell; plus contention-profile attribution.
 - **[z-go-caching](./z-go-caching/SKILL.md)** — Redis caching and rate limiting for Go — cache-aside (read-through, delete-on-write invalidation, TTL jitter), singleflight before a distributed lock, fail-open on outages, and atomic INCR+EXPIRE or…
 - **[z-go-ci](./z-go-ci/SKILL.md)** — GitHub Actions CI/CD for Go projects — test matrix, race detection, golangci-lint, govulncheck, CodeQL, GoReleaser, Dependabot/Renovate, and Docker image pipelines.
 - **[z-go-clean-arch-di](./z-go-clean-arch-di/SKILL.md)** — Clean architecture wiring, layer direction, and dependency injection for Go services.
@@ -26,6 +27,7 @@ Model- or user-reachable via skill name and trigger phrasing.
 - **[z-go-grpc](./z-go-grpc/SKILL.md)** — gRPC and protobuf service design in Go — field evolution, deadline propagation, the status-code/errdetails error model, interceptor ordering, streaming vs unary, and buf as the schema toolchain.
 - **[z-go-http-client](./z-go-http-client/SKILL.md)** — Outbound HTTP client hardening for Go calling external APIs — timeouts, transport tuning, body draining, retry with backoff/jitter, and circuit breakers.
 - **[z-go-interfaces](./z-go-interfaces/SKILL.md)** — Interface design, struct embedding, type assertions, compile-time checks, receiver rules, generics vs interfaces in Go.
+- **[z-go-interp-perf](./z-go-interp-perf/SKILL.md)** — Interpreter/scripting VM performance in Go — batched cancellation polls, preboxing, versioned-cell site caches, operand-only fusion, freeze-then-share startup templates, striped compile caches.
 - **[z-go-lint](./z-go-lint/SKILL.md)** — Configure and run golangci-lint, suppress warnings correctly, fix common lint findings, and integrate linting into CI/pre-commit hooks.
 - **[z-go-llm-streaming](./z-go-llm-streaming/SKILL.md)** — Wire an LLM chat feature end-to-end in Go — decorate an SDK's chat-model interface (or a hand-rolled ChatCompleter), a resilience decorator, callback instrumentation, and Server-Sent Events streaming.
 - **[z-go-makefile](./z-go-makefile/SKILL.md)** — Author a clean Makefile for a Go project's inner loop — DRY build recipes, build-dir handling (inline mkdir or order-only prereq), self-documenting help, version stamping, go tool codegen, and…
@@ -35,6 +37,7 @@ Model- or user-reachable via skill name and trigger phrasing.
 - **[z-go-naming](./z-go-naming/SKILL.md)** — Go naming conventions — MixedCaps, package stuttering, constructors, booleans, acronyms, enums, error strings, receivers, getters, functional options.
 - **[z-go-observability](./z-go-observability/SKILL.md)** — Production observability for Go services — structured logging with log/slog, Prometheus metrics, OpenTelemetry tracing, pprof profiling, signal correlation.
 - **[z-go-ogen](./z-go-ogen/SKILL.md)** — OpenAPI-first HTTP transport in Go using ogen (github.com/ogen-go/ogen).
+- **[z-go-perf-gate](./z-go-perf-gate/SKILL.md)** — CI benchmark non-regression gate — repo-owned gold-set corpus, tiered thresholds, paired interleaved hosted runs, burden-of-proof reruns, stored baselines; latency is decidable only on the quiet fixed runner.
 - **[z-go-performance](./z-go-performance/SKILL.md)** — Go performance optimization — allocation reduction, CPU efficiency, memory layout, GC tuning, pooling, caching, hot-path patterns.
 - **[z-go-pgvector](./z-go-pgvector/SKILL.md)** — pgvector-backed similarity search in Go — declaring vector(N) columns, encoding []float32 via pgvector.NewVector, L2/cosine/inner-product distance operators, ORDER BY ... LIMIT k queries, and choosing exact…
 - **[z-go-pkg](./z-go-pkg/SKILL.md)** — Query the official pkg.go.dev API (v1beta) for Go module and package metadata — package info, module versions, symbols, imported-by, search, and vulnerabilities.

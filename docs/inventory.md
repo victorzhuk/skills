@@ -157,6 +157,25 @@ skill draft (since removed) so any RU tech text can use it.
 |---|---|---|---|
 | `z-ru-tech-register` | `writing` | authored directly in this repo | [`skills/writing/z-ru-tech-register/SKILL.md`](../skills/writing/z-ru-tech-register/SKILL.md) |
 
+## Phase 6 — performance measurement and interpreter perf
+
+Three Go skills authored directly in this repo, distilled from a months-long
+performance program on an embedded Lisp interpreter (bytecode VM vs
+tree-walker, a release-blocking benchmark gate, and repeated cases of
+confident-but-wrong measurements): A/B benchmark validity, CI perf-gate
+design, and the interpreter/VM optimization playbook itself. A fourth topic —
+compiler-verified perf premises (escape analysis, boxing facts, struct
+layout) — was folded into `z-go-performance` as a "Verify the premise first"
+section instead of a new skill, to stay inside the catalog description
+budget. Descriptions in this phase are deliberately short for the same
+reason.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-go-bench-ab` | `go` | authored directly in this repo | [`skills/go/z-go-bench-ab/SKILL.md`](../skills/go/z-go-bench-ab/SKILL.md) |
+| `z-go-perf-gate` | `go` | authored directly in this repo | [`skills/go/z-go-perf-gate/SKILL.md`](../skills/go/z-go-perf-gate/SKILL.md) |
+| `z-go-interp-perf` | `go` | authored directly in this repo | [`skills/go/z-go-interp-perf/SKILL.md`](../skills/go/z-go-interp-perf/SKILL.md) |
+
 ## Public cleanup applied
 
 - Replaced the personal npm scope example in `z-npm-publish` with `@scope/*`.
