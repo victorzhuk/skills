@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0
+
+### Minor Changes
+
+- [`376a87c`](https://github.com/victorzhuk/skills/commit/376a87c2681e320b45b5c4d96ea98d30686a24d5) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Three new Go performance skills distilled from an embedded-interpreter perf program: `z-go-bench-ab` (A/B microbenchmark validity — interleaving inside the parent, arm symmetry, control cells, contention-profile attribution), `z-go-perf-gate` (CI benchmark non-regression gate — tiered thresholds, paired runs, burden-of-proof reruns, baseline lifecycle), and `z-go-interp-perf` (interpreter/VM optimization playbook — poll batching, preboxing, site caches, fusion, startup templates, striped caches, lean call boundary). `z-go-performance` gains a "Verify the premise first" section (escape analysis, boxing facts, struct layout, exact-rate profiling) and cross-links the measurement skills.
+
+- [`7d13aeb`](https://github.com/victorzhuk/skills/commit/7d13aeb1e542c9997986df945e14f840a5e5e46c) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Resource-limit floor for dev test runs across the catalog. `z-testing-strategy` gains a per-runner limits table (timeouts plus worker caps) and the ask-then-tune rule for projects whose runner has no limits configured. Stack and QA skills now carry the limits in every test invocation: `z-go-testing`, `z-go-makefile` (`GOTESTFLAGS ?= -timeout 2m`), `z-go-ci`, `z-go-troubleshooting`, `z-go-bdd`, `z-qa-orchestrator`, `z-qa-debugger`, `z-qa-api`, `z-qa-browser` (`--workers=2`), `z-ts-core` (vitest `maxWorkers`), `z-rust-core` (`timeout(1)` wrap + `--test-threads`), `z-py-core` (pytest-timeout).
+
+### Patch Changes
+
+- [`ce1b733`](https://github.com/victorzhuk/skills/commit/ce1b733fe53e6fae2bbe6ffe24176c6a09669f7f) Thanks [@victorzhuk](https://github.com/victorzhuk)! - `z-go-pgvector`: replace the ellipsis in the description's `ORDER BY / LIMIT k` phrase so the trigger text reads cleanly.
+
 ## 0.7.1
 
 ### Patch Changes
