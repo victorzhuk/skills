@@ -1,6 +1,6 @@
 ---
 name: z-deep-modules
-description: Deep-module design vocabulary — depth as leverage at the interface, seams, adapters, the deletion test, interface-is-the-test-surface. Use when designing or reviewing a module's interface, deciding where a seam goes, or judging whether an abstraction earns its keep. Triggers on "deep module", "shallow module", "seam", "deletion test". Does not cover bounded contexts (see [[z-domain-modeling]]) or premature abstraction (see [[z-no-over-engineering]]). Go mechanics live in [[z-go-interfaces]].
+description: Deep-module design vocabulary — depth as leverage at the interface, seams, adapters, the deletion test, interface-is-the-test-surface. Use when designing or reviewing a module's interface or deciding where a seam goes. Triggers on "deep module", "shallow module", "seam", "deletion test". Bounded contexts — [[z-domain-modeling]]; premature abstraction — [[z-no-over-engineering]]; Go mechanics — [[z-go-interfaces]].
 ---
 
 # Deep modules

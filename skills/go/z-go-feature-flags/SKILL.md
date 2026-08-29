@@ -1,6 +1,6 @@
 ---
 name: z-go-feature-flags
-description: Feature flag lifecycle in a Go service — typed flag constants, a layered Evaluator (env kill-switch → remote provider → default), global vs per-user surfacing, fail-open/fail-closed semantics, a fake evaluator for tests. Use when adding a kill switch, gating a feature on a remote provider (PostHog, LaunchDarkly, OpenFeature), or calling IsEnabled in a use case or handler. Triggers on "feature flag", "kill switch", "IsEnabled", "Evaluator". Does not cover env parsing; see [[z-go-env-v11]].
+description: Feature flag lifecycle in a Go service — typed flag constants, a layered Evaluator (env kill-switch → remote provider → default), fail-open/fail-closed semantics, a fake evaluator for tests. Use when adding a kill switch or gating a feature on a remote provider (PostHog, LaunchDarkly, OpenFeature). Triggers on "feature flag", "kill switch", "IsEnabled", "Evaluator". Env parsing — [[z-go-env-v11]].
 ---
 
 # Feature flags in Go

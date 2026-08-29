@@ -1,6 +1,6 @@
 ---
 name: z-git-guardrails
-description: Install a Claude Code PreToolUse hook that blocks destructive git commands — push, reset --hard, clean -f, checkout ./restore ., and branch -D of unmerged branches — before they execute, while letting worktree cleanup through (git worktree remove and deleting already-merged worktree branches stay allowed). Use when the user wants git safety hooks, to prevent force pushes or hard resets, or to block destructive git operations. Claude Code specific — other harnesses need their own hook mechanism.
+description: Install a Claude Code PreToolUse hook that blocks destructive git commands — push, reset --hard, clean -f, checkout ./restore ., branch -D of unmerged branches — before they execute, while letting worktree cleanup through. Use when the user wants git safety hooks, to prevent force pushes or hard resets, or to block destructive git operations. Claude Code specific — other harnesses need their own hook mechanism.
 ---
 
 # Git guardrails

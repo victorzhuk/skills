@@ -176,6 +176,21 @@ reason.
 | `z-go-perf-gate` | `go` | authored directly in this repo | [`skills/go/z-go-perf-gate/SKILL.md`](../skills/go/z-go-perf-gate/SKILL.md) |
 | `z-go-interp-perf` | `go` | authored directly in this repo | [`skills/go/z-go-interp-perf/SKILL.md`](../skills/go/z-go-interp-perf/SKILL.md) |
 
+## Phase 7 — stdlib discovery and canon idioms
+
+Two Go skills authored directly in this repo. `z-go-stdlib` closes the
+reinvented-wheel gap: a stdlib-first lookup workflow and task→package map so
+helpers and dependencies are only written after `go doc` proves the standard
+library lacks them. `z-go-idioms` projects the official canon (Effective Go,
+Go Proverbs, Code Review Comments, Google's Go Style Guide) into design-level
+decision rules; it deliberately owns only the *why* and routes all mechanics
+to the existing sibling skills to avoid overlap.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-go-stdlib` | `go` | authored directly in this repo | [`skills/go/z-go-stdlib/SKILL.md`](../skills/go/z-go-stdlib/SKILL.md) |
+| `z-go-idioms` | `go` | authored directly in this repo | [`skills/go/z-go-idioms/SKILL.md`](../skills/go/z-go-idioms/SKILL.md) |
+
 ## Public cleanup applied
 
 - Replaced the personal npm scope example in `z-npm-publish` with `@scope/*`.

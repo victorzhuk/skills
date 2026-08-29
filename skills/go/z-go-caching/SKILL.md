@@ -1,6 +1,6 @@
 ---
 name: z-go-caching
-description: Redis caching and rate limiting for Go — cache-aside (read-through, delete-on-write invalidation, TTL jitter), singleflight before a distributed lock, fail-open on outages, and atomic INCR+EXPIRE or Lua token-bucket limiting over racy GET-then-SET. Use when adding a cache layer or choosing go-redis vs rueidis. Triggers on "cache-aside", "singleflight", "INCR+EXPIRE", "token-bucket". Not CDN/HTTP caching; DB is [[z-go-database]], concurrency [[z-go-concurrency]], metrics [[z-go-observability]].
+description: Redis caching and rate limiting for Go — cache-aside (read-through, delete-on-write invalidation, TTL jitter), singleflight before a distributed lock, fail-open on outages, atomic INCR+EXPIRE or Lua token-bucket over racy GET-then-SET. Use when adding a cache layer or choosing go-redis vs rueidis. Triggers on "cache-aside", "singleflight", "INCR+EXPIRE", "token-bucket". Not CDN/HTTP caching; DB is [[z-go-database]], concurrency [[z-go-concurrency]].
 ---
 
 # Go caching

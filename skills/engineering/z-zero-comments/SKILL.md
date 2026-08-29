@@ -1,6 +1,6 @@
 ---
 name: z-zero-comments
-description: Comment discipline — a comment explaining WHAT code does means the name is wrong; rename or restructure instead of commenting. Use when writing new code, reviewing a diff for comment noise, or deciding whether a comment belongs. Triggers on "add a comment explaining", "// creates a new", "// checks if", "// initialize the". Does not cover doc-comment format for exported APIs; write Go doc comments, JSDoc, etc. as your language's convention requires — this skill only governs implementation comments.
+description: Comment discipline — a comment explaining WHAT code does means the name is wrong; rename or restructure instead. Use when writing new code, reviewing a diff for comment noise, or deciding whether a comment belongs. Triggers on "add a comment explaining", "// creates a new", "// checks if", "// initialize the". Doc comments for exported APIs follow the language convention — this skill governs implementation comments only.
 ---
 
 # Zero comments unless why

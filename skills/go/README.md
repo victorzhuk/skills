@@ -26,6 +26,7 @@ Model- or user-reachable via skill name and trigger phrasing.
 - **[z-go-goose](./z-go-goose/SKILL.md)** — Schema migrations for Go using goose (github.com/pressly/goose) — numbered SQL files, up/down blocks, PL/pgSQL wrapping with StatementBegin/End, embed.FS embedding, bare-text enum pattern, and…
 - **[z-go-grpc](./z-go-grpc/SKILL.md)** — gRPC and protobuf service design in Go — field evolution, deadline propagation, the status-code/errdetails error model, interceptor ordering, streaming vs unary, and buf as the schema toolchain.
 - **[z-go-http-client](./z-go-http-client/SKILL.md)** — Outbound HTTP client hardening for Go calling external APIs — timeouts, transport tuning, body draining, retry with backoff/jitter, and circuit breakers.
+- **[z-go-idioms](./z-go-idioms/SKILL.md)** — Go design idioms from the official canon — Effective Go, Go Proverbs, Code Review Comments, Google's Go Style Guide — projected into decision rules, plus a router to the sibling skills that own the mechanics.
 - **[z-go-interfaces](./z-go-interfaces/SKILL.md)** — Interface design, struct embedding, type assertions, compile-time checks, receiver rules, generics vs interfaces in Go.
 - **[z-go-interp-perf](./z-go-interp-perf/SKILL.md)** — Interpreter/scripting VM performance in Go — batched cancellation polls, preboxing, versioned-cell site caches, operand-only fusion, freeze-then-share startup templates, striped compile caches.
 - **[z-go-lint](./z-go-lint/SKILL.md)** — Configure and run golangci-lint, suppress warnings correctly, fix common lint findings, and integrate linting into CI/pre-commit hooks.
@@ -44,6 +45,7 @@ Model- or user-reachable via skill name and trigger phrasing.
 - **[z-go-safety](./z-go-safety/SKILL.md)** — Prevents panics, silent data corruption, and runtime bugs through defensive Go coding — nil panics, append aliasing, map concurrent-write panics, float comparison, numeric overflow, defer-in-loop…
 - **[z-go-security](./z-go-security/SKILL.md)** — Go security hardening — injection prevention, crypto, path traversal, secrets, timing safety, and race-free concurrency.
 - **[z-go-sqlc](./z-go-sqlc/SKILL.md)** — Use when writing or reviewing Go database access that should be type-safe — generating Go from SQL with sqlc, authoring sqlc.yaml, structuring queries/schema, and wiring sqlc output into the…
+- **[z-go-stdlib](./z-go-stdlib/SKILL.md)** — Stdlib-first discovery — before writing any helper, util, or new dependency, verify the standard library or golang.org/x already covers it, via `go doc` and a task→package map.
 - **[z-go-style](./z-go-style/SKILL.md)** — Go code style — declarations, control flow, function design, and file organization.
 - **[z-go-taskfile](./z-go-taskfile/SKILL.md)** — Author a Taskfile.yml (go-task) for orchestration around a Go project — docker, databases, pipelines, CLI shortcuts, E2E — while delegating the inner loop to the Makefile.
 - **[z-go-telegram-bot](./z-go-telegram-bot/SKILL.md)** — Hand-rolled Telegram Bot API client in Go for MarkdownV2/Mini-App/Stars-level control — the minimal Bot struct over net/http, common methods (sendMessage, sendPhoto), MarkdownV2 escaping,…

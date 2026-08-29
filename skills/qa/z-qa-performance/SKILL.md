@@ -1,6 +1,6 @@
 ---
 name: z-qa-performance
-description: "Load and throughput testing with k6 — flat vus/duration or stages for the load shape, http_req_duration percentile thresholds, http_req_failed rate gating, wired through Makefile targets (test-load-smoke/test-load/test-load-stress/test-load-spike). Auto-activates for: load testing, performance benchmarks, latency profiling, SLA validation, API throughput testing. Does not cover Core Web Vitals; see [[core-web-vitals]]. Does not cover single-request API contract checks; see [[z-qa-api]]."
+description: "Load and throughput testing with k6 — flat vus/duration or stages for the load shape, http_req_duration percentile thresholds, http_req_failed rate gating, wired through Makefile targets. Auto-activates for load testing, performance benchmarks, latency profiling, SLA validation, API throughput. Core Web Vitals — [[core-web-vitals]]; single-request API contract checks — [[z-qa-api]]."
 ---
 
 # Performance QA Skill

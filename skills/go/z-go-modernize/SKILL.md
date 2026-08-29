@@ -1,7 +1,7 @@
 ---
 name: z-go-modernize
 description: >
-  Modernize Go code and tooling to current idioms (Go 1.21–1.26) — deprecated
+  Modernize Go code and tooling to current idioms (Go 1.21–1.27) — deprecated
   package replacements, language feature adoption, stdlib upgrades, and
   test/bench patterns. Triggers on "interface{}", "math/rand", "ioutil",
   "sort.Slice", "range over int", "slog migration". Does not cover linter
@@ -97,6 +97,14 @@ h := unique.Make(s)              // equal values dedupe to one handle, O(1) comp
 
 // new(expr) (1.26) — allocate + initialize in one step
 ptr := new(true)                 // old: v := true; ptr := &v
+
+// strings.CutLast / bytes.CutLast (1.27) — split on the last separator
+dir, file, ok := strings.CutLast(p, "/")  // old: strings.LastIndex + manual slicing
+
+// std uuid package (1.27) — v4/v7 generation and parsing per RFC 9562
+// replaces github.com/google/uuid for basic generate/parse needs
+
+// url.URL.Clone / url.Values.Clone (1.27)  // old: manual field-by-field copy
 ```
 
 ### Lower — gradual improvement
@@ -143,10 +151,13 @@ coordinate first — this is disruptive.
 - `govulncheck` in CI catches vulnerabilities in transitive deps.
 - PGO (`-pgo=auto`, 1.21+): measure before enabling; not always a win.
 - Tool deps in `go.mod` `tool` directives (1.24) instead of `tools.go`.
-- `encoding/json/v2` is experimental (`GOEXPERIMENT=jsonv2`, 1.25+) — do not
-  adopt without explicit opt-in from the team.
+- `encoding/json/v2` is stdlib since 1.27; `encoding/json` is backed by it
+  (opt out with `GOEXPERIMENT=nojsonv2`). Prefer v2 in new code on 1.27+.
+  Below 1.27 it is experimental (`GOEXPERIMENT=jsonv2`) — do not adopt there.
 - `cmd/doc` and `go tool doc` are deleted (1.26) — `go doc` is the drop-in
-  replacement, same flags and output.
+  replacement, same flags and output. `go doc` accepts `package@version` and
+  `-ex` for runnable examples (1.27).
+- `go test` runs the `stdversion` vet check by default (1.27).
 
 ## Quick Reference
 
@@ -168,6 +179,10 @@ coordinate first — this is disruptive.
 | Interning | manual dedup map | `unique.Handle[T]` | 1.23 |
 | Iterating | manual append loop | `slices.Collect` / `slices.Sorted` | 1.23 |
 | Pointer init | `v := x; p := &v` | `new(x)` | 1.26 |
+| Last-sep split | `LastIndex` + slicing | `strings.CutLast` | 1.27 |
+| UUIDs | `github.com/google/uuid` | std `uuid` | 1.27 |
+| URL copy | manual field copy | `url.URL.Clone` | 1.27 |
+| JSON (new code) | `encoding/json` | `encoding/json/v2` | 1.27 |
 
 ## Do not
 
@@ -176,7 +191,8 @@ coordinate first — this is disruptive.
 - Migrate to `slog` mid-task without team consent.
 - Remove `tt := tt` copies if the project still targets Go 1.21 (loop-var fix
   is runtime-only from 1.22).
-- Adopt `encoding/json/v2` — still experimental.
+- Adopt `encoding/json/v2` below Go 1.27 — experimental there
+  (`GOEXPERIMENT=jsonv2`).
 
 ## Verify
 

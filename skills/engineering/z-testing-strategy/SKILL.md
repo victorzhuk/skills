@@ -1,6 +1,6 @@
 ---
 name: z-testing-strategy
-description: Choose test depth by type of work, not a fixed coverage target — MVP/greenfield TDD vs existing-service regression protection, and when behavior needs a Gherkin/BDD contract vs an ordinary test. Use before writing code with observable behavior, or classifying a task as MVP vs existing-service. Triggers on "what should I test", "TDD", "regression test", "is this MVP or production". Owns the resource-limit floor for dev test runs (timeouts, worker caps). Language-specific syntax/mocking is the language's own skill, e.g. [[z-go-testing]] or [[z-go-bdd]].
+description: Choose test depth by type of work, not a fixed coverage target — MVP/greenfield TDD vs existing-service regression protection, and when behavior needs a Gherkin/BDD contract. Use before writing code with observable behavior. Triggers on "what should I test", "TDD", "regression test", "is this MVP or production". Owns the resource-limit floor for dev test runs (timeouts, worker caps). Language syntax/mocking — [[z-go-testing]], [[z-go-bdd]].
 ---
 
 # Testing strategy
