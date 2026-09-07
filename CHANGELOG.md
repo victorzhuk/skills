@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1
+
+### Patch Changes
+
+- [`b9bbeb9`](https://github.com/victorzhuk/skills/commit/b9bbeb93bc27513d57316eda04cf38984a95d7c6) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Scope testing, debugging, and lint guidance under a delegated dispatch: seams
+  and test mode arrive fixed, instrumentation stays inside the file budget,
+  sealed contract tests are never edited directly, and repo-wide lint stays with
+  the caller's merge gate. Trim four descriptions for catalog budget.
+
+- [`b9bbeb9`](https://github.com/victorzhuk/skills/commit/b9bbeb93bc27513d57316eda04cf38984a95d7c6) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Correct Go guidance for channel ownership and shutdown, timer compatibility,
+  shallow copies, method sets, generic comparability, loop-version migration,
+  and test contexts. Replace unconditional allocation claims with measured
+  compiler behavior, and add retained-memory and bounds-check guidance.
+
 ## 0.9.0
 
 ### Minor Changes
