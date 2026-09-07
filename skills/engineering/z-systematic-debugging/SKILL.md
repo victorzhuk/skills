@@ -37,13 +37,13 @@ Show the ranked list to the user before testing: they often re-rank instantly ("
 
 ## Phase 4 — Instrument
 
-Each probe maps to one prediction; change one variable at a time. Prefer a debugger/REPL breakpoint over logs; targeted logs at hypothesis-distinguishing boundaries over that; never "log everything and grep". Tag every debug log with a unique prefix (e.g. `[DEBUG-a4f2]`) so cleanup is one grep.
+Each probe maps to one prediction; change one variable at a time. Prefer a debugger/REPL breakpoint over logs; targeted logs at hypothesis-distinguishing boundaries over that; never "log everything and grep". Tag every debug log with a unique prefix (e.g. `[DEBUG-a4f2]`) so cleanup is one grep. Under a zapply dispatch, instrumentation stays inside the dispatch's file budget and comes out before yield — a bug that needs more is an escalation, not a wider edit.
 
 Performance regressions: logs are usually wrong — establish a baseline measurement first (timing harness, profiler, query plan), then bisect. Measure first, fix second.
 
 ## Phase 5 — Fix and lock
 
-Write the regression test **before the fix**, at a seam that exercises the real bug pattern ([[z-tdd]]). If the only available seam is too shallow to replicate the trigger, **the missing seam is itself a finding** — record it instead of writing a false-confidence test.
+Write the regression test **before the fix**, at a seam that exercises the real bug pattern ([[z-tdd]]). In a zapply worktree whose contract tests the caller has sealed, the regression test lands through the caller's test-amendment channel — never your own edit to a sealed `_test.go`. If the only available seam is too shallow to replicate the trigger, **the missing seam is itself a finding** — record it instead of writing a false-confidence test.
 
 Then: watch the test fail → apply one fix at the root cause (no bundled refactoring, no "while I'm here") → watch it pass → re-run the Phase 1 loop against the original, un-minimized scenario.
 

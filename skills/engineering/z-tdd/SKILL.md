@@ -17,7 +17,7 @@ Tests verify behaviour through public interfaces, not implementation details. Co
 
 A **seam** is the public boundary you test at: where behaviour is observable without reaching inside ([[z-deep-modules]]).
 
-**Test only at pre-agreed seams.** Before writing any test, write down the seams under test and confirm them with the user. You can't test everything — agreeing seams up front is how effort lands on critical paths and complex logic instead of every edge case.
+**Test only at pre-agreed seams.** Before writing any test, write down the seams under test and confirm them with the user. You can't test everything — agreeing seams up front is how effort lands on critical paths and complex logic instead of every edge case. Under a zapply dispatch the plan's seams are that confirmation — report an unlisted seam as a gap in your yield rather than deciding, never as a question.
 
 Ask: "What's the public interface, and which seams should we test?"
 
@@ -25,20 +25,20 @@ Ask: "What's the public interface, and which seams should we test?"
 
 - **Implementation-coupled** — mocks internal collaborators, tests private methods, or verifies through a side channel (querying the database instead of using the interface). The tell: the test breaks on refactor while behaviour is unchanged.
 - **Tautological** — the assertion recomputes the expected value the way the code does, so it passes by construction and can never disagree with the code. Expected values come from an independent source of truth: a known-good literal, a worked example, the spec.
-- **Horizontal slicing** — writing all tests first, then all implementation. Bulk tests verify *imagined* behaviour and freeze test structure before the implementation teaches you anything. Work in **vertical slices**: one test → one implementation → repeat, each test a tracer bullet responding to what the last cycle taught.
+- **Horizontal slicing** — writing all tests first, then all implementation. Bulk tests verify *imagined* behaviour and freeze test structure before the implementation teaches you anything. Work in **vertical slices**: one test → one implementation → repeat, each test a tracer bullet responding to what the last cycle taught. A zapply red stage is not this anti-pattern: there the plan's behavior contract already closed the design, and bulk-writing the chunk's contract tests against it is the mandate.
 
 ## Rules of the loop
 
 - **Red before green.** Failing test first, then only enough code to pass it. Watch it fail — a test that never went red proves nothing.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle. No speculative features.
-- **Refactoring is a separate stage.** It happens after green with the tests as a net, never mid-cycle.
+- **Refactoring is a separate stage.** It happens after green with the tests as a net, never mid-cycle. Under a zapply seal — the caller's sealed contract tests — stop at green; refactoring beyond the chunk belongs to the caller's review floor.
 
 ## Do not
 
 - Write a test at a seam the user hasn't confirmed.
 - Compute the expected value with the same logic as the code under test.
 - Write the implementation first and back-fill a passing test.
-- Bulk-write tests for behaviour that doesn't exist yet.
+- Bulk-write tests for behaviour that doesn't exist yet (outside a zapply red stage, where the sealed contract mandates it).
 - Refactor while red.
 
 ## Verify

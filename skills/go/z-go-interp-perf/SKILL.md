@@ -18,7 +18,7 @@ Profile-verified shares from a stack VM running a recursive workload — check t
 
 ## Boxing
 
-Converting an 8-byte pointer-free value with bit pattern 0..255 to an interface is already 0-alloc (`runtime.staticuint64s`); negatives and ≥256 allocate. So prebox exactly what Go doesn't cover: bool singletons and a small-int range (goja's `intCache[256]` covers −256..−1 for the same reason). Verify any boxing claim per [[z-go-performance]] "Verify the premise first" before building on it.
+Prebox only values that allocate on the measured VM path. Current gc already has static storage for bools and some small integer representations; nonescaping conversions may use the stack or disappear. Negative values do not universally allocate. Compare representative concrete types and escape paths before adding a cache; verification belongs to [[z-go-performance]] "Verify the premise first".
 
 ## Global/name resolution
 
@@ -50,9 +50,9 @@ Converting an 8-byte pointer-free value with bit pattern 0..255 to an interface 
 ## Host-call boundary
 
 - Give embedders a pre-resolved handle API (cached cell keyed by env + generation) instead of name lookup per call; a value-namespace fallback result must never be cached under a function-namespace key.
-- Benchmarks and hot embedder code should pass a pre-built `[]Value` — variadic literals allocate a fresh slice per call (two 16-byte interface headers = the whole 32 B/op some Call benchmarks report).
+- Reuse a pre-built `[]Value` when the measured call path allocates argument storage. Variadic backing arrays and boxed arguments may stay on the stack or be optimized away; check retained arguments, input sizes, and escape paths before changing the API.
 - A lean fast path (no meter, no callbacks, plain ctx → single defer, CAS-claimed pooled VM) cut the call boundary 21–36%. But measure the raw floor first — bare apply on a reused VM — because if the floor is near a competitor's full path, boundary stripping alone can't win; VM internals must shrink too.
-- Audit per-eval hashing/keying: `sha256.Sum256([]byte(src))` heap-copies the whole source per eval — one such site was 18% of alloc_space. Hash via `unsafe.Slice(unsafe.StringData(s), len(s))` or a stack buffer.
+- Audit per-eval hashing/keying across real source lengths. `sha256.Sum256([]byte(src))` may use stack storage for short inputs and allocate for larger ones. Prefer typed APIs or bounded stack buffers when a measured copy matters. Consider an unsafe borrowed view only after proving the benefit and preserving lifetime and immutability for the whole use; never mutate string-backed bytes.
 
 ## Do not
 

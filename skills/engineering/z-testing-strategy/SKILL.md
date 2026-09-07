@@ -5,7 +5,7 @@ description: Choose test depth by type of work, not a fixed coverage target — 
 
 # Testing strategy
 
-Before writing code with observable behavior, classify the work and pick the matching test depth — then write the failing test before the implementation.
+Before writing code with observable behavior, classify the work and pick the matching test depth — then write the failing test before the implementation. Under a zapply dispatch the mode arrives fixed in the prompt — apply it, don't re-derive it.
 
 ## Step 1 — classify
 
@@ -41,7 +41,7 @@ Goal: change behavior without losing what's already guaranteed.
 - Read the existing tests before writing code.
 - Add a failing test before changing behavior — regression for a fix, characterization for a refactor, new-behavior test for a feature.
 - Cover, when touched: permissions, validation boundaries, state transitions, idempotency/retries, persistence and transaction behavior, external side effects, user-visible error mapping, backward compatibility, migrations.
-- Run the targeted test first, then the relevant suite through the project's own wrappers.
+- Run the targeted test first, then the relevant suite through the project's own wrappers — under a zapply dispatch, stop at the targeted run; the suite is the caller's merge-gate floor.
 - Done when: old behavior stays covered, new behavior has direct tests, bug fixes carry a reproduction test, and no test is left flaky or skipped without a reason.
 
 ## Step 3 — does this need a behavior contract (Gherkin/BDD)?

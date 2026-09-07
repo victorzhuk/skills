@@ -53,7 +53,7 @@ Always use context-aware variants: `QueryContext`, `ExecContext`, `NewRequestWit
 
 ## Cancellation
 
-`WithCancel` lets a parent scope stop all downstream work. Call `cancel()` as soon as the reason is gone — the `defer` handles the normal path; call it explicitly on error to signal early:
+`WithCancel` lets a parent scope request shutdown of cooperating downstream work. Cancellation does not wait for workers or interrupt code that ignores it; join workers before releasing resources they use. Call `cancel()` as soon as the reason is gone — the `defer` handles the normal path; call it explicitly on error to signal early:
 
 ```go
 ctx, cancel := context.WithCancel(ctx)
@@ -111,23 +111,17 @@ For CPU-bound loops, check `ctx.Err() != nil` periodically instead of `select`.
 
 ## WithoutCancel (Go 1.21+)
 
-Preserves context values (trace ID, etc.) but detaches cancellation. Use for
-background work that must outlive the request — audit logs, async enqueue:
+Preserves context values but removes cancellation and deadline; `Done()` is nil.
+Use only when work deliberately outlives the request. Give it its own bound
+with `context.WithTimeout(context.WithoutCancel(ctx), limit)`, and arrange
+application-owned shutdown and joining through [[z-go-concurrency]]. A timeout
+alone does not make ignored cancellation safe or guarantee delivery of audit
+records. For work that must survive process exit, use durable delivery.
 
-```go
-func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
-    ctx := r.Context()
-    order, err := h.orders.Create(ctx, req)
-    if err != nil { ... }
-
-    // audit must complete even if the client disconnects
-    go h.audit.LogCreated(context.WithoutCancel(ctx), order)
-
-    w.WriteHeader(http.StatusCreated)
-}
-```
-
-`context.Background()` here would drop the trace ID. `ctx` would be cancelled on handler return.
+`context.Background()` would drop request values. Keeping `ctx` would retain
+request cancellation. Neither choice replaces an explicit worker lifetime.
+See [context.WithoutCancel](https://pkg.go.dev/context#WithoutCancel) and
+[CancelFunc](https://pkg.go.dev/context#CancelFunc).
 
 ## Context values
 

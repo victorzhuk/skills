@@ -10,9 +10,11 @@ description: >
 
 # Go Modernization
 
-Check `go.mod` / `go.work` version first. All suggestions below are gated by
-the `go` directive. Upgrade the `go` line before applying features that depend
-on it.
+Check the selected toolchain and the owning module's `go` directive first;
+account for workspace selection and per-file language-version constraints.
+Language semantics, library availability, and runtime compatibility settings
+are separate gates. Propose a version bump when needed; do not raise the
+minimum version merely to enable a cleanup.
 
 ## Migration priority
 
@@ -21,7 +23,7 @@ on it.
 | Pattern | Fix | Since |
 |---|---|---|
 | `math/rand` + `rand.Seed` | `math/rand/v2` | 1.22 |
-| Loop variable re-used in goroutine/subtest | Remove shadow copy — fixed by runtime | 1.22 |
+| Captured loop variable declared with `:=` | Remove redundant shadow only under Go 1.22+ language semantics; `=` still reuses variables | 1.22 |
 | `reflect.SliceHeader` / `StringHeader` | `unsafe.Slice` / `unsafe.String` | 1.21 |
 | `crypto/elliptic` | `crypto/ecdh` | 1.20 |
 | `runtime.SetFinalizer` | `runtime.AddCleanup` | 1.24 |
@@ -65,7 +67,8 @@ var once sync.Once               // old pattern
 var val T
 once.Do(func() { val = compute() })
 
-v := sync.OnceValue(compute)()  // new — inline, type-safe
+getValue := sync.OnceValue(compute)
+v := getValue()
 
 // sync.WaitGroup.Go (1.25)
 wg.Add(1)
@@ -107,6 +110,9 @@ dir, file, ok := strings.CutLast(p, "/")  // old: strings.LastIndex + manual sli
 // url.URL.Clone / url.Values.Clone (1.27)  // old: manual field-by-field copy
 ```
 
+Create a `sync.OnceValue` wrapper once per intended lifetime and reuse it.
+Recreating `sync.OnceValue(compute)()` on each access creates independent caches.
+
 ### Lower — gradual improvement
 
 ```go
@@ -125,7 +131,7 @@ for part := range strings.SplitSeq(s, ",") { ... }
 
 ```go
 // t.Context() (1.24) over context.Background() inside tests
-ctx := t.Context()               // cancels at test cleanup, carries deadline
+ctx := t.Context()               // cancels immediately before cleanup callbacks
 
 // b.Loop() (1.24) over the manual N loop
 for b.Loop() { ... }             // replaces: for i := 0; i < b.N; i++
@@ -136,7 +142,28 @@ for b.Loop() { ... }             // replaces: for i := 0; i < b.N; i++
 // idle — use it over a hand-rolled Clock interface for controlling fake time
 ```
 
-Loop-variable capture (`tt := tt`) is unnecessary on Go 1.22+. Remove it.
+`t.Context()` does not inherit `t.Deadline()`; derive a deadline explicitly when
+the tested operation requires one. See [[z-go-testing]].
+
+## Loop-version migration
+
+- Fresh variables per iteration apply to loop declarations (`:=`) under Go
+  1.22+ language semantics. Assignment to existing variables (`=`) still reuses
+  them. A newer toolchain alone does not change a module targeting Go 1.21.
+- Remove `tt := tt` only after checking the declaration and effective language
+  version. Per-iteration copies still share nested slices, maps, and pointers;
+  parallel subtests need independent mutable fixtures.
+- In a three-clause loop, the next iteration's declared variables are copied
+  from the previous iteration before the post statement. Keep used locks,
+  WaitGroups, typed atomics, and nonzero `strings.Builder` values outside the
+  loop initializer or behind stable pointers. Do not rely on vet catching
+  every implicit copy.
+- `&v` from `for _, v := range s` points to an iteration copy, not a slice
+  element. Use `&s[i]` when element identity matters. Escaping addresses can
+  allocate on current Go versions too.
+- Converting a three-clause loop to integer range changes bound evaluation:
+  range evaluates its bound once; the original condition runs each iteration.
+  Check side effects, changing bounds, and post-step behavior before replacing.
 
 ## Logging migration
 
@@ -186,11 +213,11 @@ coordinate first — this is disruptive.
 
 ## Do not
 
-- Apply language features if `go.mod` is below the required version; bump the
-  directive first.
+- Apply language features below the effective language version; propose the
+  required version upgrade separately.
 - Migrate to `slog` mid-task without team consent.
-- Remove `tt := tt` copies if the project still targets Go 1.21 (loop-var fix
-  is runtime-only from 1.22).
+- Treat the Go 1.22 loop change as a runtime fix or remove captures from loops
+  assigning existing variables without checking their lifetime.
 - Adopt `encoding/json/v2` below Go 1.27 — experimental there
   (`GOEXPERIMENT=jsonv2`).
 
@@ -200,5 +227,14 @@ coordinate first — this is disruptive.
 go vet ./...
 golangci-lint run --enable modernize
 govulncheck ./...
-go test -short ./...
+go test -short -timeout 2m -p 2 -parallel 2 ./...
 ```
+
+Prefer the project's bounded test target. For loop migration, cover captured
+values, retained addresses, and shared mutable fixtures at the supported
+language version.
+
+## Sources
+
+- [Go101: Go 1.22 loop changes](https://go101.org/blog/2024-03-01-for-loop-semantic-changes-in-go-1.22.html).
+- [Go specification: for clauses](https://go.dev/ref/spec#For_clause), [range clauses](https://go.dev/ref/spec#For_range), [OnceValue](https://pkg.go.dev/sync#OnceValue), [test context](https://pkg.go.dev/testing#T.Context).

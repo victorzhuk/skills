@@ -7,7 +7,7 @@ description: Go performance optimization — allocation reduction, CPU efficienc
 
 ## Core discipline
 
-Profile → hypothesize → change ONE thing → re-measure. Intuition about bottlenecks is wrong ~80% of the time. Reducing allocations per request yields more ROI than micro-optimizing CPU cycles.
+Profile → hypothesize → change ONE thing → re-measure. Choose CPU, allocation rate, retained memory, or contention work from the measured bottleneck.
 
 Before touching Go code, verify the bottleneck is *in your process* — if 90% of latency is a slow DB query or upstream API, reducing allocations won't help.
 
@@ -15,17 +15,12 @@ Before touching Go code, verify the bottleneck is *in your process* — if 90% o
 fgprof -http :6060 &
 ```
 
-None of `sync.Pool`, `GOMEMLIMIT`/`GOGC` tuning, `fieldalignment`, or the full
-`Benchmark*`/`b.Loop()`/benchstat cycle below shows real usage across the current
-fleet yet — that's not evidence against them, just that no profiled bottleneck has
-needed them so far. They stay in this skill for when one does.
-
 ## Iteration cycle
 
 ```bash
-go test -bench=BenchmarkFoo -benchmem -count=10 ./pkg/... | tee bench-before.txt
+timeout 5m go test -run='^$' -bench=BenchmarkFoo -benchmem -count=10 -cpu=2 -timeout 2m -p 2 -parallel 2 ./pkg/... | tee bench-before.txt
 # apply ONE change
-go test -bench=BenchmarkFoo -benchmem -count=10 ./pkg/... | tee bench-after.txt
+timeout 5m go test -run='^$' -bench=BenchmarkFoo -benchmem -count=10 -cpu=2 -timeout 2m -p 2 -parallel 2 ./pkg/... | tee bench-after.txt
 benchstat bench-before.txt bench-after.txt
 ```
 
@@ -38,9 +33,9 @@ For A/B validity traps — interleaving, arm symmetry, control cells, contention
 A perf change's premise ("this allocates", "this struct can't shrink without reordering") must come from a compiler or runtime observation, not from reading code — one command settles each claim:
 
 - **Heap claim**: `go build -gcflags=-m` — escape analysis may already stack-allocate the object; pooling it then removes zero allocations. Account for every alloc in the target `-benchmem` cell by name.
-- **Boxing claim**: a constant composite literal converted to an interface never calls `runtime.convT*` — the emitted code references a static symbol. Converting an 8-byte pointer-free value with bit pattern 0..255 is 0-alloc (`runtime.staticuint64s`); negatives **always** allocate, as do values ≥256 and runtime-computed floats. Settle with `go build -gcflags=-S`: look for `convT` vs a `LEAQ` of a static symbol.
+- **Boxing claim**: interface conversions may use direct storage, static data, stack storage, or heap allocation. Current gc has static storage for bools and some small integer representations, but type layout and escape path matter. Nonescaping negative values need not allocate. Inspect `go build -gcflags='-m=2'` and `-gcflags=-S`, then measure the actual escaping and nonescaping call paths before preboxing.
 - **Layout claim**: never assert a size/alignment consequence of field order by reasoning — run a throwaway `unsafe.Sizeof`/`unsafe.Offsetof` program over **all** variants under comparison. The failure mode is crediting a size-class crossing to a reorder that contributed nothing; the bytes gate sees size classes, not field counts.
-- **Sizing a win**: profile at `GODEBUG=memprofilerate=1` — the default sampling rate extrapolates and misattributes flat costs (a change sized as a "42-alloc residue" measured 4 of 42 at exact rate). An `AllocsPerRun`-flat test across two sizes cannot discriminate map cost: `make(map, N)` alloc *count* is flat from N≈10 to N≈1000.
+- **Sizing a win**: when attributing small allocation differences, use `GODEBUG=memprofilerate=1` in a separate diagnostic run; its overhead invalidates normal timing comparisons. Measure both allocation counts and bytes across representative capacities and key/value types. Equal counts do not imply equal map memory cost; counts and size classes vary with toolchain and input.
 
 When a change pays off through a different mechanism than proposed, correct the premise in the doc instead of letting the wrong causal story stand.
 
@@ -59,7 +54,7 @@ func BenchmarkParse(b *testing.B) {
 
 | Signal (pprof) | Bottleneck | Action |
 |---|---|---|
-| `alloc_objects` high | too many heap allocs | sync.Pool, prealloc, value receivers |
+| `alloc_objects` high | too many heap allocs | Identify escaping objects; measure preallocation, lifetime changes, or pooling |
 | function dominates CPU profile | hot loop | inlining, cache locality, avoid reflect |
 | high GC%, OOM in container | GC pressure | GOMEMLIMIT, GOGC, reduce live set |
 | goroutines blocked on I/O | external wait | connection pools, streaming, batching |
@@ -89,10 +84,17 @@ func process(data []byte) string {
 Escape analysis — check what escapes to heap:
 
 ```bash
-go build -gcflags="-m=2" ./pkg/... 2>&1 | grep "escapes to heap"
+go build -gcflags="-m=2" ./pkg/... 2>&1 | rg "escapes to heap"
 ```
 
-Common escape causes: interface boxing, taking address of loop variable (pre-1.22), closures capturing by reference, passing to `interface{}` parameters.
+Address-taking, closures, and interface conversions can cause escape on any Go version; none implies an allocation by syntax alone. Escape diagnostics also do not settle every dynamic-size allocation: measure representative input lengths and retained results.
+
+## Retained memory
+
+- A small substring or subslice can retain a large backing allocation. Use `strings.Clone` or `slices.Clone` when the retained memory warrants a copy. Capacity clipping does not detach storage; clone/alias semantics belong to [[z-go-safety]].
+- After manual deletion or compaction of pointer-bearing slice elements, clear the obsolete tail before shortening when those references should be released. `slices.Delete` clears that tail on Go 1.22+; keep its returned slice and account for aliases.
+- `clear(m)` removes entries, not a promised amount of backing storage. Rebuild or release a map only when retained-memory measurements justify it and ownership permits it.
+- `sync.Pool` may drop entries at any time. Bound retained buffer capacity when pooling; do not return an object while another caller still holds a mutable view of its storage.
 
 ## Struct alignment
 
@@ -102,7 +104,7 @@ Padding waste adds up on hot-path structs. Run:
 fieldalignment ./...
 ```
 
-Pack large fields first (pointer/int64 = 8 bytes), bools/int8 last:
+Measure field sizes and alignment for the target `GOARCH`; group fields to reduce measured padding without breaking layout contracts. On amd64, the following example reduces 24 bytes to 16; verify rather than generalizing those sizes to every target:
 
 ```go
 // Bad: 24 bytes due to padding
@@ -122,9 +124,9 @@ type Good struct {
 
 ## Memory layout & cache locality
 
-False sharing: avoid placing fields written by different goroutines in the same cache line (64 bytes). Pad with `_ [64]byte` when a struct is used as a goroutine-local shard.
+Investigate false sharing when independently written fields contend on the target CPU. Cache-line size and padding benefits are target-dependent; benchmark before padding shards, which increases the live set.
 
-Value types in hot loops are cheaper than pointer chasing — a `[]Foo` is a contiguous block; `[]*Foo` makes the CPU fetch each element from a random heap address.
+A `[]Foo` stores elements contiguously; `[]*Foo` adds indirection and potentially more allocations and GC scanning. Pointers can avoid large copies. For large slice elements, compare index iteration with `for _, v := range s`; choose from measured copy cost and locality, preserving aliasing behavior.
 
 ## GC tuning
 
@@ -147,13 +149,15 @@ GODEBUG=gccheckmark=1,gctrace=1 go run ./cmd/server
 | Interface dispatch | `any` parameters on hot path | concrete types or generics |
 | Logging in loops | `log.Printf(...)` every iteration | log outside, or `slog.LogAttrs` with level check |
 | panic/recover as flow | `panic` + `recover` for errors | error returns |
-| Large copy on map access | `map[K]BigStruct` — copies value | `map[K]*BigStruct` |
+| Large copy on map access | Assume either representation wins | Compare value copies with pointer indirection, GC cost, and ownership |
 
-Inlining: functions > 80 AST nodes won't inline. Check:
+Inlining uses compiler cost heuristics affected by call sites and PGO, not a fixed AST-node limit. Check the actual build:
 
 ```bash
-go build -gcflags="-m" ./... 2>&1 | grep "can inline\|too complex"
+go build -gcflags="-m=2" ./... 2>&1 | rg "can inline|too complex"
 ```
+
+For a measured indexing hotspot, inspect bounds checks with `go build -gcflags='-d=ssa/check_bce/debug=1' ./pkg/...`; instantiate relevant generic functions so their bodies are compiled. Prefer clear length-guarded loops. Recheck hints after compiler upgrades; fewer bounds checks alone do not prove a speedup.
 
 ## I/O & networking
 
@@ -180,7 +184,10 @@ func fetch(key string) ([]byte, error) {
     v, err, _ := g.Do(key, func() (any, error) {
         return expensiveLoad(key)
     })
-    return v.([]byte), err
+    if err != nil {
+        return nil, err
+    }
+    return v.([]byte), nil
 }
 ```
 
@@ -197,8 +204,15 @@ Precompile regexps at init, precompute lookup tables, cache parsed config. For p
 ## Verify
 
 ```bash
-go test -bench=. -benchmem -count=10 ./... | tee bench-after.txt
+timeout 5m go test -run='^$' -bench=. -benchmem -count=10 -cpu=2 -timeout 2m -p 2 -parallel 2 ./... | tee bench-after.txt
 benchstat bench-before.txt bench-after.txt
-go build -gcflags="-m=2" ./... 2>&1 | grep "escapes to heap"
+go build -gcflags="-m=2" ./... 2>&1 | rg "escapes to heap"
 fieldalignment ./...
 ```
+
+Prefer the project's bounded benchmark target. Record toolchain, `GOARCH`, input sizes, and concurrency settings; keep them identical between comparisons. `-parallel` limits tests, not `b.RunParallel`; `-cpu=2` bounds its default workers, while `SetParallelism` multiplies that count. Check benchmark-specific worker creation too.
+
+## Sources
+
+- [Go101: allocations](https://go101.org/optimizations/0.3-memory-allocations.html), [retention](https://go101.org/article/memory-leaking.html), [copy costs](https://go101.org/article/value-copy-cost.html), [bounds checks](https://go101.org/optimizations/5-bce.html).
+- [Go GC guide](https://go.dev/doc/gc-guide), [slices.Delete](https://pkg.go.dev/slices#Delete), [sync.Pool](https://pkg.go.dev/sync#Pool). Treat compiler examples as version-specific observations; confirm current behavior before applying them.

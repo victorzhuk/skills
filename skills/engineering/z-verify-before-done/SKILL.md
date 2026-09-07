@@ -12,11 +12,13 @@ No completion claims without fresh verification evidence. A claim made from memo
 Before claiming any status:
 
 1. **Identify** the command that proves the claim.
-2. **Run** it — fresh, complete, not a cached or partial variant.
+2. **Run** it — fresh, complete, not a skipped or partial run.
 3. **Read** the full output: exit code, failure counts, warnings.
 4. **Compare** output to claim. Output contradicts it → state the actual status with the evidence. Output confirms it → state the claim *with* the evidence.
 
 Skipping a step isn't efficiency; it's reporting fiction.
+
+Fresh means after the last edit, not cache-busted: a cache hit on an unchanged package is valid evidence, and `-count=1` belongs to merge gates, not to your proof. Under a zapply dispatch the command that proves the claim is the chunk's literal verify command — the suite and the repo-wide merge-gate floor belong to the caller, and re-running an identical command that already gave its answer adds nothing.
 
 ## What each claim requires
 
@@ -45,7 +47,7 @@ Every rationalization has the same answer: run the command.
 ## Do not
 
 - Claim success in any wording — direct, paraphrased, or implied — without fresh evidence in the same turn.
-- Substitute a weaker check for the real one (lint for build, one test for the suite, compile for behavior).
+- Substitute a weaker check for the real one (lint for build, one test for the suite, compile for behavior). Under a zapply dispatch the chunk's targeted command *is* the real check — the suite is the caller's floor, not a stronger substitute you owe.
 - Report a subagent's claim as verified fact.
 - Let tiredness or a long session lower the bar.
 

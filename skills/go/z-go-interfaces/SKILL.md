@@ -84,8 +84,10 @@ an enhanced version. Use a named field when the outer type only *uses* the inner
 | **Embed** | Outer type exposes the inner type's API (`Server` embeds `http.Handler`) |
 | **Named field** | Outer type hides it (`Server` holds `store *DataStore`) |
 
-Receiver of promoted methods is the inner type. Override by declaring the same
-method on the outer type.
+The receiver of a promoted method is the embedded value. An outer method with
+the same name shadows that selector; calls inside the embedded type still use
+its own methods. Embedding does not provide virtual dispatch. Equal-depth
+selector collisions can prevent promotion and change interface satisfaction.
 
 ## Receivers
 
@@ -97,6 +99,17 @@ method on the outer type.
 
 **Pick one and stay consistent.** If any method uses a pointer receiver, all
 methods should.
+
+For a defined non-interface, non-pointer type `T`, the method set of `T` contains value-receiver
+methods; `*T` also has pointer-receiver methods. An addressable `t.M()` can be
+shorthand for `(&t).M()`; this does not make `T` implement an interface requiring
+that pointer method. Map elements and concrete values stored in interfaces are
+not addressable through those expressions.
+
+A method value `f := x.M` saves its receiver at creation: a value receiver is a
+copy, a pointer receiver keeps the pointer. Later reassignment of `x` does not
+rebind `f`. For explicit receiver selection at call time, use a method expression
+such as `(*T).M`. Value-receiver copies can still alias nested data; see [[z-go-safety]].
 
 ## Zero value
 
@@ -126,8 +139,22 @@ func Process[T io.Reader](r T) error { ... }  // bad — T adds nothing
 func Process(r io.Reader) error { ... }        // good
 ```
 
-Prefer `comparable` over hand-rolled type unions. Start concrete; generalize
-only when a second real call site appears.
+Choose constraints from the operations required: `comparable` permits `==` and
+map keys, not ordering or arithmetic. Use `~T` when accepting defined types with
+underlying type `T`; a bare non-interface `T` term admits only that type. Unions admit
+alternatives; embedded constraint elements intersect their type sets. Interfaces
+whose type sets cannot be expressed entirely by methods are constraints, not
+ordinary runtime value types.
+
+Since Go 1.20, `any` can satisfy `comparable`; this is not a panic-free comparison
+guarantee. Equality of two interfaces with the same non-comparable dynamic type
+(such as `[]int`) panics; an interface map key with such a value also panics.
+This can occur inside `Equal[T comparable]` instantiated with `any`, or through
+interface fields in structs. Prefer strictly comparable key types when inputs
+must be accepted without runtime panics: their compared fields/elements must
+exclude interfaces, including within nested structs and arrays.
+
+Start concrete; generalize only when a second real call site appears.
 
 ## Functional options
 
@@ -161,7 +188,7 @@ Under 3 options or all-internal API → plain config struct is simpler.
 | Type assertion | Always comma-ok | Bare `val.(T)` |
 | Receivers | Consistent per type; pointer if mutates/large | Mix pointer + value |
 | Embed vs field | Embed to expose API, field to hide | Embed to "save typing" |
-| `any` / generics | `[T comparable]` for type-safe ops | `any` for collections |
+| Constraints | `any` unless operations need more; `comparable` for equality/map keys | Assume `comparable` makes interface values panic-free |
 | Generics | Shared logic, no useful interface | Genericize when interface fits |
 
 ## Verify
@@ -170,3 +197,12 @@ Under 3 options or all-internal API → plain config struct is simpler.
 go vet ./...
 golangci-lint run
 ```
+
+Check interface satisfaction for the intended `T` or `*T`, not only whether a
+method call compiles. For generic comparisons accepting interface values, test
+non-comparable dynamic values at the boundary.
+
+## Sources
+
+- [Go101: methods](https://go101.org/article/method.html), [embedding](https://go101.org/article/type-embedding.html), [type constraints](https://go101.org/generics/555-type-constraints-and-parameters.html).
+- [Go specification: method sets](https://go.dev/ref/spec#Method_sets), [method values](https://go.dev/ref/spec#Method_values), [constraint satisfaction](https://go.dev/ref/spec#Satisfying_a_type_constraint).

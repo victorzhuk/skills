@@ -1,6 +1,6 @@
 ---
 name: z-ru-tech-register
-description: Russian tech prose in the native senior-engineer register — Latin-vs-Cyrillic term choice, serious-register structure, erasing tells that mark a text as machine-written. Use writing or reviewing any Russian technical text — post, article, doc, README, comment. Triggers on "напиши по-русски", "чтобы не выглядело как нейрослоп". Owns the bilingual RU/EN glossary by theme. AI-fingerprint removal [[z-fuck-slop]]; English docs [[z-concise-human-docs]].
+description: Russian tech prose in the native senior-engineer register — Latin-vs-Cyrillic term choice, serious-register structure, erasing machine-written tells. Use for any Russian technical text — post, article, doc, README, comment. Triggers on "напиши по-русски", "чтобы не выглядело как нейрослоп". Owns the bilingual RU/EN glossary by theme. AI-fingerprint removal [[z-fuck-slop]]; English docs [[z-concise-human-docs]].
 ---
 
 # RU Tech Register

@@ -14,24 +14,33 @@ Every goroutine is a liability until proven necessary. Correctness and leak-free
 
 ## Principles
 
-1. Every goroutine must have a clear exit — context, done channel, or WaitGroup.
-2. Share memory by communicating; channels transfer ownership. Mutexes protect shared state.
-3. Send copies, not pointers on channels — pointers create invisible shared memory.
-4. Only the sender closes a channel — receiver close panics if sender writes after.
+1. Give every goroutine an exit condition and an owner that waits for completion. A WaitGroup joins work; it does not cancel or unblock it.
+2. Channel sends copy values, not referenced data. Choose exclusive ownership transfer, immutable sharing, or synchronized mutation.
+3. Pointer payloads are valid under that protocol. Copied slices, maps, and pointer-bearing structs still share storage; the sender must stop accessing transferred mutable data until ownership returns.
+4. Assign one closer. Close only after all possible sends finish; with multiple senders, join them before closing. `sync.Once` prevents duplicate closes, not send/close races.
 5. Specify channel direction (`chan<-`, `<-chan`) — compiler prevents misuse.
 6. Default to unbuffered channels; buffers mask backpressure.
-7. Always include `ctx.Done()` in `select` — omitting it leaks goroutines on cancellation.
-8. Never use `time.After` in hot loops — reuse `time.NewTimer` + `Reset`.
+7. Guard channel operations that must unblock on cancellation with `ctx.Done()`. A ready cancellation case has no priority over other ready cases.
+8. Reuse timers when repeated `time.After` allocations matter; check effective timer semantics before choosing a reset/drain protocol.
+
+## Channel state and visibility
+
+- A nil channel blocks sends and receives; setting a local input to `nil` disables its `select` case.
+- A closed, drained channel stays ready and yields zero values. Check `ok`; return at stream end or disable that input in a multiplexing loop.
+- `select` evaluates channel operands and send values before choosing a case. `case out <- expensive()` runs `expensive()` even if cancellation or `default` wins.
+- A send synchronizes before completion of its matching receive. Closing synchronizes before a receive that observes closure (`ok == false`), not merely a receive of earlier buffered data. An unbuffered receive also synchronizes before completion of its matching send.
+- Goroutine exit, `time.Sleep`, and `runtime.Gosched` do not join work or establish visibility. Use a channel, lock, WaitGroup, or documented atomic protocol.
+- Atomics do not make a compound invariant atomic. Publishing a pointer atomically does not protect later mutations of its pointee.
 
 ## Channel vs Mutex vs Atomic
 
 | Scenario | Primitive | Why |
 |---|---|---|
-| Passing data between goroutines | channel | Explicit ownership transfer |
+| Passing data between goroutines | channel | Handoff under an explicit ownership protocol |
 | Goroutine lifecycle / signals | channel + context | Clean shutdown via select |
 | Protecting shared struct fields | `sync.Mutex` / `sync.RWMutex` | Simple critical sections |
-| Counters, flags | `sync/atomic` | Lock-free, lower overhead |
-| Read-heavy concurrent map | `sync.Map` | Optimized for high read/low write |
+| Independent counters, flags | `sync/atomic` | Atomic access; measure contention and cost |
+| Write-once/read-many or disjoint-key map access | `sync.Map` | Specialized workloads; default to typed map + lock |
 | Cache stampede prevention | `x/sync/singleflight` | Deduplicates in-flight calls |
 | Caching an expensive init | `sync.Once` | Execute once, safe for concurrent callers |
 
@@ -39,12 +48,14 @@ Every goroutine is a liability until proven necessary. Correctness and leak-free
 
 | Need | Use |
 |---|---|
-| Fire-and-forget, no errors | `sync.WaitGroup` |
+| Wait for completion, no error collection | `sync.WaitGroup` |
 | Collect first error | `errgroup.Group` |
 | Cancel siblings on first error | `errgroup.WithContext` |
 | Bounded concurrency | `errgroup.SetLimit(n)` |
 
 `errgroup.Group.Go(func() error { ... })` — no manual Add/Done; first non-nil error is returned by `Wait`. This signature has always been `func() error`; nothing about it is Go-version-gated.
+
+Go 1.25+: `wg.Go(f)` starts and tracks a task; `f` must not panic. Start tasks before `Wait` when the group is empty. Reuse a group for independent work only after previous `Wait` calls return. With manual `Add`/`Done`, register work before starting its goroutine.
 
 ## Sync Primitives
 
@@ -53,9 +64,11 @@ Every goroutine is a liability until proven necessary. Correctness and leak-free
 | `sync.Mutex` | Never hold across I/O; keep critical sections short |
 | `sync.RWMutex` | Never upgrade `RLock` → `Lock` (deadlock) |
 | `sync/atomic` | Prefer typed: `atomic.Int64`, `atomic.Bool` (Go 1.19+) |
-| `sync.Map` | No explicit locking; use `RWMutex`+map when writes dominate |
-| `sync.Pool` | Always `Reset()` before `Put()`; reduces GC pressure |
+| `sync.Map` | Individual operations are safe; multi-operation invariants need coordination |
+| `sync.Pool` | Release aliases before `Put`; reset before reuse; entries may disappear at any time |
 | `sync.Once` | Go 1.21+: `OnceFunc`, `OnceValue`, `OnceValues` |
+
+Do not copy locks, WaitGroups, Once/Pool/Map values, or typed atomics after first use, including through containing structs, value receivers, range values, and channel sends. Keep them at stable addresses. Go 1.22 loop declarations can introduce implicit copies; see [[z-go-modernize]].
 
 ## Common Patterns
 
@@ -67,7 +80,10 @@ func (w *Worker) run(ctx context.Context) {
         select {
         case <-ctx.Done():
             return
-        case item := <-w.queue:
+        case item, ok := <-w.queue:
+            if !ok {
+                return
+            }
             w.process(item)
         }
     }
@@ -116,6 +132,8 @@ func (s *Service) fetchUser(ctx context.Context, id string) (*User, error) {
 
 ### Timer reuse in hot loop
 
+With Go 1.23 timer semantics, unreachable timers can be collected before expiry; channel `Stop`/`Reset` exclude stale notifications. Go 1.23–1.26 can retain legacy behavior through the main module's version or `GODEBUG` compatibility settings; Go 1.27 removed `asynctimerchan`. Reuse avoids repeated allocations, rather than fixing a universal timer leak. The loop below resets only after consuming the previous tick.
+
 ```go
 t := time.NewTimer(interval)
 defer t.Stop()
@@ -142,10 +160,10 @@ Before every `go func`:
 ## Do not
 
 - `wg.Add` inside the goroutine — `Wait` may return before `Add` is called.
-- Close a channel from the receiver side.
-- Send pointers on channels when the goroutine on the other end writes to them.
+- Close a channel while a sender may still use it.
+- Access transferred mutable data concurrently without synchronization.
 - Upgrade `RLock` to `Lock` — deadlock.
-- Use `time.After` in loops — a timer is allocated and never collected until it fires.
+- Treat `len(ch)` or an "is closed" probe as permission to send or close; state can change immediately.
 - Leave `select` without `ctx.Done()` in goroutines that run until cancellation.
 - Spawn goroutines without a bound — use `errgroup.SetLimit(n)` or a semaphore.
 
@@ -159,7 +177,7 @@ func TestMain(m *testing.M) {
 ```
 
 ```sh
-go test -race ./...
+go test -race -timeout 2m -p 2 -parallel 2 ./...
 runtime.NumGoroutine()           # runtime count
 curl http://localhost:6060/debug/pprof/goroutine?debug=2  # stack dump
 ```
@@ -167,6 +185,13 @@ curl http://localhost:6060/debug/pprof/goroutine?debug=2  # stack dump
 ## Verify
 
 ```sh
-go test -race ./...
+go test -race -timeout 2m -p 2 -parallel 2 ./...
 golangci-lint run ./...
 ```
+
+Prefer the project's bounded test target. Exercise closed input, cancellation while blocked, and sender completion before close; the race detector alone does not prove liveness.
+
+## Sources
+
+- [Go101: channels](https://go101.org/article/channel.html), [channel closing](https://go101.org/article/channel-closing.html), [common concurrency mistakes](https://go101.org/article/concurrent-common-mistakes.html).
+- [Go memory model](https://go.dev/ref/mem), [select semantics](https://go.dev/ref/spec#Select_statements), [timer compatibility](https://go.dev/doc/godebug).

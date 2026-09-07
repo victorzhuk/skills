@@ -21,7 +21,7 @@ Naming: `TestFoo`, `TestFoo_Method`, `BenchmarkFoo`, `ExampleFoo`, `FuzzFoo`.
 
 ## Table-driven tests
 
-Always name cases; build the table incrementally in TDD — one case per cycle. Loop-variable capture (`tt := tt`) is unnecessary on Go 1.22+.
+Always name cases; build the table incrementally in TDD — one case per cycle. Under a zapply red stage the plan's behavior contract is already closed — write the full contract table up front there. Loop-variable capture (`tt := tt`) is redundant for loop variables declared with `:=` under Go 1.22+ language semantics; assignments with `=` still reuse variables. Check the owning module's version, not just the toolchain; see [[z-go-modernize]].
 
 ```go
 func TestCalculatePrice(t *testing.T) {
@@ -49,9 +49,9 @@ func TestCalculatePrice(t *testing.T) {
 }
 ```
 
-Call `t.Parallel()` on the top-level when it shares no mutable global; add it to subtests only when they are truly independent.
+Call `t.Parallel()` on the top-level when it shares no mutable global; add it to subtests only when they are truly independent. Per-iteration variables and shallow fixture copies do not isolate nested slices, maps, or pointers; see [[z-go-safety]].
 
-`t.Context()` is the modernization target for new or touched test code — it cancels at cleanup and carries the test deadline. `context.Background()` is still the majority pattern by volume across most codebases; only a minority of repos favor `t.Context()` outright, typically ones with an in-flight Go-modernization effort under way. Its presence in untouched test files isn't itself a bug to fix opportunistically — migrate incrementally, not as a drive-by change.
+`t.Context()` (Go 1.24+) is canceled immediately before cleanup callbacks. It does not inherit `t.Deadline()`; derive a deadline explicitly when the tested operation needs one. Cleanup can join workers that stop on that context. Migrate touched tests when useful; `context.Background()` in untouched tests alone is not a reason to expand scope. See [testing.T.Context](https://pkg.go.dev/testing#T.Context).
 
 ## testify: assert vs require
 
@@ -133,9 +133,9 @@ Use `testing/synctest` when tests are flaky due to timing — time advances only
 
 ## TDD: red-green-refactor
 
-Each cycle ≤ 2 minutes. If stuck, the step is too big — revert to last green.
+Each cycle ≤ 2 minutes. If stuck, the step is too big — revert to last green. Under a zapply seal — the caller's sealed contract tests — never revert or rewrite sealed `_test.go` files; stuck is an escalation.
 
-1. **Red** — write one failing test (compilation failure counts)
+1. **Red** — write one failing test (compilation failure counts; under a sealed red stage it does not — red means an assertion failure or stub panic, and a compile error is your bug)
 2. **Green** — minimal code to pass (fake it: return a constant first)
 3. **Refactor** — clean up while tests stay green
 
@@ -158,8 +158,8 @@ the per-runner limit floor.
 |---|---|
 | `go test -timeout 2m ./...` | all tests |
 | `go test -timeout 2m -run TestName/subtest ./...` | specific subtest |
-| `go test -timeout 5m -race ./...` | race detection |
-| `go test -timeout 2m -count=1 ./...` | disable test caching |
+| `go test -timeout 5m -race ./...` | race detection — when concurrency is in play; roughly doubles run time |
+| `go test -race -timeout 5m -count=1 ./...` | disable test caching — merge gates only, never the inner loop: an unchanged package re-runs in full; use the project's cached fast target narrowed to the touched packages |
 | `go test -timeout 10m -tags=integration ./...` | integration build tag |
 | `go test -timeout 10m -bench=. -benchmem ./...` | benchmarks |
 | `go test -timeout 10m -fuzz=FuzzName -fuzztime 30s ./...` | fuzzing — `-fuzztime` or it never stops |
@@ -181,3 +181,5 @@ the per-runner limit floor.
 ```sh
 go test -timeout 5m -race ./...
 ```
+
+Under a zapply dispatch, verify with the chunk's literal verify command instead — touched packages named literally, `-race` only when the chunk touched concurrency; `-race ./...` belongs to the caller's merge-gate floor.

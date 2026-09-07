@@ -174,6 +174,8 @@ gofmt -l . && go vet ./... && golangci-lint run ./...
 
 Fix any findings before proceeding to manual review. Mechanical issues distract from logical ones.
 
+Under a zapply chunk, scope the sweep to the touched packages — repo-wide runs, `--fix`, and full lint belong to the caller's merge-gate floor, and never run `--fix` over `_test.go` files the caller has sealed as contract tests.
+
 ## Do not
 
 - Use bare `//nolint` — always name the linter.

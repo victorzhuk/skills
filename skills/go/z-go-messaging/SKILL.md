@@ -1,6 +1,6 @@
 ---
 name: z-go-messaging
-description: At-least-once delivery is the default reality for Go services on Kafka, RabbitMQ, or NATS — idempotent-consumer dedup, the transactional outbox, consumer-group rebalancing, and dead-letter queues. Use when wiring a consumer/producer, an outbox relay, or DLQ routing. Triggers on "at-least-once", "idempotent consumer", "transactional outbox", "consumer group", "dead-letter queue", "JetStream". Does not cover transaction wiring or goroutines; see [[z-go-database]] and [[z-go-concurrency]].
+description: At-least-once messaging for Go on Kafka, RabbitMQ, or NATS — idempotent-consumer dedup, the transactional outbox, consumer-group rebalancing, and dead-letter queues. Use when wiring a consumer/producer, an outbox relay, or DLQ routing. Triggers on "at-least-once", "idempotent consumer", "transactional outbox", "consumer group", "dead-letter queue", "JetStream". Does not cover transaction wiring or goroutines; see [[z-go-database]] and [[z-go-concurrency]].
 ---
 
 # Go messaging
