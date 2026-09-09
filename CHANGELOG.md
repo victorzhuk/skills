@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0
+
+### Minor Changes
+
+- New `z-grill-me` skill: the request-grilling interview as a four-stage loop — sharpen the raw ask into a brief, grill the brief against the codebase, grill it against the project's own records (CONTEXT.md, ADRs, PRDs, specs), then grill the user one question per turn, and close with a decision list. `z-grill-with-docs` now delegates the loop to it and keeps only the recording discipline layered on top: CONTEXT.md updated the moment a term resolves, an ADR only for hard-to-reverse trade-offs.
+
 ## 0.9.1
 
 ### Patch Changes
