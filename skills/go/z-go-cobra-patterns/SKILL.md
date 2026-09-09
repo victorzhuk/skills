@@ -12,6 +12,8 @@ lives here.
 
 One package per command group under `internal/cli/<group>/`: `root.go` (parent, attaches subcommands), one file per subcommand. Subcommands import the adapter/usecase packages they need directly and construct them inline — no provider interface, no injected dependency struct.
 
+File split for a 3+ subcommand group, local flag structs, output helpers, package tests, and shared persistent flags: [references/command-layout.md](references/command-layout.md).
+
 ## Command constructor
 
 ```go

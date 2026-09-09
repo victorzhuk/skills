@@ -90,7 +90,7 @@ C#/ASP.NET Core web API conventions for inherited and green services.
 
 ### Engineering
 
-General engineering process, changelog, architecture, repository tooling, and skill authoring.
+General engineering process, changelog, architecture, repository tooling, skill authoring, and cross-language code-quality doctrine.
 
 - **[z-algo-core](./skills/engineering/z-algo-core/SKILL.md)** — DS/algorithm selection judgment for production code, not competitive tricks — hash map for membership/dedup, slice+sort beats a tree until proven, heap for top-k, two-pointer/sliding-window for scans, BFS/DFS/topo-sort for dependency shapes.
 - **[z-changelog](./skills/engineering/z-changelog/SKILL.md)** — Maintain a Keep a Changelog 1.1.0 CHANGELOG.md — [Unreleased] upkeep, the six change types, the release cut, YANKED, the SemVer note, and the three real project styles (hand-maintained, Changesets,…
@@ -152,7 +152,7 @@ Go engineering discipline: architecture, testing, database, observability, secur
 - **[z-go-makefile](./skills/go/z-go-makefile/SKILL.md)** — Author a clean Makefile for a Go project's inner loop — DRY build recipes, build-dir handling (inline mkdir or order-only prereq), self-documenting help, version stamping, go tool codegen, and…
 - **[z-go-mcp-server](./skills/go/z-go-mcp-server/SKILL.md)** — MCP (Model Context Protocol) server authoring in Go — SDK choice, transport selection, stdio discipline, tool design, and testing.
 - **[z-go-messaging](./skills/go/z-go-messaging/SKILL.md)** — At-least-once delivery is the default reality for Go services on Kafka, RabbitMQ, or NATS — idempotent-consumer dedup, the transactional outbox, consumer-group rebalancing, and dead-letter queues.
-- **[z-go-modernize](./skills/go/z-go-modernize/SKILL.md)** — Modernize Go code and tooling to current idioms (Go 1.21–1.26). Covers deprecated package replacements, language feature adoption, stdlib upgrades, and test/bench patterns.
+- **[z-go-modernize](./skills/go/z-go-modernize/SKILL.md)** — Modernize Go code and tooling to current idioms (Go 1.21–1.27). Covers deprecated package replacements, language feature adoption, stdlib upgrades, and test/bench patterns.
 - **[z-go-naming](./skills/go/z-go-naming/SKILL.md)** — Go naming conventions — MixedCaps, package stuttering, constructors, booleans, acronyms, enums, error strings, receivers, getters, functional options.
 - **[z-go-observability](./skills/go/z-go-observability/SKILL.md)** — Production observability for Go services — structured logging with log/slog, Prometheus metrics, OpenTelemetry tracing, pprof profiling, signal correlation.
 - **[z-go-ogen](./skills/go/z-go-ogen/SKILL.md)** — OpenAPI-first HTTP transport in Go using ogen (github.com/ogen-go/ogen).
@@ -243,7 +243,7 @@ Rust core, web, and GTK/libadwaita desktop guidance.
 
 ### TypeScript
 
-TypeScript house conventions and Telegram Mini App client development.
+TypeScript house conventions, React/Next.js App Router patterns, and Telegram Mini App client development.
 
 - **[z-react-core](./skills/typescript/z-react-core/SKILL.md)** — React and Next.js conventions beyond TypeScript tooling — App Router, server components by default, server data fetching, URL/server state before client stores, server actions, suspense/error boundaries.
 - **[z-ts-core](./skills/typescript/z-ts-core/SKILL.md)** — Strict-mode TypeScript house conventions for a Go-first engineer — tsconfig baseline, zod boundary validation, Error-subclass handling, and Biome/vitest/pnpm defaults.
@@ -251,7 +251,7 @@ TypeScript house conventions and Telegram Mini App client development.
 
 ### Writing
 
-Documentation and prose cleanup skills for concise, human text.
+Documentation, prose de-slopping, and Russian technical register — skills for concise, human text.
 
 - **[z-concise-human-docs](./skills/writing/z-concise-human-docs/SKILL.md)** — Write and edit documentation, comments, guides, runbooks, specs, and explanatory prose in a concise human style.
 - **[z-fuck-slop](./skills/writing/z-fuck-slop/SKILL.md)** — De-slop pass for any text — detects and erases AI-writing fingerprints (negative parallelism, em-dash abuse, rule-of-three, false ranges, puffery, uniform cadence) and rewrites into its target…

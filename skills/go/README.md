@@ -34,7 +34,7 @@ Model- or user-reachable via skill name and trigger phrasing.
 - **[z-go-makefile](./z-go-makefile/SKILL.md)** — Author a clean Makefile for a Go project's inner loop — DRY build recipes, build-dir handling (inline mkdir or order-only prereq), self-documenting help, version stamping, go tool codegen, and…
 - **[z-go-mcp-server](./z-go-mcp-server/SKILL.md)** — MCP (Model Context Protocol) server authoring in Go — SDK choice, transport selection, stdio discipline, tool design, and testing.
 - **[z-go-messaging](./z-go-messaging/SKILL.md)** — At-least-once delivery is the default reality for Go services on Kafka, RabbitMQ, or NATS — idempotent-consumer dedup, the transactional outbox, consumer-group rebalancing, and dead-letter queues.
-- **[z-go-modernize](./z-go-modernize/SKILL.md)** — Modernize Go code and tooling to current idioms (Go 1.21–1.26). Covers deprecated package replacements, language feature adoption, stdlib upgrades, and test/bench patterns.
+- **[z-go-modernize](./z-go-modernize/SKILL.md)** — Modernize Go code and tooling to current idioms (Go 1.21–1.27). Covers deprecated package replacements, language feature adoption, stdlib upgrades, and test/bench patterns.
 - **[z-go-naming](./z-go-naming/SKILL.md)** — Go naming conventions — MixedCaps, package stuttering, constructors, booleans, acronyms, enums, error strings, receivers, getters, functional options.
 - **[z-go-observability](./z-go-observability/SKILL.md)** — Production observability for Go services — structured logging with log/slog, Prometheus metrics, OpenTelemetry tracing, pprof profiling, signal correlation.
 - **[z-go-ogen](./z-go-ogen/SKILL.md)** — OpenAPI-first HTTP transport in Go using ogen (github.com/ogen-go/ogen).

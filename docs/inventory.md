@@ -157,7 +157,35 @@ skill draft (since removed) so any RU tech text can use it.
 |---|---|---|---|
 | `z-ru-tech-register` | `writing` | authored directly in this repo | [`skills/writing/z-ru-tech-register/SKILL.md`](../skills/writing/z-ru-tech-register/SKILL.md) |
 
-## Phase 6 — performance measurement and interpreter perf
+## Phase 6 — domain expansion
+
+Sixteen skills opening nine new domains — `cpp/`, `data/`, `dotnet/`, `flutter/`,
+`infra/`, `lisp/`, `lua/`, `network/`, `php/`, `python/` — plus a market-research
+entry point for the product pipeline, an algorithms core under `engineering/`,
+and React/Next.js coverage under `typescript/`. Each language core states the
+baseline version, routes framework depth to `references/`, and stops at the
+boundary where a dedicated skill already owns the topic.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-algo-core` | `engineering` | authored directly in this repo | [`skills/engineering/z-algo-core/SKILL.md`](../skills/engineering/z-algo-core/SKILL.md) |
+| `z-cpp-core` | `cpp` | authored directly in this repo | [`skills/cpp/z-cpp-core/SKILL.md`](../skills/cpp/z-cpp-core/SKILL.md) |
+| `z-data-pipeline` | `data` | authored directly in this repo | [`skills/data/z-data-pipeline/SKILL.md`](../skills/data/z-data-pipeline/SKILL.md) |
+| `z-dotnet-core` | `dotnet` | authored directly in this repo | [`skills/dotnet/z-dotnet-core/SKILL.md`](../skills/dotnet/z-dotnet-core/SKILL.md) |
+| `z-flutter-core` | `flutter` | authored directly in this repo | [`skills/flutter/z-flutter-core/SKILL.md`](../skills/flutter/z-flutter-core/SKILL.md) |
+| `z-deploy-pipeline` | `infra` | authored directly in this repo | [`skills/infra/z-deploy-pipeline/SKILL.md`](../skills/infra/z-deploy-pipeline/SKILL.md) |
+| `z-k8s-deploy` | `infra` | authored directly in this repo | [`skills/infra/z-k8s-deploy/SKILL.md`](../skills/infra/z-k8s-deploy/SKILL.md) |
+| `z-selfhost-deploy` | `infra` | authored directly in this repo | [`skills/infra/z-selfhost-deploy/SKILL.md`](../skills/infra/z-selfhost-deploy/SKILL.md) |
+| `z-terraform` | `infra` | authored directly in this repo | [`skills/infra/z-terraform/SKILL.md`](../skills/infra/z-terraform/SKILL.md) |
+| `z-lisp-core` | `lisp` | authored directly in this repo | [`skills/lisp/z-lisp-core/SKILL.md`](../skills/lisp/z-lisp-core/SKILL.md) |
+| `z-lua-core` | `lua` | authored directly in this repo | [`skills/lua/z-lua-core/SKILL.md`](../skills/lua/z-lua-core/SKILL.md) |
+| `z-net-core` | `network` | authored directly in this repo | [`skills/network/z-net-core/SKILL.md`](../skills/network/z-net-core/SKILL.md) |
+| `z-php-core` | `php` | authored directly in this repo | [`skills/php/z-php-core/SKILL.md`](../skills/php/z-php-core/SKILL.md) |
+| `z-market-research` | `product` | authored directly in this repo | [`skills/product/z-market-research/SKILL.md`](../skills/product/z-market-research/SKILL.md) |
+| `z-py-core` | `python` | authored directly in this repo | [`skills/python/z-py-core/SKILL.md`](../skills/python/z-py-core/SKILL.md) |
+| `z-react-core` | `typescript` | authored directly in this repo | [`skills/typescript/z-react-core/SKILL.md`](../skills/typescript/z-react-core/SKILL.md) |
+
+## Phase 7 — performance measurement and interpreter perf
 
 Three Go skills authored directly in this repo, distilled from a months-long
 performance program on an embedded Lisp interpreter (bytecode VM vs
@@ -176,7 +204,7 @@ reason.
 | `z-go-perf-gate` | `go` | authored directly in this repo | [`skills/go/z-go-perf-gate/SKILL.md`](../skills/go/z-go-perf-gate/SKILL.md) |
 | `z-go-interp-perf` | `go` | authored directly in this repo | [`skills/go/z-go-interp-perf/SKILL.md`](../skills/go/z-go-interp-perf/SKILL.md) |
 
-## Phase 7 — stdlib discovery and canon idioms
+## Phase 8 — stdlib discovery and canon idioms
 
 Two Go skills authored directly in this repo. `z-go-stdlib` closes the
 reinvented-wheel gap: a stdlib-first lookup workflow and task→package map so
@@ -191,7 +219,7 @@ to the existing sibling skills to avoid overlap.
 | `z-go-stdlib` | `go` | authored directly in this repo | [`skills/go/z-go-stdlib/SKILL.md`](../skills/go/z-go-stdlib/SKILL.md) |
 | `z-go-idioms` | `go` | authored directly in this repo | [`skills/go/z-go-idioms/SKILL.md`](../skills/go/z-go-idioms/SKILL.md) |
 
-## Phase 8 — grill split
+## Phase 9 — grill split
 
 The interview loop was extracted from `z-grill-with-docs` into a standalone
 `z-grill-me`: prompt sharpening, grilling the brief against the codebase, then

@@ -1,6 +1,6 @@
 # Writing Skills
 
-Documentation and prose cleanup skills for concise, human text.
+Documentation, prose de-slopping, and Russian technical register — skills for concise, human text.
 
 ## Model-invoked
 

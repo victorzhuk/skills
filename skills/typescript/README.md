@@ -1,6 +1,6 @@
 # TypeScript Skills
 
-TypeScript house conventions and Telegram Mini App client development.
+TypeScript house conventions, React/Next.js App Router patterns, and Telegram Mini App client development.
 
 ## Model-invoked
 

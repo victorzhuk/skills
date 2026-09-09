@@ -1,6 +1,6 @@
 # Engineering Skills
 
-General engineering process, changelog, architecture, repository tooling, and skill authoring.
+General engineering process, changelog, architecture, repository tooling, skill authoring, and cross-language code-quality doctrine.
 
 ## Model-invoked
 

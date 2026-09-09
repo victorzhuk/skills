@@ -24,6 +24,8 @@ internal/
 
 Transport never imports `internal/app`. It receives its deps through provider interfaces.
 
+Container structs, a full wiring example, provider methods, interface narrowing, and a composition-root test: [references/di-contracts.md](references/di-contracts.md).
+
 ## Phased Wiring
 
 Build in three phases so construction order is explicit — this lives in `bootstrap.go`:

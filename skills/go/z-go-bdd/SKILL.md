@@ -72,6 +72,8 @@ Reference routing — load only the needed file:
 - `references/llm-feature-context.md` — using features as agent/RAG context.
 - `references/anti-patterns.md` — review checklist.
 
+Starting points to copy: [assets/feature.template](assets/feature.template) for a tagged `.feature` skeleton, [assets/suite_test.template.go](assets/suite_test.template.go) for the `go test`-driven godog suite with CI report formats.
+
 Gherkin rules:
 
 - One scenario proves one behavior.
