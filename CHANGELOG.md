@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.1
+
+### Patch Changes
+
+- [`546c250`](https://github.com/victorzhuk/skills/commit/546c25042868afe06f87bcd301212f4ef7177616) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Catalog accuracy pass. `skills/README.md` now indexes all 17 domains with correct skill counts (it listed 6 and three stale counts); `docs/inventory.md` gains the 16 provenance rows missing since the July domain expansion, with the phase sections renumbered back into chronological order. Corrected the stale `z-go-modernize` version range (1.21–1.26 → 1.21–1.27) and the TypeScript, Writing, and Engineering domain blurbs. `z-go-bdd`, `z-go-clean-arch-di`, and `z-go-cobra-patterns` now link the `references/` and `assets/` files they shipped with but never referenced, which is what makes those files loadable at all. Catalog entries are also resynced with their skill descriptions: 21 had drifted into paraphrase or stale wording (`z-go-safety`, `z-go-messaging`, `z-go-stdlib`, `z-go-idioms`, `z-go-feature-flags` and others), and 12 more were truncated mid-connector.
+
 ## 0.10.0
 
 ### Minor Changes
