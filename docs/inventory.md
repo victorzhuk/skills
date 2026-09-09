@@ -191,6 +191,18 @@ to the existing sibling skills to avoid overlap.
 | `z-go-stdlib` | `go` | authored directly in this repo | [`skills/go/z-go-stdlib/SKILL.md`](../skills/go/z-go-stdlib/SKILL.md) |
 | `z-go-idioms` | `go` | authored directly in this repo | [`skills/go/z-go-idioms/SKILL.md`](../skills/go/z-go-idioms/SKILL.md) |
 
+## Phase 8 — grill split
+
+The interview loop was extracted from `z-grill-with-docs` into a standalone
+`z-grill-me`: prompt sharpening, grilling the brief against the codebase, then
+against the project's own records, then against the user. `z-grill-with-docs`
+keeps only what it adds on top — writing CONTEXT.md entries and ADRs while the
+interview runs — and delegates the loop via `[[z-grill-me]]`.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-grill-me` | `product` | extracted from `z-grill-with-docs` in this repo (interview loop originally ported from [mattpocock/skills grill-with-docs](https://github.com/mattpocock/skills/tree/main/skills/engineering/grill-with-docs), MIT) | [`skills/product/z-grill-me/SKILL.md`](../skills/product/z-grill-me/SKILL.md) |
+
 ## Public cleanup applied
 
 - Replaced the personal npm scope example in `z-npm-publish` with `@scope/*`.
