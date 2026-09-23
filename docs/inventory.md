@@ -231,6 +231,17 @@ interview runs — and delegates the loop via `[[z-grill-me]]`.
 |---|---|---|---|
 | `z-grill-me` | `product` | extracted from `z-grill-with-docs` in this repo (interview loop originally ported from [mattpocock/skills grill-with-docs](https://github.com/mattpocock/skills/tree/main/skills/engineering/grill-with-docs), MIT) | [`skills/product/z-grill-me/SKILL.md`](../skills/product/z-grill-me/SKILL.md) |
 
+## Phase 9 — lean fixes
+
+`z-lean-fix` covers applying accepted fixes with a minimal diff: the decision
+order (delete, reuse, inline edit, local extract), keeping the diff reviewable,
+and naming picked numbers as decisions. Its scope sits next to
+`z-no-over-engineering`, which covers new design.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-lean-fix` | `engineering` | authored in the private skills directory, copied here | [`skills/engineering/z-lean-fix/SKILL.md`](../skills/engineering/z-lean-fix/SKILL.md) |
+
 ## Public cleanup applied
 
 - Replaced the personal npm scope example in `z-npm-publish` with `@scope/*`.
