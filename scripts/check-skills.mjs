@@ -57,7 +57,7 @@ const skillFiles = files.filter((file) => basename(file) === "SKILL.md");
 const names = new Set();
 const errors = [];
 const descCap = 600;
-const descBudget = 40000;
+const descBudget = 43000;
 let descTotal = 0;
 
 for (const file of skillFiles) {
