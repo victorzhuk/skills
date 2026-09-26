@@ -96,7 +96,7 @@ func backoff(attempt int) time.Duration {
 
 - **Respect `Retry-After` on 429 and 503** — parse it as either delay-seconds or an HTTP-date and wait at least that long before the next attempt; don't let your own backoff schedule override a value the server explicitly asked for.
 - **Cap the total attempt budget with the context deadline as the outer bound**, not a fixed attempt count alone — check `ctx.Err()` before every attempt and stop the moment the deadline is gone, even mid-backoff-sleep. Drain and close every intermediate response before retrying, not just the final one — the leak in "always drain and close" applies to every attempt, not only the one you return.
-- **Rebuild the request on every attempt.** `req.Body` is a one-shot `io.ReadCloser`, consumed by the first `client.Do`; `GetBody` exists for the stdlib's own redirect handling, not for a hand-rolled retry loop. Reusing the same `*http.Request` across attempts silently sends an empty body from attempt 2 on, for exactly the bodied methods this skill tells you to retry — `PUT`, or `POST` with an idempotency key. Rebuild from a `newReq func() *http.Request` closure, or set `req.GetBody` and call it before each retry:
+- **Rebuild the request on every attempt.** `req.Body` is a one-shot `io.ReadCloser`, consumed by the first `client.Do`; `GetBody` exists for the stdlib's own redirect handling, not for a hand-rolled retry loop. Reusing the same `*http.Request` across attempts sends an empty body from attempt 2 on, with no error, for exactly the bodied methods this skill tells you to retry — `PUT`, or `POST` with an idempotency key. Rebuild from a `newReq func() *http.Request` closure, or set `req.GetBody` and call it before each retry:
 
 ```go
 for attempt := 0; ; attempt++ {
