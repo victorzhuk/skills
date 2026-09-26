@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "E1",
+      "path": "SKILL.md",
+      "message": "*curl*+*jq*—*smoke*/*health*checks*```bash*curl*-s*http://localhost:8080/health*>*/dev/null*&&*echo*ok*RESPONSE=$(curl*-s*-X*POST*http://localhost:8080/mcp/start*-d*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "E1",
+      "path": "SKILL.md",
+      "message": "*https://api.example.com/*",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

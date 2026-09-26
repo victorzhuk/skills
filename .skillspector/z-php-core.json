@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "EA2",
+      "path": "references/yii.md",
+      "message": "*without*checking*",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

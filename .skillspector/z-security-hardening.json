@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "SSRF1",
+      "path": "SKILL.md",
+      "message": "*169.254.169.254*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "MP3",
+      "path": "SKILL.md",
+      "message": "*purge*history*",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

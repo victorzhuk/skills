@@ -12,7 +12,8 @@
     "list": "node scripts/list-skills.mjs",
     "check": "node scripts/check-skills.mjs",
     "changeset": "changeset",
-    "version": "changeset version"
+    "version": "changeset version",
+    "scan": "node scripts/scan-skills.mjs"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",

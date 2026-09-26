@@ -11,12 +11,14 @@ A public catalog of reusable `z-*` agent skills, not an application. There is no
 ```bash
 npm ci             # install (release.yml uses this; lockfile is package-lock.json → npm)
 npm run check      # validate all SKILL.md files — this is the CI gate
+npm run scan       # SkillSpector security scan; needs `skillspector` on PATH
+npm run scan -- --accept z-<name>   # re-baseline a skill after reviewing its findings
 npm run list       # print every skill as: name <tab> path <tab> description
 npm run changeset  # record a version note (Changesets)
 npm run version    # apply pending changesets to CHANGELOG + package version
 ```
 
-CI (`.github/workflows/check.yml`) runs `npm run check` on Node 22 for every push to `master` and every PR, with no `npm ci` step — `check-skills.mjs` has zero external deps. `release.yml` runs `npm ci` (it needs Changesets), re-runs the check, then opens a "Version" PR via Changesets. Run `npm run check` locally before pushing any skill change.
+CI (`.github/workflows/check.yml`) runs `npm run check` on Node 22 for every push to `master` and every PR, with no `npm ci` step — `check-skills.mjs` has zero external deps. A second job installs SkillSpector (pinned) and runs `npm run scan`; it fails on any HIGH or CRITICAL finding not suppressed by `.skillspector/<name>.json`. Review a new finding before accepting it — a baseline hides it for good. `release.yml` runs `npm ci` (it needs Changesets), re-runs the check, then opens a "Version" PR via Changesets. Run `npm run check` locally before pushing any skill change.
 
 ## Layout
 

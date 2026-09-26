@@ -20,3 +20,24 @@ jobs:
 
       - name: Check skill metadata
         run: npm run check
+
+  scan:
+    name: Scan skills
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Install SkillSpector
+        run: uv tool install git+https://github.com/NVIDIA/skillspector.git@v2.12.0
+
+      - name: Scan skills
+        run: npm run scan

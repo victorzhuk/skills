@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "EA3",
+      "path": "SKILL.md",
+      "message": "*beyond*documented*",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

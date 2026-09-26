@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "PE2",
+      "path": "references/tunnels.md",
+      "message": "*chmod*600*",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

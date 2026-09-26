@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "MP3",
+      "path": "references/testcontainers-pattern.md",
+      "message": "*Reset*state*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "LP3",
+      "path": "SKILL.md",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

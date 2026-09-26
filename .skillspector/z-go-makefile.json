@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "PE3",
+      "path": "SKILL.md",
+      "message": "*.env*",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

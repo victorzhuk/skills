@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "TM1",
+      "path": "SKILL.md",
+      "message": "*git*reset*--hard*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "TM1",
+      "path": "scripts/block-dangerous-git.sh",
+      "message": "*git*reset*--hard*",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

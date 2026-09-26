@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "RP1",
+      "path": "SKILL.md",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "EA2",
+      "path": "SKILL.md",
+      "message": "*without*asking*",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

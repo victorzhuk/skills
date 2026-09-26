@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "PE3",
+      "path": "SKILL.md",
+      "message": "*/etc/passwd*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "PE3",
+      "path": "SKILL.md",
+      "message": "*.env*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "RP1",
+      "path": "SKILL.md",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

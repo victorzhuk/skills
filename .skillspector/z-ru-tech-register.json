@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "AE4",
+      "path": "references/terminology.md",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}
