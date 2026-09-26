@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0
+
+### Minor Changes
+
+- [`bf50d33`](https://github.com/victorzhuk/skills/commit/bf50d33cb69e32161ffb5275abb0c5e952a1d908) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Six skills join the catalog: `z-postgres-table-design`, `z-accessibility`, `z-interface-kit`, `z-dokploy-cli`, `z-lint` and `z-obsidian-cli`. `z-systematic-debugging` gains a deep-analysis protocol with five supporting references for bugs that survive the standard loop. Third-party-derived material carries its upstream MIT notice in `NOTICE.md`. The catalog description budget rises from 40,000 to 43,000 characters to fit them.
+
+### Patch Changes
+
+- [`ae224f8`](https://github.com/victorzhuk/skills/commit/ae224f8406142285b3323195287c067df0ba5d2e) Thanks [@victorzhuk](https://github.com/victorzhuk)! - CI now scans every skill with NVIDIA SkillSpector (`npm run scan`) and fails on new HIGH or CRITICAL findings; reviewed false positives are baselined per skill in `.skillspector/`. `z-go-http-client` rewords one retry-pitfall sentence the scanner read as an exfiltration instruction.
+
 ## 0.10.1
 
 ### Patch Changes
