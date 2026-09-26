@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "AR2",
+      "path": "references/hypothesis-testing.md",
+      "message": "*Don't*judge*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "EA2",
+      "path": "references/debugging-mindset.md",
+      "message": "*Skip*verification*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "EA1",
+      "path": "references/deep-analysis-protocol.md",
+      "message": "*USE*ALL*TOOLS*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "TM3",
+      "path": "references/verification-patterns.md",
+      "message": "*NODE_ENV=development*",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

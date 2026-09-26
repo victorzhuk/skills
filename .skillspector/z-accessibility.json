@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "P2",
+      "path": "SKILL.md",
+      "message": "*<!--*❌*Missing*alt*-->*<img*src=\"chart.png\">*<!--*✅*Descriptive*alt*-->*<img*src=\"chart.png\"*alt=\"Bar*chart*showing*40%*increase*in*Q3*sales\">*<!--*✅*Decorative*image*(empty*alt)*-->*<img*src=\"decor*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "P2",
+      "path": "SKILL.md",
+      "message": "*<!--*Announce*errors*to*screen*readers*-->*<form*novalidate>*<div*class=\"field\"*aria-live=\"polite\">*<label*for=\"email\">Email</label>*<input*type=\"email\"*id=\"email\"*aria-invalid=\"*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "P2",
+      "path": "references/WCAG.md",
+      "message": "*<!--*or*-->*<button*aria-label=\"Close*dialog\">x</button>*```*###*Links*```html*<a*href=\"/page\">Descriptive*link*text</a>*<!--*External*links*-->*<a*href=\"https://external.com\"*target=\"_blank\"*rel=\"no*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "P2",
+      "path": "references/WCAG.md",
+      "message": "*<!--*or*-->*<button*aria-label=\"Close*dialog\">×</button>*```*###*Links*```html*<a*href=\"/page\">Descriptive*link*text</a>*<!--*External*links*-->*<a*href=\"https://external.com\"*target=\"_blank\"*rel=\"no*",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "RP1",
+      "path": "references/testing-triage.md",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

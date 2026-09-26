@@ -57,6 +57,10 @@ Then: watch the test fail → apply one fix at the root cause (no bundled refact
 - The confirmed hypothesis stated in the commit message — the next debugger learns.
 - Ask what would have prevented this bug; make architectural recommendations *after* the fix is in, when you know the most.
 
+## Deep analysis
+
+When standard troubleshooting has failed, load [references/deep-analysis-protocol.md](references/deep-analysis-protocol.md): a read-only, evidence-first diagnosis protocol that treats code you wrote with more skepticism than unfamiliar code. Its supporting references: [debugging mindset](references/debugging-mindset.md), [investigation techniques](references/investigation-techniques.md), [hypothesis testing](references/hypothesis-testing.md), [verification patterns](references/verification-patterns.md), [when to research](references/when-to-research.md).
+
 ## Do not
 
 - Propose a fix before Phase 1 produces a red-capable command.

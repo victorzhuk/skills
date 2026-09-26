@@ -242,6 +242,25 @@ and naming picked numbers as decisions. Its scope sits next to
 |---|---|---|---|
 | `z-lean-fix` | `engineering` | authored in the private skills directory, copied here | [`skills/engineering/z-lean-fix/SKILL.md`](../skills/engineering/z-lean-fix/SKILL.md) |
 
+## Phase 10 — adopted private and forked skills
+
+Skills that lived in the private skills directory — locally authored tool
+wrappers, and third-party skills reworked after adoption — moved here as-is
+under `z-` names. Third-party material keeps its upstream copyright and MIT
+permission notice in a `NOTICE.md` next to the skill. `debug-like-expert` was
+folded into `z-systematic-debugging` as its `references/` rather than kept as a
+second debugging skill.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-postgres-table-design` | `data` | reworked from `postgresql-table-design` in [wshobson/agents](https://github.com/wshobson/agents), MIT | [`skills/data/z-postgres-table-design/SKILL.md`](../skills/data/z-postgres-table-design/SKILL.md) |
+| `z-accessibility` | `typescript` | reworked from `accessibility` in [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills), MIT | [`skills/typescript/z-accessibility/SKILL.md`](../skills/typescript/z-accessibility/SKILL.md) |
+| `z-interface-kit` | `typescript` | reworked from `interface-kit` in [JuliusBrussee/skills](https://github.com/JuliusBrussee/skills), MIT | [`skills/typescript/z-interface-kit/SKILL.md`](../skills/typescript/z-interface-kit/SKILL.md) |
+| `z-dokploy-cli` | `infra` | authored in the private skills directory, copied here | [`skills/infra/z-dokploy-cli/SKILL.md`](../skills/infra/z-dokploy-cli/SKILL.md) |
+| `z-lint` | `engineering` | authored in the private skills directory, copied here | [`skills/engineering/z-lint/SKILL.md`](../skills/engineering/z-lint/SKILL.md) |
+| `z-obsidian-cli` | `engineering` | authored in the private skills directory, copied here | [`skills/engineering/z-obsidian-cli/SKILL.md`](../skills/engineering/z-obsidian-cli/SKILL.md) |
+| `z-systematic-debugging` (`references/`) | `engineering` | reworked from `debug-like-expert` in [cfircoo/claude-code-toolkit](https://github.com/cfircoo/claude-code-toolkit), MIT | [`skills/engineering/z-systematic-debugging/references/`](../skills/engineering/z-systematic-debugging/references/) |
+
 ## Public cleanup applied
 
 - Replaced the personal npm scope example in `z-npm-publish` with `@scope/*`.

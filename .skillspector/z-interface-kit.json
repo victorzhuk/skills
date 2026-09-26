@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "RP1",
+      "path": "references/accessibility-checklist.md",
+      "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "RP1",
+      "path": "references/component-patterns.md",
+      "reason": "reviewed 2026-09-26"
+    }
+  ],
+  "fingerprints": []
+}

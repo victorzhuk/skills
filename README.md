@@ -81,6 +81,7 @@ Modern C++ for native/perf modules and codegen targets.
 Analytics data pipeline discipline — batch ingestion, append-only modeling, and scheduling judgment.
 
 - **[z-data-pipeline](./skills/data/z-data-pipeline/SKILL.md)** — Analytics pipeline discipline — idempotent batch loads, append-only modeling for late-arriving data, incremental vs full-refresh judgment, single metric definitions across dashboards, ingestion quality gates, cron before an orchestrator.
+- **[z-postgres-table-design](./skills/data/z-postgres-table-design/SKILL.md)** — PostgreSQL schema design depth — data types, indexing (GIN/GiST per type), constraints, IDENTITY vs UUIDv7, TOAST, and a type do-not-use list.
 
 ### .NET
 
@@ -101,11 +102,13 @@ General engineering process, changelog, architecture, repository tooling, skill 
 - **[z-domain-modeling](./skills/engineering/z-domain-modeling/SKILL.md)** — Build and maintain a domain model — ubiquitous language, bounded contexts, aggregates and invariants.
 - **[z-git-guardrails](./skills/engineering/z-git-guardrails/SKILL.md)** — Install a Claude Code PreToolUse hook that blocks destructive git commands — push, reset --hard, clean -f, checkout ./restore ., branch -D of unmerged branches — before they execute, while letting worktree cleanup through.
 - **[z-lean-fix](./skills/engineering/z-lean-fix/SKILL.md)** — Lean fixes for review findings, bug reports and broken builds — the smallest diff that removes the defect at its root, nothing more.
+- **[z-lint](./skills/engineering/z-lint/SKILL.md)** — Lint and format with the project's own tools — auto-detects ESLint, Biome, Prettier, or language-native formatters, applies safe fixes, reports what remains.
 - **[z-memory-hygiene](./skills/engineering/z-memory-hygiene/SKILL.md)** — Use when storing, updating, or reviewing long-term agent memory. Covers the four memory types (user/feedback/project/reference), the two-file save shape, the MEMORY.md index, cross-linking…
 - **[z-merge-conflicts](./skills/engineering/z-merge-conflicts/SKILL.md)** — Resolve an in-progress git merge or rebase conflict by intent, not by picking sides blindly — read both sides' commits, PRs, and tickets, preserve both intents where possible, never abort, and run…
 - **[z-no-ai-style-code](./skills/engineering/z-no-ai-style-code/SKILL.md)** — Write like a senior maintainer of this project, not a tutorial — natural short names, concise error context, structure matching the surrounding code's idiom.
 - **[z-no-over-engineering](./skills/engineering/z-no-over-engineering/SKILL.md)** — YAGNI discipline for the smallest correct change — no interfaces "for testing", no DTOs when a domain struct suffices, no premature package splits or config layers.
 - **[z-npm-publish](./skills/engineering/z-npm-publish/SKILL.md)** — Publish a Node/TypeScript package to npm via GitHub Actions with OIDC trusted publishing and provenance.
+- **[z-obsidian-cli](./skills/engineering/z-obsidian-cli/SKILL.md)** — Capture notes, journal a session, draft ADRs/PRs, and search an Obsidian vault from the terminal via the official `obsidian` CLI (v1.12+), with per-project vault binding.
 - **[z-security-hardening](./skills/engineering/z-security-hardening/SKILL.md)** — Language-agnostic security hardening for untrusted input, auth, secrets, or external systems — threat-model first (trust boundaries, STRIDE, abuse cases), then validate at boundaries, parameterize…
 - **[z-session-handoff](./skills/engineering/z-session-handoff/SKILL.md)** — Compact the current conversation into a handoff document a fresh agent can resume from — goal, current state, decisions with their why, next steps, gotchas, suggested skills — referencing artifacts by path, secrets redacted.
 - **[z-skill-mastery](./skills/engineering/z-skill-mastery/SKILL.md)** — Author, refactor, and review agent skills in this repo's house style.
@@ -179,6 +182,7 @@ Deployment discipline across Kubernetes, Terraform/OpenTofu, self-hosted VPS tar
 - **[z-terraform](./skills/infra/z-terraform/SKILL.md)** — Infrastructure-as-code discipline for Terraform/OpenTofu — remote state locking, thin-env modules with pinned versions, plan-before-apply review, drift detection, workspaces-vs-directory trade-off.
 - **[z-selfhost-deploy](./skills/infra/z-selfhost-deploy/SKILL.md)** — Startup-cheap self-hosted deploys on a VPS — Docker Compose production patterns, systemd units, Caddy/Traefik reverse proxy with automatic TLS, backup-and-restore discipline, and base hardening (SSH keys, firewall…
 - **[z-deploy-pipeline](./skills/infra/z-deploy-pipeline/SKILL.md)** — GitHub Actions delivery pipelines — environments with protection rules, OIDC over long-lived secrets, buildx build/push with layer cache, deploy patterns (helm --atomic --wait, ssh+compose pull/up), concurrency, rollback.
+- **[z-dokploy-cli](./skills/infra/z-dokploy-cli/SKILL.md)** — Manage a self-hosted Dokploy server from the terminal — auth, projects and environments, app and Compose deploys, logs, databases, domains, backups.
 
 ### Lisp
 
@@ -246,6 +250,8 @@ Rust core, web, and GTK/libadwaita desktop guidance.
 
 TypeScript house conventions, React/Next.js App Router patterns, and Telegram Mini App client development.
 
+- **[z-accessibility](./skills/typescript/z-accessibility/SKILL.md)** — Web accessibility audit and remediation against WCAG 2.1 — conformance levels, screen reader and keyboard support, Lighthouse triage.
+- **[z-interface-kit](./skills/typescript/z-interface-kit/SKILL.md)** — UI implementation reference — design engineering, accessibility, animation, spatial design, typography, color systems, and component craft; complements a project DESIGN.md.
 - **[z-react-core](./skills/typescript/z-react-core/SKILL.md)** — React and Next.js conventions beyond TypeScript tooling — App Router, server components by default ('use client' only at interaction leaves), server data fetching, URL/server state before client stores, server actions…
 - **[z-ts-core](./skills/typescript/z-ts-core/SKILL.md)** — Strict-mode TypeScript house conventions for a Go-first engineer — tsconfig baseline, zod boundary validation, Error-subclass handling, and Biome/vitest/pnpm defaults.
 - **[z-ts-telegram-mini-app](./skills/typescript/z-ts-telegram-mini-app/SKILL.md)** — Telegram Mini App client development in TypeScript — SDK choice (@tma.js/sdk vs raw WebApp), lifecycle/viewport/theme handling, BackButton/MainButton wiring, and Stars payments. initData is untrusted…
