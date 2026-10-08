@@ -129,5 +129,5 @@ flags not represented as struct fields.
 ## Verify
 
 ```sh
-go build ./... && go test -short ./internal/config/...
+go build ./... && go test -short -timeout 2m ./internal/config/...
 ```

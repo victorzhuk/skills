@@ -227,7 +227,7 @@ Update the corresponding Go enum (`Parse*` / `IsValid*`) in the same commit.
 
 ```sh
 goose -dir ./migrations postgres "$DATABASE_URL" status
-go test -short -run Integration ./...
+go test -short -run Integration -timeout 2m ./...
 ```
 
 Confirm all pending migrations are applied, then run integration tests against a clean

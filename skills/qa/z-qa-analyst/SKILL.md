@@ -39,11 +39,13 @@ Match by convention: `foo.go` -> `foo_test.go`, `Foo.tsx` -> `Foo.test.tsx`, `fo
 ## Coverage status — trust the tool, not file presence
 
 ```bash
-go test -cover ./internal/...
-go test -coverprofile=/tmp/cover.out ./... && go tool cover -func=/tmp/cover.out | rg -v '100.0%'
-npx vitest run --coverage
-pytest --cov=src --cov-report=term-missing
+go test -timeout 2m -cover ./internal/...
+go test -timeout 10m -coverprofile=/tmp/cover.out ./... && go tool cover -func=/tmp/cover.out | rg -v '100.0%'
+npx vitest run --coverage --maxWorkers=50%
+timeout 10m pytest --cov=src --cov-report=term-missing
 ```
+
+Every command above runs bounded — [[z-testing-strategy]] owns the per-runner limit floor.
 
 A same-named `_test.go` file existing says nothing about which branches it exercises — read the coverage percentage per function, not just presence or absence of the file.
 
@@ -101,7 +103,7 @@ Status is honest, not aspirational: `covered` (the coverage tool confirms it), `
 - Grep for TODO/FIXME/HACK/XXX/BUG/NOCOMMIT as a first step — real codebases carry almost none of these; it burns the first pass without surfacing real risk.
 - Reach for `tokei` or any LOC-counting tool — line counts don't tell you what's tested.
 - Use `comm -23` on sorted file-name lists to "detect" untested files — a same-named `_test.go` existing says nothing about branch coverage; run the language's own coverage tool instead.
-- Spawn parallel backend/frontend/integrations sub-analysts for a monorepo — no real project needs this split; read the affected subtree directly.
+- Spawn parallel backend/frontend/integrations sub-analysts on your own initiative — delegate only when the driver requests parallel analysis of independent bounded scopes; otherwise read the affected subtree directly.
 - Mark everything P0 — reserve it for crash/auth/data-loss; forcing every row through the top tier defeats the tiering.
 - Regenerate a fresh plan file every cycle — update the existing dated plan in place.
 - Invent an acceptance ID or PRD link that doesn't exist in the project.

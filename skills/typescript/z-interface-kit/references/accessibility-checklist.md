@@ -380,7 +380,7 @@ CSS custom property approach:
 
 ```bash
 # Example: axe-core with Playwright in CI
-npx playwright test --project=accessibility
+npx playwright test --workers=2 --project=accessibility
 ```
 
 ---

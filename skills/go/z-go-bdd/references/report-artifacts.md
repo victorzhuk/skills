@@ -49,7 +49,7 @@ Behavior changed:
 - `features/billing/payment.feature`: Scenario: Gateway timeout leaves order pending
 
 Validated:
-- `BDD_TAGS='@story:PAY-241' go test ./internal/billing -run '^TestBDD$'`
+- `BDD_TAGS='@story:PAY-241' go test -timeout 10m ./internal/billing -run '^TestBDD$'`
 - report: `reports/bdd/cucumber.json`
 ```
 

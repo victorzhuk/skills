@@ -204,7 +204,7 @@ Drive the handler with an atomic counter to fail N times then succeed, and asser
 ```sh
 grep -rn 'http.Client{}' --include='*.go' .          # bare client with no Timeout
 golangci-lint run --enable bodyclose ./...           # response bodies closed on every path
-go test -race ./... -run TestProviderClient
+go test -race -timeout 5m ./... -run TestProviderClient
 ```
 
 Read the retry test output for attempt counts, not just pass/fail — a retry test that passes on the first attempt isn't exercising the retry path at all.

@@ -63,11 +63,11 @@ Watch for metrics that are true by construction: a counter identical across arms
 ## Verify
 
 ```bash
-go test -bench '^BenchmarkAB$' -count=1 -benchmem ./... | tee raw.txt
+go test -bench '^BenchmarkAB$' -count=1 -benchmem -timeout 10m ./... | tee raw.txt
 rg -o 'BenchmarkAB/rep=[0-9]+/[a-z]+' raw.txt | head -20   # arm order must alternate
 benchstat -col /arm -ignore /rep raw.txt
 # contention pass, fixed count:
-go test -bench '^BenchmarkAB$/new$' -benchtime=100x -mutexprofile=mu.out ./...
+go test -bench '^BenchmarkAB$/new$' -benchtime=100x -mutexprofile=mu.out -timeout 10m ./...
 go tool pprof -peek 'FunctionUnderTest' mu.out
 ```
 

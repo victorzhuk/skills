@@ -127,7 +127,7 @@ Reach for golden JSON-RPC frame fixtures only for cross-SDK wire-compatibility r
 
 ```sh
 go build ./...
-go test ./... -run TestMCP -v
+go test -timeout 2m ./... -run TestMCP -v
 ```
 
 Confirm `initialize` negotiates the expected `protocolVersion` and advertises the `tools` capability, and that `tools/list` returns the schema you expect, before wiring a real client to the server.

@@ -146,7 +146,7 @@ Playwright for a real end-to-end flow that crosses a Server Action or a route bo
 ```sh
 rg -n "'use client'" app/ | grep -v '_components\|components/'   # client directive outside a leaf component dir
 rg -n 'useEffect.*fetch' app/                                     # client-side fetch waterfalls
-vitest run
+vitest run --maxWorkers=50%
 ```
 
 see [[z-ts-core]], [[z-ts-telegram-mini-app]], [[z-testing-strategy]]

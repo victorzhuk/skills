@@ -155,5 +155,5 @@ it factual — no marketing.
 
 ```sh
 go doc ./...                  # check all exported symbol comments render
-go test -run Example ./...    # verify all Example functions pass
+go test -run Example -timeout 2m ./...    # verify all Example functions pass
 ```

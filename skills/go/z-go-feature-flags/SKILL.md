@@ -240,5 +240,5 @@ Do not use `os.Setenv` in tests to control flags — it is global state and intr
 ## Verify
 
 ```sh
-go build ./... && go test -short ./...
+go build ./... && go test -short -timeout 2m ./...
 ```

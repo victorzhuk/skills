@@ -156,7 +156,7 @@ Rate-limit with `golang.org/x/time/rate`.
 
 ## Concurrency
 
-Protect shared state with `sync.RWMutex` or channels; a race under auth logic can bypass authorization. Run `go test -race ./...` in CI — treat every race as high-severity.
+Protect shared state with `sync.RWMutex` or channels; a race under auth logic can bypass authorization. Run `go test -race -timeout 5m ./...` in CI — treat every race as high-severity.
 
 ## Error Handling
 
@@ -179,12 +179,12 @@ Log full detail server-side; return a generic message to the caller. Never swall
 
 ```sh
 # Known CVEs in dependencies — standalone CI step
-go tool govulncheck ./...
+govulncheck ./...
 
 # SAST + security linters — gosec runs as a golangci-lint linter, not standalone;
 # enable it in .golangci.yml's linters list alongside bodyclose/errcheck/nilerr
 golangci-lint run
 
 # Race detector
-go test -race ./...
+go test -race -timeout 5m ./...
 ```

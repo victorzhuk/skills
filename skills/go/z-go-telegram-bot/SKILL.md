@@ -327,7 +327,7 @@ rg 'subtle\.ConstantTimeCompare' internal/
 # Confirm no bare == on secret/token strings
 rg '(secret|hash|token).*==|== .*(secret|hash|token)' internal/
 
-go test -race ./internal/infra/telegram/...
+go test -race -timeout 5m ./internal/infra/telegram/...
 ```
 
 ## See also

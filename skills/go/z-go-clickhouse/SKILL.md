@@ -160,6 +160,6 @@ Events landing in ClickHouse from Kafka/RabbitMQ/NATS go through an ordinary con
 ```sh
 clickhouse-client --query "EXPLAIN indexes = 1 SELECT ... FORMAT PrettyCompact"  # confirm ORDER BY prefix is used (look for "Granules" pruning)
 clickhouse-client --query "SELECT table, partition, count() FROM system.parts WHERE active GROUP BY table, partition ORDER BY count() DESC LIMIT 20"  # catch partition explosion
-go test -race ./internal/... # repository tests against a real clickhouse-server via testcontainers, not a fake
+go test -race -timeout 10m ./internal/... # repository tests against a real clickhouse-server via testcontainers, not a fake
 go vet ./...
 ```

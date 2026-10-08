@@ -131,8 +131,8 @@ file mapping instead.
 
 ## Verify
 
-- Stub compiles/typechecks without running: `go build ./...`, `tsc --noEmit`, or `python -m py_compile <file>`.
-- Every stub is skipped, not failing: run the suite and confirm the new file reports skip/todo, not fail.
+- Stub compiles/typechecks without running: `timeout 2m go build ./...`, `timeout 5m tsc --noEmit`, or `timeout 1m python -m py_compile <file>`.
+- Every stub is skipped, not failing: run the suite through the project's runner with its limits ([[z-testing-strategy]] floor) and confirm the new file reports skip/todo, not fail.
 - Stub file path mirrors the source file it covers, per TEST_PLAN.md's mapping.
 
 Consumes `TEST_PLAN.md` from [[z-qa-analyst]]; [[z-qa-debugger]] runs and triages the generated

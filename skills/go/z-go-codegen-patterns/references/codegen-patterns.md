@@ -92,7 +92,7 @@ Consistent field naming reduces bugs in template context assembly:
 
 ```
 1. Write test with golden comparison (fail on mismatch)
-2. Run: go test -run TestGenerate -update ./...
+2. Run: go test -timeout 2m -run TestGenerate -update ./...
 3. Review generated diff: git diff testdata/
 4. Confirm output is correct Go that compiles
 5. Commit golden files alongside the generator change

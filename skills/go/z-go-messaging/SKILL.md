@@ -169,7 +169,7 @@ Changing a Kafka topic's partition count changes `hash(key) % partitions` for ev
 ## Verify
 
 ```sh
-go test -race ./internal/consumer/... ./internal/outbox/...
+go test -race -timeout 10m ./internal/consumer/... ./internal/outbox/...
 ```
 
 - Idempotency: replay the same message ID twice through the handler in a test; assert the business effect applied exactly once.

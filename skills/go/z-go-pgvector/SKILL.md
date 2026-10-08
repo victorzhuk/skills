@@ -215,5 +215,5 @@ psql -c "\d+ items"
 # query uses index (look for "Index Scan" when index exists)
 psql -c "EXPLAIN SELECT id, embedding <=> '[0,1,0]'::vector AS d FROM items ORDER BY d LIMIT 5;"
 
-go test -short -race ./internal/repository/...
+go test -short -race -timeout 5m ./internal/repository/...
 ```
