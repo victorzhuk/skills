@@ -1,4 +1,4 @@
-@<domain> @<risk> @story:<ID> @type:<unit|integration|e2e>
+@<domain> @<risk> @type:<unit|integration|e2e>
 Feature: <capability>
   As a <role>
   I want <capability>

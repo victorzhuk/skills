@@ -30,6 +30,10 @@ Record expected outcomes in the repository's Playwright specs when a regression 
 
 Keep exploratory observations distinct from executable regression proof. A snapshot showing a dashboard is evidence for that moment, not an assertion that will run in CI.
 
+For browser products, run acceptance against the running application using the scenario contract in [[z-bdd]].
+Agents execute, investigate, and explore. Maintain repeatable scripts with explicit expected outcomes as the acceptance gate.
+Do not weaken assertions or skip required scenarios while repairing locators or fixtures.
+
 Exercise success, rejection, loading, and relevant empty/error states. Mock only dependencies outside the behavior under test. Register a route before triggering the request.
 
 ## Authentication and artifacts

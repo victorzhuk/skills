@@ -17,7 +17,7 @@ Tests verify behaviour through public interfaces, not implementation details. Co
 
 A **seam** is the public boundary you test at: where behaviour is observable without reaching inside ([[z-deep-modules]]).
 
-**Use the agreed seams.** Existing caller approval or a dispatch plan is sufficient. Choose the lowest interface that proves the behavior without hiding integration risk. Resolve genuinely missing seam decisions before expanding scope. Under zapply, report an unlisted seam to the driver rather than asking the user from the worker.
+**Use the agreed seams.** Existing caller approval or a dispatch plan is sufficient. Follow [[z-testing-strategy]] for acceptance boundaries and residual-risk exceptions. The red-green loop can run through a public product boundary. Resolve genuinely missing seam decisions before expanding scope. Under zapply, report an unlisted seam to the driver rather than asking the user from the worker.
 
 ## Anti-patterns
 

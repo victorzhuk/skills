@@ -1,5 +1,14 @@
 # z-* Skill Inventory
 
+## Acceptance contracts
+
+`z-bdd` was authored directly in this repository under `skills/qa/z-bdd/`.
+It owns readable acceptance contracts and execution evidence across UI, API, and CLI products.
+`z-go-bdd` retains Go harness details. Test selection belongs to `z-testing-strategy`.
+The catalog is the source for these reusable skills. Installed copies are deployment outputs.
+
+## Original imports
+
 Copied 51 `z-*` skills from `~/.agents/skills` into this repo. A further 5
 cross-cutting doctrine skills were authored directly (not copied from a
 pre-existing skill) to close the gap between what the technical skills teach

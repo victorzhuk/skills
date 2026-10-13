@@ -15,7 +15,7 @@ Reusable z-prefixed agent skills, grouped by domain. Directory names and frontma
 - **[PHP](./php/README.md)** — 1 skill. PHP core conventions with Symfony, Laravel, and Yii2 framework depth.
 - **[Product](./product/README.md)** — 7 skills. Idea-to-OpenSpec pipeline: market research, grilling, design briefs, cloud-design handoff, and PRD authoring.
 - **[Python](./python/README.md)** — 1 skill. Python tooling baseline and framework routing for FastAPI, Django, Flask, and data/LLM work.
-- **[QA](./qa/README.md)** — 7 skills. QA planning and autonomous API, browser, performance, and failure-triage workflows.
+- **[QA](./qa/README.md)** — 8 skills. Readable acceptance contracts, QA planning, and API, browser, performance, and failure-triage workflows.
 - **[Rust](./rust/README.md)** — 3 skills. Rust core, web, and GTK/libadwaita desktop guidance.
 - **[TypeScript](./typescript/README.md)** — 5 skills. TypeScript house conventions, React/Next.js App Router patterns, and Telegram Mini App client development.
 - **[Writing](./writing/README.md)** — 3 skills. Documentation, prose de-slopping, and Russian technical register.

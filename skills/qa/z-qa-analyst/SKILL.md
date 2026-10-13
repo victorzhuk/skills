@@ -11,7 +11,7 @@ Map behavior and risk to existing tests. Use execution coverage as supporting ev
 
 1. Read the scoped requirements, public interfaces, and existing tests.
 2. Discover the repository's runner and coverage format.
-3. Map each behavior to tests that assert it. Include relevant source paths for navigation.
+3. Map each behavior to acceptance scenarios and assertions. Include relevant source paths for navigation.
 4. Run or read current applicable coverage evidence through the bounded project wrapper.
 5. Update the existing test-plan record; create a new record only within the requested scope.
 
@@ -59,6 +59,8 @@ List partial, gap, and unverified items with their reason and proposed next chec
 
 ## Verify
 
-Each status traces to inspected assertions and available execution evidence. Every missing proof is visible in the plan. Proposed tests use the lowest adequate interface and the approved seams.
+Each status traces to inspected assertions and available execution evidence. Every missing proof is visible in the plan.
+Use the approved product boundary for acceptance. Propose lower-layer tests only for named residual risks per [[z-testing-strategy]].
+Preserve existing tests. Apply [[z-bdd]] when deciding whether required scenario evidence passes the gate.
 
 See [[z-testing-strategy]], [[z-qa-spec-writer]], [[z-qa-debugger]], [[z-qa-orchestrator]], [[z-go-bdd]].

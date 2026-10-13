@@ -1,6 +1,6 @@
 ---
 name: z-qa-spec-writer
-description: 'Test framework auto-detection (Go testify/ginkgo/stdlib, JS/TS vitest/playwright, Python pytest) and compilable stub generation matched to the repo''s real import and assert style. Auto-activates for: test stub generation, test scaffolding, spec-first testing, framework detection, "add a skipped test for". Does not cover Gherkin/BDD scenarios or ginkgo priority Label tagging; see [[z-go-bdd]]. Does not cover writing the test plan itself; see [[z-qa-analyst]].'
+description: "Discover the existing test framework and generate requested compilable scaffolding. Use for test stubs, framework detection, or skipped tests. Readable acceptance scenarios belong to [[z-bdd]], test plans to [[z-qa-analyst]]. Skipped scaffolding is not acceptance proof."
 ---
 
 # Test scaffolding

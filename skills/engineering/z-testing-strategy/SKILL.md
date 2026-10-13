@@ -1,17 +1,17 @@
 ---
 name: z-testing-strategy
-description: Choose test depth by type of work, not a fixed coverage target — MVP/greenfield TDD vs existing-service regression protection, and when behavior needs a Gherkin/BDD contract. Use before writing code with observable behavior. Triggers on "what should I test", "TDD", "regression test", "is this MVP or production". Owns the resource-limit floor for dev test runs (timeouts, worker caps). Language syntax/mocking — [[z-go-testing]], [[z-go-bdd]].
+description: "Choose acceptance scope and residual-risk tests before changing observable behavior. Default to readable BDD contracts and repeatable E2E acceptance. Use for test strategy, regression scope, or unit/integration exceptions. Owns test resource limits. Scenario contracts belong to [[z-bdd]], test mechanics to language skills."
 ---
 
 # Testing strategy
 
-Choose test depth by risk and existing guarantees. Default to test-first for observable behavior.
+Use readable behavior contracts and repeatable E2E acceptance as the primary quality gate. Add lower-layer tests for named residual risks.
 
 ## Preserve the agreed contract
 
 Use the caller's approved testing mode, flow, seams, and verification scope. An approved tests-after flow remains valid. Do not reopen those decisions because a skill loaded. Under zapply, the dispatch supplies this contract; report missing decisions to the driver.
 
-Without an agreed flow, propose test-first and the lowest interface that proves the behavior. Confirm genuinely unresolved seam decisions before expanding scope.
+Without an agreed flow, propose contract-first acceptance through the public product boundary. Confirm genuinely unresolved behavior or boundary decisions.
 
 ## Classify the work
 
@@ -21,8 +21,8 @@ Mechanical edits, generated code, trivial mappings, and internal refactors may n
 
 | Work | Default depth |
 |---|---|
-| MVP or greenfield | Core behavior tests plus smoke checks at real boundaries |
-| Feature in an existing service | New behavior and regression coverage around the touched contract |
+| MVP or greenfield | Main journey and principal rejection through the product boundary |
+| Feature in an existing service | Changed acceptance scenarios plus existing regression guarantees |
 | Bug fix | Reproduction test that fails without the fix |
 | Refactor | Passing characterization coverage before moving behavior |
 | Auth, money, permissions, data loss | Existing-service depth even in an MVP |
@@ -30,8 +30,8 @@ Mechanical edits, generated code, trivial mappings, and internal refactors may n
 ### MVP
 
 - Test the main behavior, its principal rejection, and relevant auth/money/data-loss rules.
-- Prefer domain/use-case tests when they prove the outcome.
-- Exercise each touched real boundary that can fail independently.
+- Exercise the running product through its public boundary: browser, service protocol, or CLI executable.
+- Add unit or integration tests only for named risks that acceptance cannot prove reliably or economically.
 - Skip getters, DTOs, framework boilerplate, and logic-free mappers.
 - Name deferred risks; do not imply untested boundaries are verified.
 
@@ -39,23 +39,39 @@ Mechanical edits, generated code, trivial mappings, and internal refactors may n
 
 - Read existing tests and identify guarantees callers already depend on.
 - Default to a failing behavior test before a feature or fix. Characterization tests for an unchanged refactor should pass first.
-- Cover touched validation, permissions, transactions, state, retries, error mapping, compatibility, and migrations.
+- Preserve existing tests and required checks. This policy changes new test selection, not established guarantees.
+- Map touched validation, permissions, transactions, state, retries, compatibility, and migrations to acceptance or named residual-risk checks.
 - Follow an already-approved tests-after flow when supplied. Still prove a regression test fails without the fix.
 - Run the targeted check and the relevant repository suite. Under zapply, run only the dispatched checks; the caller owns the merge floor.
 
-## Choose the layer
+## Select additional tests
 
-| Risk | Lowest useful layer |
+Use [[z-bdd]] for the readable contract, public boundary, repeatable execution, and acceptance evidence.
+E2E does not require a browser for API or CLI products. Exercise the product's actual public interface.
+Keep required build, lint, type, and security checks alongside acceptance.
+
+Before adding a unit or integration test, name the risk and why E2E cannot prove it reliably or economically.
+Then choose the smallest useful interface for that risk. Typical exceptions include:
+
+| Residual risk | Candidate check |
 |---|---|
-| Business rule or algorithm | Domain/use-case test |
-| Storage contract | Repository integration test |
-| Request/response behavior | Handler/API test |
-| External dependency behavior | Adapter contract test |
-| Critical journey across layers | E2E test |
+| Many algorithm or pricing edge cases | Domain table or property test |
+| Transaction isolation, migrations, or data integrity | Real storage integration test |
+| Concurrency, cancellation, or rare fault ordering | Focused deterministic test |
+| Provider failure or compatibility unavailable in E2E | Adapter contract or integration test |
+| Security boundary not adequately exercised by acceptance | Focused permission or validation test |
 
-Move up when a lower layer hides the actual failure. Several implementation files may share one tested interface; one test file per source file is not a goal.
+Criticality calls for adequate proof, not automatic duplication at every layer. Do not add tests to meet a quota or file count.
+Several implementation files may share one tested interface. Preserve existing regression coverage when changing the default for new work.
 
-Use BDD/Gherkin when a business-readable contract has an audience: workflows, permissions, billing, or release evidence. Use ordinary tests for internal algorithms and small rules. Without a BDD harness, use the existing framework; adding a dependency is a separate decision.
+Without a BDD harness, use readable scenarios mapped to the existing runner. Adding a dependency remains a separate tooling decision.
+
+## Recover within the approved scope
+
+Record recovery limits with the verification plan. Use existing retry, time, and environment-repair limits when the project supplies them.
+Continue recoverable investigation and repairs within the approved contract, authority, and recorded limits.
+Ask when the contract or authority must change, or when recovery exhausts its recorded limits.
+Do not weaken assertions or omit required scenarios to recover. A retry-pass remains flaky and cannot clear acceptance.
 
 ## Resource limits
 
@@ -89,6 +105,8 @@ Use a host deadline or an available `timeout` wrapper for the whole invocation. 
 
 ## Verify
 
-Report testing mode, approved flow and seams, command, effective limits, observed result, and deferred risks. A timeout means incomplete verification. If no new behavior test was warranted, explain why.
+Report testing mode, approved flow, acceptance boundary, command, effective limits, observed result, and named residual risks.
+A timeout means incomplete verification. Required missing, skipped, pending, blocked, or flaky scenarios cannot pass acceptance.
+If no new behavior test was warranted, explain why.
 
-see [[z-tdd]], [[z-go-testing]], [[z-go-bdd]], [[z-verify-before-done]]
+see [[z-bdd]], [[z-tdd]], [[z-go-testing]], [[z-go-bdd]], [[z-verify-before-done]]

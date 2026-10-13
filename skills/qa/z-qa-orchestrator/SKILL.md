@@ -1,11 +1,11 @@
 ---
 name: z-qa-orchestrator
-description: Runs a project's test suite as three phases — smoke, regression, full — stopping at the first failure (opt out with --continue-on-failure). Wraps go test -race, vitest, playwright, and govulncheck through the project's own runner. Auto-activates for "run full QA suite", "test the app", "QA report", "/qa-run". Not a substitute for [[z-qa-browser]], [[z-qa-api]], [[z-qa-performance]], [[z-qa-analyst]], [[z-qa-spec-writer]], or [[z-qa-debugger]].
+description: "Run acceptance and required regression checks through the project's runner. Use for full QA, test the app, QA reports, or /qa-run. Start with changed acceptance and critical smoke, then the broader merge gate. Scenario contracts belong to [[z-bdd]], failure triage to [[z-qa-debugger]]."
 ---
 
 # QA Orchestrator
 
-Run one project's test suite through three phases -- smoke, regression, full -- using the project's own tooling. Sequential, stop-on-first-failure by default.
+Run the project's acceptance gate and existing required checks. Use its own tooling and the approved verification scope.
 
 ## Discover before running
 
@@ -15,24 +15,27 @@ Before picking commands: find the project's runner (Makefile, Taskfile, `package
 
 Run the requested phases in order. Stop between phases after the first failed phase unless the caller requests continuation. Within a phase, collect the intended failure census without fail-fast; see [[z-qa-debugger]].
 
-### Phase 1: Smoke (~3-5 min)
-Fast signal before deeper work.
-- Lint changed files only, through the project's linter wrapper (`golangci-lint run --new`, `eslint`, etc.)
-- `go vet ./...` for touched Go packages
-- Unit tests only, no race/coverage: `go test -timeout 2m -short ./...`, `vitest run --changed --maxWorkers=50%`
+### Phase 1: Changed acceptance and critical smoke
 
-### Phase 2: Regression (~15-30 min) -- default depth
-Full behavioral suite across every real boundary the project already exercises. Run this when the caller just says "run QA" or "test the app" without naming a phase.
-- Go: run the repository's regression target with its race/coverage settings and actual integration setup. Discover testcontainers, compose, external fixtures, or build tags instead of assuming a dependency mechanism.
-- JS/TS: full `vitest` run; `playwright test` for first-party E2E specs (see [[z-qa-browser]] for CLI-driven exploratory work, [[z-go-bdd]] for Ginkgo/Gomega or Gherkin behavior contracts)
-- `govulncheck ./...` when it's already wired into CI
+- Record the selected scenarios and their public product boundaries before execution.
+- Run changed acceptance scenarios and the project's required critical smoke journeys.
+- Use browser, running-service, or CLI checks according to the product. Apply [[z-bdd]] for explicit assertions and evidence.
+- Run build or setup prerequisites as needed. Preserve required static checks in their established order.
 
-### Phase 3: Full (~1-2h)
-Regression plus everything expensive or manual.
-- Everything in Phase 2
-- Full Playwright E2E suite, not just changed specs
-- Load smoke if the project has a load target: k6 via its own Makefile target (`test-load-smoke`, `test-load`, ...), checking `http_req_duration` p95/p99 and `http_req_failed` against configured thresholds; Locust for worker/queue-shaped load with no HTTP surface (see [[z-qa-performance]])
-- The project's manual-smoke checklist, if it keeps one -- walk it, don't skip it
+### Phase 2: Merge gate -- default depth
+
+Run this scope when the caller says "run QA" or "test the app" without naming a phase.
+
+- Run the broader required acceptance suite before merge, not only the changed scenarios.
+- Preserve existing required regression, lint, type, race, and security checks.
+- Run additional unit or integration checks for the named residual risks in the approved plan.
+- Discover fixtures, build tags, and dependency setup rather than assuming a mechanism.
+
+### Phase 3: Additional requested checks
+
+- Run load, visual, accessibility, or manual checks when required by the project or the requested scope.
+- Use [[z-qa-performance]] for load checks and [[z-qa-browser]] for browser-specific evidence.
+- A check already required for acceptance belongs to the gate. Do not defer it because it is expensive.
 
 ## Running tests
 
@@ -44,6 +47,9 @@ Inspect process deadlines, test timeouts, and parallel limits per [[z-testing-st
 
 Report each phase inline as you go: name, pass/fail, duration. Close with a SUMMARY table in the same reply.
 
+Apply [[z-bdd]] to the overall verdict. Required skips, pending steps, missing results, blocked execution, and flakes prevent PASS.
+Continuing after a failed phase collects evidence. It does not clear the earlier failure.
+
 If the project already keeps a dated QA log (a `docs/qa/`-style tree, for example), append an entry there instead, matching that project's existing format. Don't invent a `results/` directory or a `SUMMARY.md` file on top of a convention that already exists.
 
 ## When to reach for a domain skill instead
@@ -53,7 +59,8 @@ The phases above cover running the suite. Reach for a narrower skill when the ta
 - API contract testing, auth flows -> [[z-qa-api]]
 - Load/latency benchmarking beyond a load-smoke check -> [[z-qa-performance]]
 - Building a P0/P1/P2 test plan from scratch -> [[z-qa-analyst]]
-- Generating test stubs or BDD specs from a plan -> [[z-qa-spec-writer]]
+- Readable BDD scenarios and acceptance evidence -> [[z-bdd]]
+- Generating explicitly requested skipped stubs -> [[z-qa-spec-writer]]
 - Classifying failures, flaky-test triage, writing a QA report -> [[z-qa-debugger]]
 - Visual regression or screenshot diffing, only if the project actually does it -> [[z-qa-browser]]
 - Go behavior contracts, Ginkgo/Gomega or Gherkin/godog -> [[z-go-bdd]]

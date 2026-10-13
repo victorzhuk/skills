@@ -1,6 +1,6 @@
 # Report Artifacts
 
-`.feature` files are the source of truth. Reports are evidence from a run.
+Use [[z-bdd]] for the acceptance evidence contract. These formats connect a Go BDD runner to that contract.
 
 ## Standard paths
 
@@ -28,7 +28,9 @@ pretty,junit:reports/bdd/junit.xml,cucumber:reports/bdd/cucumber.json
 
 ## Gates
 
-Use the test runner exit status as the primary gate. A missing report, empty selection, or undefined/pending/skipped required scenario must not pass merely because no step has status failed. For an all-required passing report, an additional `jq`/`jaq` check is:
+Require a successful runner exit and complete results for the preselected required scenarios.
+Missing, empty, undefined, pending, skipped, blocked, or flaky required results prevent PASS.
+The following supplemental check only inspects reported steps. It does not prove selection completeness or absence of retry-pass flakes:
 
 ```sh
 jq -e '[.[].elements[].steps[].result.status] | length > 0 and all(. == "passed")' reports/bdd/cucumber.json

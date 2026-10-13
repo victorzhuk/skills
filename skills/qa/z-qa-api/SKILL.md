@@ -1,11 +1,13 @@
 ---
 name: z-qa-api
-description: "API testing in Go: net/http/httptest for handler-level contract tests and testcontainers-go for real-boundary integration against a live Postgres. Auto-activates for: API testing, REST contract tests, handler test, endpoint health check, auth flow testing, testcontainers integration test. Does not cover browser/UI flows; see [[z-qa-browser]]. Does not cover load/throughput testing; see [[z-qa-performance]]."
+description: "API acceptance through a running service, with focused Go handler and dependency tests for residual risks. Use for API journeys, REST contracts, authentication, handler tests, or integration fixtures. Shared acceptance contracts belong to [[z-bdd]], browser flows to [[z-qa-browser]]."
 ---
 
 # API testing
 
-Discover the service's test runner and existing contract-test style. Prefer in-process handler tests for behavior they can prove, and real dependency tests for storage or transport risks they cannot.
+Discover the service's test runner and existing contract-test style. Use [[z-bdd]] for acceptance through the running service's public protocol.
+Exercise real application wiring and required dependencies. A health response alone does not prove a business journey.
+Add handler or dependency integration tests only for named residual risks per [[z-testing-strategy]]. Preserve existing tests.
 
 ## Handler contracts
 

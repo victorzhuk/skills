@@ -1,13 +1,13 @@
 ---
 name: z-go-bdd
-description: Go BDD and executable behavior contracts — two patterns, pick by audience. ginkgo/gomega (`Describe`/`When`/`It`, `Label("p0"...)`) suits engineer-only scenarios; Gherkin/godog (`.feature` files) suits non-engineer-readable ones. Use when changing observable Go behavior or writing `.feature`/`*_bdd_test.go` specs. Triggers on "BDD", "Gherkin", "Given-When-Then". Does not cover test-depth classification or non-BDD unit tests; see [[z-testing-strategy]] and [[z-go-testing]].
+description: "Wire Go behavior scenarios through existing Ginkgo/Gomega or godog harnesses. Use for Go BDD suites, step adapters, tags, and runner reports. Shared readable contracts and acceptance evidence belong to [[z-bdd]]. Test selection belongs to [[z-testing-strategy]]."
 ---
 
 # Go BDD
 
-Use an executable behavior contract before changing observable behavior. Change the contract first, then the code.
+Implement the agreed behavior contract through the project's Go harness. Use [[z-bdd]] for scenario semantics and acceptance evidence.
 
-BDD here is opt-in, not the default contract — no project in this corpus ships `.feature` files or godog today. Reach for Pattern A or B when non-engineers must read or author the scenario; otherwise the nearest use-case/integration test already does the job.
+Ginkgo and godog are runner choices. Neither framework is required merely to write a readable behavior contract.
 
 ## Workflow
 
@@ -15,12 +15,12 @@ BDD here is opt-in, not the default contract — no project in this corpus ships
    - Observable behavior: API/CLI response, workflow, permission, auth, billing, retry, state transition, persistence effect, external side effect, user-visible error, production bug.
    - Internal-only: private helper, mechanical refactor, generated code, DTO mapping without logic.
 2. Inspect the project for an existing harness — `**/*_bdd_test.go` with `ginkgo`/`gomega` imports, `features/**/*.feature` with `godog`, BDD Make/Task targets. Match whatever is already wired.
-3. If neither exists, choose by audience:
-   - **Pattern A — ginkgo/gomega**: nobody outside engineering reviews or authors this scenario. This is the more common case.
-   - **Pattern B — godog/Gherkin**: the scenario itself needs to be readable, or reviewable, by product/support/QA who don't read Go.
+3. Preserve an existing harness and map readable scenarios to its executable assertions.
+   - **Pattern A — ginkgo/gomega**: use when already adopted or chosen for Go scenario execution.
+   - **Pattern B — godog/Gherkin**: use when the project chooses executable `.feature` files.
 4. For observable behavior, write or update the scenario first.
    - If acceptance criteria are ambiguous, draft the scenario and ask for confirmation.
-   - If the project has no BDD harness and neither pattern is worth introducing yet, use the nearest behavior-level Go test and ask before adding a dependency.
+   - Without a BDD harness, use readable scenarios with the existing runner. Treat new dependencies as a separate tooling decision.
 5. Implement steps/specs as adapters.
    - They prepare state, perform actions, and assert outcomes.
    - Business logic stays in domain/use-case code, not in step or spec functions.
@@ -56,7 +56,9 @@ func TestScenarioSuite(t *testing.T) {
 }
 ```
 
-Labels: `p0` (critical, every push), `p1` (important), `p2` (nice-to-have, slow, or infra-gated — e.g. `Label("p2", "container")`). Filter with `timeout 5m go test -parallel 4 -p 2 -timeout 5m ./... -ginkgo.label-filter=p0`. Put suites that shell out to a real binary or hit real infra behind a build tag (`//go:build scenarios`) so plain `go test ./...` stays fast; run the tagged suite through its own Make/Task target.
+Labels: `p0` (critical), `p1` (important), `p2` (lower impact). Keep cost and infrastructure labels separate from risk.
+Filter with `timeout 5m go test -parallel 4 -p 2 -timeout 5m ./... -ginkgo.label-filter=p0` when no wrapper exists.
+Follow existing build tags and Make/Task targets. Required acceptance suites must run in the acceptance gate even when ordinary tests exclude them.
 
 `Describe`/`When`/`It` text should still read as behavior, not implementation — the same discipline as Gherkin's `Given`/`When`/`Then` (below), just expressed in Go instead of a separate file.
 
@@ -74,15 +76,7 @@ Reference routing — load only the needed file:
 
 Starting points to copy: [assets/feature.template](assets/feature.template) for a tagged `.feature` skeleton, [assets/suite_test.template.go](assets/suite_test.template.go) for the `go test`-driven godog suite with CI report formats.
 
-Gherkin rules:
-
-- One scenario proves one behavior.
-- `Given` prepares state.
-- `When` performs one user/system action.
-- `Then` asserts observable outcomes.
-- Keep step text in domain language. Avoid function names, table names, selectors, mocks, and transport plumbing unless those are the behavior.
-- Use `Scenario Outline` only when the examples table is part of the requirement.
-- Use tags for domain, risk, story, and test type.
+Follow [[z-bdd]] for the shared contract. Use `references/gherkin-style.md` for syntax examples and step semantics.
 
 Use `go test` integration for godog; avoid the deprecated godog CLI unless the project already depends on it.
 

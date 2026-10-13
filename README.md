@@ -8,7 +8,7 @@ The layout is inspired by [mattpocock/skills](https://github.com/mattpocock/skil
 
 ## Quickstart
 
-When this repo is public on GitHub:
+Install from the repository:
 
 ```bash
 npx skills@latest add victorzhuk/skills
@@ -17,8 +17,11 @@ npx skills@latest add victorzhuk/skills
 For Pi or any harness that scans skill directories, you can also point it at this repo's `skills/` directory or copy selected skill directories into your installed skills folder.
 
 ```bash
-# example: copy every skill into the shared agent skills directory
-cp -R skills/* ~/.agents/skills/
+# copy individual skill directories into a flat installation
+mkdir -p ~/.agents/skills
+for skill in skills/*/z-*; do
+  cp -R "$skill" ~/.agents/skills/
+done
 ```
 
 ## Why these skills exist
@@ -67,6 +70,9 @@ npm run changeset
 ```
 
 Changesets handles version notes; GitHub Actions validates skills and opens version PRs.
+
+Edit reusable skills in this repository. Treat installed copies as outputs, and use the host's managed installer when one exists.
+Keep host-specific settings in the host configuration rather than modifying installed skill copies.
 
 ## Reference
 
@@ -118,7 +124,7 @@ General engineering process, changelog, architecture, repository tooling, skill 
 - **[z-skill-mastery](./skills/engineering/z-skill-mastery/SKILL.md)** — Author, refactor, and review agent skills in this repo's house style.
 - **[z-systematic-debugging](./skills/engineering/z-systematic-debugging/SKILL.md)** — Root-cause-first debugging loop — no fixes before a feedback loop exists and the cause is understood. Build a tight red-capable repro, minimize it, rank falsifiable hypotheses…
 - **[z-tdd](./skills/engineering/z-tdd/SKILL.md)** — Red-green loop discipline that produces tests worth keeping — tests at pre-agreed seams through public interfaces, expected values from an independent source of truth, one vertical slice per cycle.
-- **[z-testing-strategy](./skills/engineering/z-testing-strategy/SKILL.md)** — Choose test depth by type of work, not a fixed coverage target — MVP/greenfield TDD vs existing-service regression protection, and when behavior needs a Gherkin/BDD contract.
+- **[z-testing-strategy](./skills/engineering/z-testing-strategy/SKILL.md)** — Use E2E acceptance as the primary gate; select new lower-layer tests for named residual risks and preserve existing guarantees.
 - **[z-verify-before-done](./skills/engineering/z-verify-before-done/SKILL.md)** — Evidence before completion claims, commits, PRs, or reliance on subagent reports. Use for "done", "fixed", "should work now", "tests pass", or "looks correct". Require fresh verification output and bug reproduction. Test depth belongs to [[z-testing-strategy]]. Debugging belongs to [[z-systematic-debugging]].
 - **[z-zero-comments](./skills/engineering/z-zero-comments/SKILL.md)** — Comment discipline — a comment explaining WHAT code does means the name is wrong; rename or restructure instead.
 
@@ -133,7 +139,7 @@ Flutter mobile client development — Dart 3 essentials, state management, and p
 Go engineering discipline: architecture, testing, database, observability, security, performance, and tooling.
 
 - **[z-go-api-design](./skills/go/z-go-api-design/SKILL.md)** — REST API contract design for OpenAPI-first Go, before ogen generates the transport — path versioning, keyset/cursor pagination, Idempotency-Key, RFC 9457 problem+json errors, PATCH-merge-patch…
-- **[z-go-bdd](./skills/go/z-go-bdd/SKILL.md)** — Go BDD and executable behavior contracts — two patterns, pick by audience. ginkgo/gomega (`Describe`/`When`/`It`, `Label("p0"...)`) suits engineer-only scenarios; Gherkin/godog (`.feature` files)…
+- **[z-go-bdd](./skills/go/z-go-bdd/SKILL.md)** — Wire existing Ginkgo/Gomega or godog harnesses to shared readable acceptance contracts.
 - **[z-go-bench-ab](./skills/go/z-go-bench-ab/SKILL.md)** — A/B microbenchmark validity in Go — `-count` never interleaves b.Run arms; repeat inside the parent, equalize arm plumbing, keep a control cell; plus contention-profile attribution.
 - **[z-go-caching](./skills/go/z-go-caching/SKILL.md)** — Redis caching and rate limiting for Go — cache-aside (read-through, delete-on-write invalidation, TTL jitter), singleflight before a distributed lock, fail-open on outages, atomic INCR+EXPIRE or Lua token-bucket over racy GET-then-SET.
 - **[z-go-ci](./skills/go/z-go-ci/SKILL.md)** — GitHub Actions CI/CD for Go projects — test matrix, race detection, golangci-lint, govulncheck, CodeQL, GoReleaser, Dependabot/Renovate, Docker image pipelines.
@@ -235,13 +241,14 @@ Python tooling baseline and framework routing for FastAPI, Django, Flask, and da
 
 QA planning and autonomous API, browser, performance, and failure-triage workflows.
 
+- **[z-bdd](./skills/qa/z-bdd/SKILL.md)** — Readable BDD contracts and repeatable acceptance evidence across UI, API, and CLI products.
 - **[z-qa-analyst](./skills/qa/z-qa-analyst/SKILL.md)** — Plan tests by behavior and risk; map requirements to assertions and execution evidence, distinguishing coverage from proof.
-- **[z-qa-api](./skills/qa/z-qa-api/SKILL.md)** — API testing in Go: net/http/httptest for handler-level contract tests and testcontainers-go for real-boundary integration against a live Postgres. Auto-activates for: API testing, REST contract…
+- **[z-qa-api](./skills/qa/z-qa-api/SKILL.md)** — Run API acceptance through the service boundary; use focused Go handler and integration tests for named residual risks.
 - **[z-qa-browser](./skills/qa/z-qa-browser/SKILL.md)** — Test browser flows through available host tools and the project's Playwright runner; verify current page state, meaningful assertions, and bounded execution.
 - **[z-qa-debugger](./skills/qa/z-qa-debugger/SKILL.md)** — Test execution without fail-fast, failure classification, flaky detection, and QA report authoring. Auto-activates for: test failure triage, flaky tests, QA report, race conditions, test run…
-- **[z-qa-orchestrator](./skills/qa/z-qa-orchestrator/SKILL.md)** — Runs a project's test suite as three phases — smoke, regression, full — stopping at the first failure (opt out with --continue-on-failure). Wraps go test -race, vitest, playwright, and govulncheck…
+- **[z-qa-orchestrator](./skills/qa/z-qa-orchestrator/SKILL.md)** — Run changed acceptance and critical smoke, then broader acceptance and existing required checks through project runners.
 - **[z-qa-performance](./skills/qa/z-qa-performance/SKILL.md)** — Test load and throughput with user-count or arrival-rate workloads; gate business checks, latency, and errors while bounding generated traffic.
-- **[z-qa-spec-writer](./skills/qa/z-qa-spec-writer/SKILL.md)** — Test framework auto-detection (Go testify/ginkgo/stdlib, JS/TS vitest/playwright, Python pytest) and compilable stub generation matched to the repo's real import and assert style.
+- **[z-qa-spec-writer](./skills/qa/z-qa-spec-writer/SKILL.md)** — Discover existing frameworks and generate explicitly requested compilable scaffolding; skipped stubs remain acceptance gaps.
 
 ### Rust
 

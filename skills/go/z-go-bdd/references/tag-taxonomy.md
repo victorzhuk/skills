@@ -2,7 +2,9 @@
 
 Tags make behavior contracts filterable by CI, release scripts, reports, and humans.
 
-## Required tag types
+## Tag dimensions
+
+Use the project's existing tags. Require only dimensions used for selection or reporting. Work-item tags are optional when no tracker exists.
 
 | Type | Format | Example |
 |---|---|---|
@@ -37,4 +39,5 @@ BDD_TAGS='@story:PAY-241' timeout 15m go test -parallel 4 -p 2 -timeout 10m ./..
 - Do not create synonyms for the same domain.
 - Remove `@wip` before merge unless CI excludes it intentionally.
 - Keep risk tags stable; do not downgrade risk to make CI faster.
+- Keep execution cost and dependency availability separate from risk.
 - Prefer one domain tag per scenario unless the scenario truly crosses domains.

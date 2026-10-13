@@ -7,7 +7,7 @@ Go engineering discipline: architecture, testing, database, observability, secur
 Model- or user-reachable via skill name and trigger phrasing.
 
 - **[z-go-api-design](./z-go-api-design/SKILL.md)** — REST API contract design for OpenAPI-first Go, before ogen generates the transport — path versioning, keyset/cursor pagination, Idempotency-Key, RFC 9457 problem+json errors, PATCH-merge-patch…
-- **[z-go-bdd](./z-go-bdd/SKILL.md)** — Go BDD and executable behavior contracts — two patterns, pick by audience. ginkgo/gomega (`Describe`/`When`/`It`, `Label("p0"...)`) suits engineer-only scenarios; Gherkin/godog (`.feature` files)…
+- **[z-go-bdd](./z-go-bdd/SKILL.md)** — Wire existing Ginkgo/Gomega or godog harnesses to shared readable acceptance contracts.
 - **[z-go-bench-ab](./z-go-bench-ab/SKILL.md)** — A/B microbenchmark validity in Go — `-count` never interleaves b.Run arms; repeat inside the parent, equalize arm plumbing, keep a control cell; plus contention-profile attribution.
 - **[z-go-caching](./z-go-caching/SKILL.md)** — Redis caching and rate limiting for Go — cache-aside (read-through, delete-on-write invalidation, TTL jitter), singleflight before a distributed lock, fail-open on outages, atomic INCR+EXPIRE or Lua token-bucket over racy GET-then-SET.
 - **[z-go-ci](./z-go-ci/SKILL.md)** — GitHub Actions CI/CD for Go projects — test matrix, race detection, golangci-lint, govulncheck, CodeQL, GoReleaser, Dependabot/Renovate, Docker image pipelines.

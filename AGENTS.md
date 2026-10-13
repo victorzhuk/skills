@@ -4,7 +4,7 @@ This file provides guidance to coding agents working in this repository.
 
 ## What this repo is
 
-A public catalog of reusable `z-*` agent skills, not an application. There is no build or runtime — only skills as content plus Node scripts that list and validate them. Skills are authored in a private `~/.agents/skills` directory, copied here, and sanitized for public release (see `docs/inventory.md`).
+A public catalog of reusable `z-*` agent skills, not an application. There is no application runtime — only skills as content plus Node scripts that list and validate them. Edit reusable skills in this tracked repository, then install through the target host's installation mechanism. Installed copies are not the source. Keep host-specific settings outside this catalog. Historical provenance is recorded in `docs/inventory.md`.
 
 ## Commands
 
