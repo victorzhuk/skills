@@ -13,10 +13,12 @@ Two ways to make a handler safe under redelivery, in order of preference:
 
 | Strategy | When | Cost |
 |---|---|---|
-| Idempotent-by-construction (upsert on a natural key) | The business write already has a stable key — `INSERT ... ON CONFLICT (order_id) DO UPDATE` | Free — no extra table, no extra round-trip |
-| Dedup table keyed by message ID | The write isn't naturally idempotent — counters, appends, side-effecting calls, multi-statement effects | One extra row + index per message |
+| Idempotent-by-construction | Repeating the write produces the same result; an upsert that increments a counter does not qualify | No extra dedup table |
+| Dedup table keyed by message ID | Non-idempotent counters, appends, or multi-statement effects in the same database transaction | One extra row + index per message |
 
 Dedup table pattern — the dedup INSERT and the business write share one transaction, so either both land or neither does:
+
+External HTTP, email, or payment calls are outside this transaction. Use an outbox for durable dispatch and downstream idempotency for repeated calls.
 
 ```go
 tx, err := pool.Begin(ctx)
