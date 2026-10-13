@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.0
+
+### Minor Changes
+
+- [`d56c841`](https://github.com/victorzhuk/skills/commit/d56c8419e488ecb7b4ab88b776e793b1cb53b77a) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add `z-go-entrypoint` for Go entrypoints: a thin `main` driver over a testable
+  `run` harness, with injected args and streams, `flag.ContinueOnError` bound to
+  stderr, `signal.NotifyContext`, and explicit dependency construction. Update the
+  Go domain index, the top-level catalog, and the provenance inventory.
+
 ## 0.11.0
 
 ### Minor Changes
