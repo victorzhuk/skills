@@ -49,6 +49,15 @@ Deprecated symbols:
 func Create(o *Order) (string, error)
 ```
 
+For APIs that own resources or start concurrent work, document the applicable lifecycle contract:
+
+- State who closes, cancels, or otherwise releases each resource, and when.
+- State concurrent-use guarantees and any synchronization the caller must provide.
+- Explain context lifetimes or cancellation behavior that differ from ordinary call-scoped use.
+- State whether background work continues after return and how callers stop it and wait for completion.
+
+Omit guarantees already implied by the API's conventional behavior.
+
 ## Quick Reference
 
 | What | Rule |
@@ -152,6 +161,8 @@ it factual — no marketing.
 - Commit `llms.txt` with speculative or future-tense claims.
 
 ## Verify
+
+Review changed API comments against the implementation. Verify cleanup ownership, concurrent-use guarantees, and exceptional context behavior wherever applicable. For background work, verify the documented stop and completion mechanism.
 
 ```sh
 go list ./...                 # select the affected package

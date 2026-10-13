@@ -110,18 +110,16 @@ func mustPositive(n int) int {
     }
     return n
 }
-
-// Recover at goroutine boundaries, not deep in business logic
-func safeRun(f func()) (err error) {
-    defer func() {
-        if r := recover(); r != nil {
-            err = fmt.Errorf("panic: %v", r)
-        }
-    }()
-    f()
-    return nil
-}
 ```
+
+Do not recover an unexpected panic merely to keep a server or worker alive.
+A broken invariant can leave shared state unsafe even when the goroutine exits.
+
+If an existing package uses an internal panic protocol, recover only its private
+panic type at the package boundary and re-panic every unexpected value. Define
+the returned error and resource cleanup. Any broader containment boundary must
+establish state isolation, define the failed operation's result, and preserve
+stack diagnostics; a goroutine boundary alone provides no such guarantee.
 
 ## Quick reference
 
@@ -134,6 +132,7 @@ func safeRun(f func()) (err error) {
 | Join independent | `errors.Join(errA, errB)` |
 | Single handling | log OR return; boundary logs, interior wraps |
 | Panic scope | Programmer errors and broken invariants only |
+| Recovery | Owned panic protocol or explicit containment; re-panic unexpected values |
 | Error var name | `ErrFoo` |
 | Error type name | `FooError` |
 
@@ -144,6 +143,7 @@ func safeRun(f func()) (err error) {
 - Use bare type assertions on errors — use `errors.As`.
 - Produce high-cardinality data in the stable log message; attach as structured attrs.
 - Expose raw internal errors to external callers — translate at the boundary.
+- Convert every panic to an error or log entry without a containment contract.
 
 ## Verify
 
@@ -151,3 +151,10 @@ func safeRun(f func()) (err error) {
 go build ./... && timeout 5m go test -parallel 4 -p 2 -short -timeout 2m ./...
 golangci-lint run ./...
 ```
+
+Review any recovery path for its accepted panic values, unexpected-value
+propagation, cleanup, and explicit failure result.
+
+## Sources
+
+- [Google Go best practices: program checks and panics](https://google.github.io/styleguide/go/best-practices.html#program-checks-and-panics), [controlled panic recovery](https://google.github.io/styleguide/go/best-practices.html#when-to-panic).

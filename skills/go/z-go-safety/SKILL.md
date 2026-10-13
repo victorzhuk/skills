@@ -158,19 +158,19 @@ Inject instead of mutating package-level vars: `type signer struct{ now func() t
 
 ## Panic / Must
 
-`Must` helpers are acceptable at package init only. Never expose panics across package boundaries — convert to errors. Recover in server goroutines:
+`Must` helpers are acceptable at package init only. Return errors for expected
+failures. Do not add blanket recovery at package or server-goroutine boundaries:
+an unexpected panic may indicate corrupted shared state.
 
 ```go
 var re = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
-
-defer func() {
-    if r := recover(); r != nil {
-        log.Println("recovered:", r)
-    }
-}()
 ```
 
-Recovery only works when called directly by a deferred function in the panicking goroutine. A caller's defer cannot recover a child goroutine's panic; put recovery at the boundary that owns the goroutine and defines its failure result.
+Recover only an owned internal panic protocol or at a documented containment
+boundary with state isolation, cleanup, an explicit failure result, and stack
+diagnostics. Re-panic unexpected values; see [[z-go-errors]]. Recovery must be
+called directly by a deferred function in the panicking goroutine. A caller's
+defer cannot recover a child goroutine's panic.
 
 ---
 

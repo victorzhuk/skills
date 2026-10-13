@@ -15,7 +15,7 @@ type Writer interface{ Write(p []byte) (n int, err error) }
 type ReadWriter interface{ Reader; Writer }
 ```
 
-**Consumer owns the interface.** Define where consumed, not where implemented:
+**Prefer consumer-owned interfaces.** Define a narrow contract where its caller needs it:
 
 ```go
 // package notification — only what it needs
@@ -24,18 +24,22 @@ type Sender interface{ Send(to, body string) error }
 type Service struct{ sender Sender }
 ```
 
-The `email` package exports a concrete `Client` — it never declares `Sender`.
+In this example, the `email` package exports a concrete `Client` without declaring `Sender`.
+Shared or generated protocol contracts can own interfaces outside the consumer package.
+Preserve that ownership when the contract requires it.
 
-**Accept interfaces, return concrete types.** Callers get the full struct API;
-callers upstream assign to an interface variable if they need to:
+**Prefer concrete return types.** Callers retain the full API and can assign results to their own interfaces:
 
 ```go
-func NewService(store UserStore) *Service { ... }  // good
-func NewService(store UserStore) ServiceInterface  // bad — never do this
+func NewService(store UserStore) *Service { ... }
 ```
 
-**Don't extract interfaces prematurely.** Start concrete; extract when a second
-consumer or a test mock demands it. One implementation alone does not justify an interface; an established boundary or test seam can.
+Return an interface for required shared protocols, runtime implementation selection, or deliberate API restriction that serves callers.
+Use these exceptions for a concrete requirement, not to hide every implementation behind an interface.
+
+**Don't extract interfaces prematurely.** Start concrete.
+Extract an interface for an established boundary, test seam, or caller that needs interchangeable implementations.
+Neither implementation count nor consumer count decides this alone.
 
 ## Compile-time interface check
 
@@ -156,9 +160,15 @@ exclude interfaces, including within nested structs and arrays.
 
 Start concrete; generalize only when a second real call site appears.
 
-## Functional options
+## Constructor configuration
 
-Use when a constructor has 3+ optional parameters or the API will grow.
+Start with ordinary parameters for required dependencies and simple inputs.
+Use a config struct for related settings that callers commonly supply together.
+Consider functional options for actual caller needs: selective overrides, defaults, or reusable option composition.
+Use them only when simpler forms cannot express those needs clearly.
+Choose from actual call sites, not parameter counts or anticipated growth.
+
+When functional options meet that need, apply defaults before the supplied options:
 
 ```go
 type Option func(*Server)
@@ -174,16 +184,17 @@ func New(opts ...Option) *Server {
 }
 ```
 
-Under 3 options or all-internal API → plain config struct is simpler.
+Keep required dependencies explicit rather than hiding them in optional configuration.
 
 ## Quick Reference
 
 | Rule | Do | Don't |
 |---|---|---|
-| Interface size | 1–3 methods; compose | Giant catch-all interfaces |
-| Interface placement | Consumer package / `domain/` | Implementor package |
-| Constructors | Return concrete `*Type` | Return interface |
-| Premature interface | Wait for 2nd consumer or mock | Extract for one impl |
+| Interface size | Focused capabilities | Unrelated methods or universal method limits |
+| Interface placement | Consumer by default. Respect shared/generated protocol ownership | Mirror every implementation with an interface |
+| Constructors | Concrete by default. Interface for protocol, runtime selection, or deliberate API restriction | Hide implementations without a caller need |
+| Constructor configuration | Ordinary params first. Choose config structs or options from actual callers | Numeric thresholds or anticipated growth |
+| Premature interface | Extract for a real boundary, test seam, or interchangeable implementations | Decide from implementation or consumer count alone |
 | Compile-time check | `var _ Iface = (*Type)(nil)` | Skip it |
 | Type assertion | Always comma-ok | Bare `val.(T)` |
 | Receivers | Consistent per type; pointer if mutates/large | Mix pointer + value |
@@ -206,3 +217,4 @@ non-comparable dynamic values at the boundary.
 
 - [Go101: methods](https://go101.org/article/method.html), [embedding](https://go101.org/article/type-embedding.html), [type constraints](https://go101.org/generics/555-type-constraints-and-parameters.html).
 - [Go specification: method sets](https://go.dev/ref/spec#Method_sets), [method values](https://go.dev/ref/spec#Method_values), [constraint satisfaction](https://go.dev/ref/spec#Satisfying_a_type_constraint).
+- [Google Go best practices: interfaces](https://google.github.io/styleguide/go/best-practices.html#interfaces), [variadic options](https://google.github.io/styleguide/go/best-practices.html#variadic-options).

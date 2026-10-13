@@ -55,7 +55,11 @@ Call `t.Parallel()` on the top-level when it shares no mutable global; add it to
 
 ## testify: assert vs require
 
+Testify is the house convention for these examples. Preserve the target repository's established assertion style.
+
 `require` calls `t.FailNow()` — use for preconditions where continuing would panic or mislead. `assert` records failure and continues — use for independent verifications. Argument order: always `(expected, actual)`.
+
+Call `require`, `t.FailNow`, `t.Fatal`, and `t.Fatalf` only from the goroutine running the test or subtest. Collect worker and HTTP handler errors, then assert in the test goroutine. Alternatively, call `t.Error` or `t.Errorf` and return explicitly from the worker or handler. Complete required synchronization before the test ends.
 
 ## testify: key assertions
 
@@ -166,7 +170,7 @@ Prefer the project wrapper. Standalone runs need a whole-process deadline, a per
 - Reach for `context.Background()` in new or touched test code — prefer `t.Context()` there; don't rewrite untouched tests as a drive-by migration.
 - Add `t.Parallel()` to subtests that share a fixture or depend on order.
 - Assert on whole structs when one field is the contract — assert the field.
-- Use `assert` for guards where a nil dereference follows on failure — use `require`.
+- Use `assert` for guards where a nil dereference follows on failure. Use `require` in the test goroutine, or explicitly return from a worker after reporting failure.
 - Forget `AssertExpectations(t)` on mocks — unverified expectations silently pass.
 - Use `is.Equal(ErrNotFound, err)` for wrapped errors — use `is.ErrorIs`.
 - Add `//go:build test` tags unless the project explicitly builds with `-tags test`.

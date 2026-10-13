@@ -111,7 +111,8 @@ func TestGenerate_HTTPServer(t *testing.T) {
     if *update || os.Getenv("UPDATE_GOLDEN") == "1" {
         require.NoError(t, os.WriteFile(golden, got, 0o644))
     }
-    want, _ := os.ReadFile(golden)
+    want, err := os.ReadFile(golden)
+    require.NoError(t, err)
     assert.Equal(t, string(want), string(got))
 }
 ```

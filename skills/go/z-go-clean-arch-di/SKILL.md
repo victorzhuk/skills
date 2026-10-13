@@ -52,17 +52,15 @@ Infra → services → usecases. Never reverse.
 
 ## Constructors
 
-Return concrete structs; accept interface-typed params:
+Prefer concrete return types and narrow interfaces for dependencies that need a contract:
 
 ```go
-// correct
 func NewUserService(repo UserRepository, log *slog.Logger) *UserService
-
-// wrong — leaks interface from implementation package
-func NewUserService(repo UserRepository, log *slog.Logger) UserServiceInterface
 ```
 
-Consumer structs hold interface-typed fields:
+Shared protocols, runtime implementation selection, and deliberate API restriction can justify interface returns. See [[z-go-interfaces]].
+
+Consumer structs hold interface-typed fields where callers need that contract:
 
 ```go
 type OrderUseCase struct {
@@ -73,7 +71,7 @@ type OrderUseCase struct {
 
 ## Interface Placement
 
-Interfaces belong at the consumption site, not the implementation site:
+Prefer interfaces at the consumption site:
 
 ```go
 // domain/usecase/user.go — shared across layers
@@ -89,6 +87,7 @@ type userLookup interface {
 ```
 
 Use `domain/` for contracts shared across layers. Use package-local interfaces for deliberately narrower contracts.
+Preserve shared or generated protocol ownership when the contract requires another location. See [[z-go-interfaces]].
 
 ## Contract Aliases
 
@@ -163,8 +162,8 @@ checks and graceful shutdown.
 |---|---|
 | Composition root | `internal/app/` — only package that knows all concrete types |
 | Phased wiring | infra → services → usecases, never reverse |
-| Constructors | return concrete struct, accept interface params |
-| Interface placement | consumer side or `domain/`, not implementation side |
+| Constructors | Prefer concrete returns and narrow dependency contracts. See exceptions in [[z-go-interfaces]] |
+| Interface placement | Consumer side or shared contract by default. Respect protocol ownership. See [[z-go-interfaces]] |
 | Contract aliases | for readability in `bootstrap.go`, not to hide bad imports |
 | Lifecycle | one blocking `Run(ctx) error` in `app.go`; shutdown is an internal closure |
 | DI library | manual constructor injection by default, regardless of scale |

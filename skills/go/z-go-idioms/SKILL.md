@@ -35,9 +35,8 @@ mechanics belong to sibling skills — route first, then apply the proverbs.
 Each proverb below is canon (Pike's Go Proverbs, Effective Go); apply the
 rule, not the slogan.
 
-- **Accept interfaces, return structs.** Parameters: the narrowest interface
-  the function actually calls, declared at the consumer. Returns: concrete
-  types — callers keep full API and can wrap themselves.
+- **Accept interfaces, return structs.** Prefer narrow consumer contracts and concrete return types.
+  Shared protocols, runtime selection, or deliberate API restriction can justify exceptions. See [[z-go-interfaces]].
 - **The bigger the interface, the weaker the abstraction.** One- or
   two-method interfaces compose (`io.Reader`, `fmt.Stringer`); depth in
   [[z-go-interfaces]].
@@ -85,8 +84,8 @@ rule, not the slogan.
 | Imported habit | Go idiom |
 |---|---|
 | Getter/setter pairs for every field | Export the field, or a getter named `Owner()` not `GetOwner()` |
-| Interface declared next to each struct | Interface at the consumer, only when a second implementation or a test seam exists |
-| Factory / builder hierarchies | Constructor func, functional options, or a config struct |
+| Interface declared next to each struct | Consumer contract by default. Use actual boundary needs and the exceptions in [[z-go-interfaces]] |
+| Factory / builder hierarchies | Plain constructor first. Choose config structs or options from actual callers. See [[z-go-interfaces]] |
 | `util`/`common`/`base` packages | Package per responsibility, named by what it provides |
 | Exception-style flow (panic/recover as control) | Explicit `error` returns |
 | Annotation/DI frameworks | Plain constructor wiring in `main` |

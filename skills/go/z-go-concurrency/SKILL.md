@@ -107,11 +107,15 @@ if err := g.Wait(); err != nil {
 
 ### singleflight — cache stampede prevention
 
-```go
-var sf singleflight.Group
+Store `sf singleflight.Group` on each `Service`, alongside its repository; do not
+share a package-level group across independent service instances or copy the
+service after first use. An ID-only key is valid only when the result depends
+solely on that ID within the instance. Include tenant, authorization, or other
+result-affecting scope in an unambiguous key when those vary per call.
 
+```go
 func (s *Service) fetchUser(ctx context.Context, id string) (*User, error) {
-    v, err, _ := sf.Do(id, func() (any, error) {
+    v, err, _ := s.sf.Do(id, func() (any, error) {
         return s.repo.GetUser(ctx, id)
     })
     if err != nil {
@@ -191,7 +195,11 @@ golangci-lint run ./...
 
 Prefer the project's bounded test target. Exercise closed input, cancellation while blocked, and sender completion before close; the race detector alone does not prove liveness.
 
+For singleflight, verify that duplicate keys share work within the intended scope
+and that independent service instances or tenants cannot share results.
+
 ## Sources
 
 - [Go101: channels](https://go101.org/article/channel.html), [channel closing](https://go101.org/article/channel-closing.html), [common concurrency mistakes](https://go101.org/article/concurrent-common-mistakes.html).
 - [Go memory model](https://go.dev/ref/mem), [select semantics](https://go.dev/ref/spec#Select_statements), [timer compatibility](https://go.dev/doc/godebug).
+- [Google Go best practices: global state](https://google.github.io/styleguide/go/best-practices.html#global-state).

@@ -27,7 +27,7 @@ description: >
 | switch vs if-else | Use switch when comparing same var multiple times |
 | Labeled break | `break Label` to exit loop from inside switch |
 | Signature wrapping | All params on own lines + trailing comma |
-| Param count | ≤4; beyond that, options struct |
+| Configuration params | Ordinary params first. Choose config structs or options from actual callers. See [[z-go-interfaces]] |
 | Pointer to interface | Almost never needed — pass interface value |
 | Printf variants | End in `f`; use `%q` for strings in errors |
 | File order | type → constructor → exported → unexported → utils |
@@ -158,7 +158,9 @@ Loop:
 func FetchUser(ctx context.Context, id string) (*User, error)
 ```
 
-Context first. ≤4 params; beyond that, use an options struct. Wrap when > ~120 chars:
+Context first. Start with ordinary parameters.
+Choose config structs or functional options from actual caller needs, not parameter counts. See [[z-go-interfaces]].
+Wrap when > ~120 chars:
 
 ```go
 func (r *Handler) CreateOrder(
@@ -208,7 +210,7 @@ Unexport by default — exporting is a commitment. Dot imports never in library 
 - Add `else` after a returning `if`.
 - Put 3+ boolean operands inline — extract to named vars.
 - Pass pointer to interface.
-- Return interface from constructor — return concrete type.
+- Return an interface from a constructor without a concrete caller need. Prefer concrete types. See exceptions in [[z-go-interfaces]].
 - Shadow built-in identifiers.
 - Add `/* name */` comments to clarify params — fix the type instead.
 
