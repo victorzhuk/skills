@@ -284,6 +284,16 @@ Label Schema coverage includes compatibility with its OCI successor.
 | `z-cloudevents` | `engineering` | CloudEvents 1.0.2 core, JSON format, HTTP binding, and primer | [`skills/engineering/z-cloudevents/SKILL.md`](../skills/engineering/z-cloudevents/SKILL.md) |
 | `z-open-graph` | `engineering` | Open Graph protocol, Next.js, LinkedIn, and Slack documentation | [`skills/engineering/z-open-graph/SKILL.md`](../skills/engineering/z-open-graph/SKILL.md) |
 
+## Phase 12 — entrypoint shape
+
+One skill authored directly in this repository, closing the Go entrypoint gap:
+how `main` hands off to a testable `run`, and why injected arguments, streams,
+and context replace process globals.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-go-entrypoint` | `go` | authored directly in this repo | [`skills/go/z-go-entrypoint/SKILL.md`](../skills/go/z-go-entrypoint/SKILL.md) |
+
 ## Public cleanup applied
 
 - Updated security guidance from OWASP and MCP primary sources reviewed on 2026-10-13. Added a shared agent-security reference and aligned Go, memory, and skill-authoring boundaries. Sources remain linked beside the guidance.

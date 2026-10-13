@@ -7,7 +7,7 @@ Reusable z-prefixed agent skills, grouped by domain. Directory names and frontma
 - **[.NET](./dotnet/README.md)** — 1 skill. C#/ASP.NET Core web API conventions for inherited and green services.
 - **[Engineering](./engineering/README.md)** — 28 skills. General engineering process, changelog, architecture, repository tooling, skill authoring, and cross-language code-quality doctrine.
 - **[Flutter](./flutter/README.md)** — 1 skill. Flutter mobile client development — Dart 3 essentials, state management, and project structure.
-- **[Go](./go/README.md)** — 45 skills. Go engineering discipline: architecture, testing, database, observability, security, performance, and tooling.
+- **[Go](./go/README.md)** — 46 skills. Go engineering discipline: architecture, testing, database, observability, security, performance, and tooling.
 - **[Infra](./infra/README.md)** — 6 skills. Deployment discipline across Kubernetes, Terraform/OpenTofu, self-hosted VPS targets, and the pipelines that ship to them.
 - **[Lisp](./lisp/README.md)** — 1 skill. Embeddable Scheme-flavored Lisp VM and compiler design for host applications.
 - **[Lua](./lua/README.md)** — 1 skill. Lua embedded as a sandboxed scripting layer inside Go and Rust hosts.
