@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.11.0
+
+### Minor Changes
+
+- [`bf50d33`](https://github.com/victorzhuk/skills/commit/bf50d33cb69e32161ffb5275abb0c5e952a1d908) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Six skills join the catalog: `z-postgres-table-design`, `z-accessibility`, `z-interface-kit`, `z-dokploy-cli`, `z-lint` and `z-obsidian-cli`. `z-systematic-debugging` gains a deep-analysis protocol with five supporting references for bugs that survive the standard loop. Third-party-derived material carries its upstream MIT notice in `NOTICE.md`. The catalog description budget rises from 40,000 to 43,000 characters to fit them.
+
+- [`740e357`](https://github.com/victorzhuk/skills/commit/740e3576b69fa0499c1787daf1ff633806d258bd) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add shared BDD acceptance contracts for UI, API, and CLI products.
+  Make repeatable E2E scenarios with explicit assertions the primary acceptance gate.
+  Limit new unit and integration tests to named residual risks while preserving existing tests.
+  Align QA execution, Go harness guidance, and OpenSpec planning with the same policy.
+  Correct source ownership and flat installation guidance.
+
+- [`7d98a3a`](https://github.com/victorzhuk/skills/commit/7d98a3ab633c8a96cb37d7d606e15d41d4f3f5b4) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add five skills for metadata and schema standards: `z-container-metadata` for OCI
+  annotations and legacy Label Schema migration, `z-schema-org` for structured web
+  content and consumer validation, and `z-json-schema` for payload contracts,
+  validator behavior, and compatibility checks. Add `z-cloudevents` for event
+  envelopes and protocol mappings, and `z-open-graph` for shared-link metadata and
+  preview verification. Update catalog entries, sibling links, and the provenance
+  inventory. Shorten three existing descriptions to stay within the catalog budget.
+
+### Patch Changes
+
+- [`c8c6ec0`](https://github.com/victorzhuk/skills/commit/c8c6ec046fad26235ac4df70c8318c43b87184b8) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Bound every runnable test example in the public catalog and repair QA delegation guidance
+
+- [`248a2e8`](https://github.com/victorzhuk/skills/commit/248a2e8aad79cfd29fc4a7c9dc9929f0cf975759) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Scope singleflight state to service instances and constrain panic recovery.
+  Qualify interface design defaults and unify constructor configuration guidance.
+  Check golden-file reads, clarify test goroutine restrictions, and retain Testify
+  as the house convention. Add API cleanup, concurrency, and cancellation checks
+  to documentation guidance.
+
+- [`9bb14eb`](https://github.com/victorzhuk/skills/commit/9bb14eb9d39d6c9a3740b459fecf0cdc099545d8) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Strengthen security guidance for LLM tools, retrieval, memory, and dependencies. Correct Go request limits, MCP authorization, password storage, and streaming examples.
+
+- [`7d98a3a`](https://github.com/victorzhuk/skills/commit/7d98a3ab633c8a96cb37d7d606e15d41d4f3f5b4) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Correct unsafe examples and conflicting guidance across the skill catalog.
+  Repair message acknowledgement, feature targeting, transactions, secret handling,
+  authorization, deployment, and QA verification. Preserve test limits through build
+  wrappers and keep workflow decisions with the caller. Update protocol and CLI
+  guidance, remove unsupported project assumptions, and shorten duplicated references.
+  Add regression checks for the literal Git command filter.
+
+- [`ae224f8`](https://github.com/victorzhuk/skills/commit/ae224f8406142285b3323195287c067df0ba5d2e) Thanks [@victorzhuk](https://github.com/victorzhuk)! - CI now scans every skill with NVIDIA SkillSpector (`npm run scan`) and fails on new HIGH or CRITICAL findings; reviewed false positives are baselined per skill in `.skillspector/`. `z-go-http-client` rewords one retry-pitfall sentence the scanner read as an exfiltration instruction.
+
 ## 0.10.1
 
 ### Patch Changes
