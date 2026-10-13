@@ -26,7 +26,7 @@ CI (`.github/workflows/check.yml`) runs `npm run check` on Node 22 and the seria
 ```
 skills/<domain>/z-<name>/SKILL.md   # domain ∈ engineering | go | product | qa | rust | typescript | writing
   ├── references/   # bulk/rare detail, loaded only when the body links to it
-  ├── scripts/      # deterministic code the agent runs (not reads)
+  ├── scripts/      # executable helpers reviewed before use
   └── assets/       # templates copied into output
 skills/<domain>/README.md           # per-domain index of that domain's skills
 README.md                           # top-level catalog: every skill, grouped by domain

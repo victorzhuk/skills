@@ -28,13 +28,28 @@ client := &http.Client{}
 client := &http.Client{Timeout: 10 * time.Second}
 ```
 
-`Client.Timeout` bounds the whole round trip — connection, redirects, headers, and body read. It does not compose with an inbound request's own deadline: a client hardcoded to 10s ignores whether the caller already has 200ms left. For that, thread the caller's context through with `context.WithTimeout` and `http.NewRequestWithContext`, and keep `Client.Timeout` as a blunt backstop against a client built without a context at all (a background job, a health-check ping). Deadline propagation mechanics belong to [[z-go-context]].
+`Client.Timeout` bounds connection setup, redirects, headers, and body reading. With a request context, the earlier deadline wins: a 10s client timeout does not extend a caller's remaining 200ms. Propagate the caller with `http.NewRequestWithContext`; optionally shorten its budget with `context.WithTimeout`. Keep a client timeout as a backstop for bounded calls. Streaming needs a separate policy; see [[z-go-llm-streaming]] and [[z-go-context]].
 
 | Situation | Use |
 |---|---|
 | Call inside a request handler / use case | `context.WithTimeout(ctx, …)` sized to the budget left in the caller's deadline |
 | Background job, cron, no inbound deadline to inherit | `Client.Timeout` set on the client itself |
-| Either case | set both — the context deadline is the real bound, `Client.Timeout` catches a call site that forgot to build one |
+| Bounded calls | use both when useful; the earlier deadline wins |
+
+## Restrict outbound destinations
+
+For a fixed dependency, keep the base URL in trusted configuration. Do not let user or model input replace its scheme, authority, or port.
+
+For URL-fetching features, apply an explicit destination policy before connecting:
+
+- Allow only required schemes, hosts, and ports. Reject URL credentials and ambiguous addresses.
+- Disable redirects with `CheckRedirect` returning `http.ErrUseLastResponse`, or validate every hop before following it. Reject unexpected 3xx responses.
+- Validate resolved IPv4 and IPv6 addresses at connection time. Connect to the validated address without another unchecked DNS lookup. Preserve the hostname for TLS verification.
+- For public fetches, deny loopback, private, link-local, and other reserved destinations, including cloud metadata services. Explicitly authorize required internal services separately.
+- Apply egress restrictions outside the process. Account for proxies and DNS changes; URL parsing or a hostname check alone does not prevent SSRF.
+- Limit response headers and decompressed body bytes, alongside time and concurrency limits.
+
+See [OWASP SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html) and [[z-security-hardening]].
 
 ## Tune the transport under load
 
@@ -54,7 +69,7 @@ client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
 | `IdleConnTimeout` | 90s | a provider's LB recycles connections faster — lower it to match, or churn shows up as sporadic `EOF` |
 | `MaxConnsPerHost` | 0 (unlimited) | you need a hard ceiling to avoid overwhelming a small provider, not just an idle-pool hint |
 
-Everything else on `Transport` — dial timeout, TLS handshake timeout, `ForceAttemptHTTP2` — is fine at the stdlib default; don't touch it without a measured reason.
+Preserve useful transport defaults. Set response-header limits and connection deadlines from the dependency contract; streaming may need different budgets. Change pooling and protocol settings only for a demonstrated need.
 
 ## Close the response body on every path
 
@@ -65,11 +80,21 @@ if err != nil {
 }
 defer resp.Body.Close()
 
+const maxResponseBytes = 1 << 20
+body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
+if err != nil {
+    return fmt.Errorf("read provider response: %w", err)
+}
+if len(body) > maxResponseBytes {
+    return errors.New("provider response too large")
+}
 var v Payload
-if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
+if err := json.Unmarshal(body, &v); err != nil {
     return fmt.Errorf("decode provider response: %w", err)
 }
 ```
+
+Choose the byte limit from the API contract; 1 MiB is an example. Apply it after decompression, including custom decompression. Reading one extra byte distinguishes oversize input from a valid body exactly at the limit. Handle status codes before interpreting a success payload.
 
 Closing releases the body; not reading to EOF can sacrifice HTTP/1 connection reuse, not leak the connection. If reuse matters, drain only a small bounded remainder under a live deadline. Never unconditionally drain an untrusted or streaming body. Go 1.27 adds bounded automatic HTTP/1 draining on Close; check the selected Go version and protocol. See [net/http changes](https://go.dev/doc/go1.27).
 
@@ -93,17 +118,25 @@ func backoff(attempt int) time.Duration {
 
 - **Respect `Retry-After` on 429 and 503** — parse it as either delay-seconds or an HTTP-date and wait at least that long before the next attempt; don't let your own backoff schedule override a value the server explicitly asked for.
 - **Cap the total attempt budget with the context deadline as the outer bound**, not a fixed attempt count alone — check `ctx.Err()` before every attempt and stop the moment the deadline is gone, even mid-backoff-sleep. Close every intermediate response before retrying; any optional draining must respect byte and time bounds.
-- **Rebuild the request on every attempt.** `req.Body` is a one-shot `io.ReadCloser`, consumed by the first `client.Do`; `GetBody` exists for the stdlib's own redirect handling, not for a hand-rolled retry loop. Reusing the same `*http.Request` across attempts sends an empty body from attempt 2 on, with no error, for exactly the bodied methods this skill tells you to retry — `PUT`, or `POST` with an idempotency key. Rebuild from a `newReq func() *http.Request` closure, or set `req.GetBody` and call it before each retry:
+- **Rebuild the request on every attempt.** Request bodies are consumed and closed by the client. Use a factory that accepts the shared context and returns a fresh request and body, or explicitly obtain a new body from `GetBody`:
 
 ```go
-for attempt := 0; ; attempt++ {
-    req := newReq()
+if maxAttempts < 1 {
+    return nil, errors.New("max attempts must be positive")
+}
+for attempt := 1; ; attempt++ {
+    if err := ctx.Err(); err != nil {
+        return nil, err
+    }
+    req, err := newReq(ctx)
+    if err != nil {
+        return nil, err
+    }
     resp, err := client.Do(req)
     if !shouldRetry(resp, err) || attempt >= maxAttempts {
         return resp, err
     }
     if resp != nil {
-        io.Copy(io.Discard, resp.Body)
         resp.Body.Close()
     }
     select {
@@ -206,3 +239,5 @@ timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./... -run TestProviderCli
 ```
 
 Read the retry test output for attempt counts, not just pass/fail — a retry test that passes on the first attempt isn't exercising the retry path at all.
+
+Test oversized and compressed responses, a body that stalls, and cancellation during retry backoff. For URL-fetching features, test forbidden destinations, redirect escapes, and DNS changes at the connection boundary. Verify that the earlier request/client deadline wins.

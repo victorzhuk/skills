@@ -25,6 +25,18 @@ As checked on 2026-10-13, the [current protocol is 2026-07-28](https://modelcont
 
 For HTTP, validate Origin and Host according to the selected transport revision, authenticate callers, and authorize each tool. Check the pinned SDK's defaults rather than assuming it covers these controls. A generic browser cross-origin helper is not a substitute for the protocol's Origin policy.
 
+## Security boundary
+
+- Derive caller and tenant identity from verified authentication. Authorize the requested action and resource on every call, including read-only tools.
+- For OAuth, validate issuer, audience, expiry, and required scopes. Accept only tokens issued for this MCP server. Never forward its bearer token to an upstream API; use separately scoped downstream credentials.
+- Validate tool arguments in code, including ranges, paths, URLs, and ownership. Schema descriptions, tool annotations, and model confidence are not permission checks.
+- Treat returned documents, upstream errors, and tool metadata as untrusted content. Keep result data separate from trusted instructions. Do not accept model-supplied approval flags as authorization.
+- For consequential actions, verify the caller's approval policy at execution time and bind any approval to the exact operation and arguments. Preserve existing valid authorization.
+- Limit request/result bytes, execution time, concurrency, and downstream work. Apply [[z-go-http-client]] destination controls to tools that fetch URLs.
+- Run stdio servers with only the filesystem, network, and credential access they need. Stdio avoids a listening endpoint; it does not sandbox the process.
+
+Use [[z-security-hardening]] for shared prompt-injection defenses and [MCP security guidance](https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices) for the selected protocol's authorization requirements.
+
 This server-side streamable-HTTP SSE is internal transport plumbing, not an app-level streaming feature — for hand-rolled SSE to a browser client, see [[z-go-llm-streaming]].
 
 ## stdio discipline
@@ -53,18 +65,26 @@ The model is the caller. Design tools it can pick correctly and recover from whe
 type SearchParams struct {
 	City    string `json:"city" jsonschema:"IATA city code, e.g. LON"`
 	Checkin string `json:"checkin" jsonschema:"date in YYYY-MM-DD"`
-	Limit   int    `json:"limit,omitempty" jsonschema:"max results, default 20"`
+	Limit   int    `json:"limit,omitempty" jsonschema:"max results from 1 to 100, default 20"`
 }
 
 mcp.AddTool(server, &mcp.Tool{
 	Name:        "excursions_search",
 	Description: "Search bookable excursions for a city and date, paginated.",
 }, func(ctx context.Context, req *mcp.CallToolRequest, in SearchParams) (*mcp.CallToolResult, SearchResult, error) {
+	if in.Limit == 0 {
+		in.Limit = 20
+	}
+	if in.Limit < 1 || in.Limit > 100 {
+		return nil, SearchResult{}, errors.New("limit must be between 1 and 100")
+	}
 	...
 })
 ```
 
 `json` tags name the fields; `jsonschema` tags supply the description the model reads — write that string by the same rule as the tool description above.
+
+The description does not enforce `Limit`; the handler does. Pass the normalized limit to the query and cap the returned page. Choose the maximum from the tool contract, then test the generated schema and runtime behavior. Validate resource ownership separately from input shape.
 
 Register tools before serving requests. Verify discovery/listing for each supported revision; older session-based clients may derive capabilities during initialization.
 
@@ -77,7 +97,7 @@ MCP splits failures into two channels — pick the right one:
 | Protocol error (JSON-RPC `error`) | Unknown tool, malformed request, server fault — not something the model can fix by retrying | Only the raw `Server.AddTool(ToolHandler)` path sends this when it returns `error` |
 | Tool execution error (`isError: true` in the result) | Bad input, upstream API failure, business-rule violation — the model can retry with different arguments | `mcp.AddTool`'s generic handler packs a returned Go `error` here automatically |
 
-Prefer the generic `mcp.AddTool` path so ordinary failures land as tool errors: `return nil, out, fmt.Errorf("checkin %s is in the past, pick a future date", in.Checkin)`. That string is what the model sees and retries against — write it as an instruction, not a stack trace.
+Prefer the generic `mcp.AddTool` path so ordinary failures land as tool errors. Return a safe error code and concise recovery guidance. Do not echo raw upstream errors, tokens, or arbitrary user text as instructions; the model receives that content.
 
 ## Cancellation and shutdown
 
@@ -128,3 +148,5 @@ timeout 5m go test -parallel 4 -p 2 -timeout 2m ./... -run TestMCP -v
 ```
 
 Verify the pinned SDK/client protocol matrix: current-revision discovery and per-request version handling where supported, legacy initialization only for legacy revisions, expected tool schemas, cancellation, malformed input, and HTTP authorization/origin rejection. Record any unsupported revision instead of claiming conformance.
+
+Test wrong-audience and expired tokens, cross-tenant resource access, invalid limits, forbidden fetch destinations, and missing or changed approvals. Assert that rejected calls never reach the protected dependency. Include malicious tool-result text; authorization must hold even if the model follows it.

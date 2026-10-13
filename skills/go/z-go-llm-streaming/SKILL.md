@@ -8,6 +8,14 @@ description: Wire an LLM chat feature end-to-end in Go — decorate an SDK's cha
 Pick the right abstraction boundary first, then add resilience, instrumentation, and SSE
 streaming on top of it.
 
+## Trust boundary
+
+Build privileged instructions and trusted history on the server. Do not decode a public request directly into the internal `Request` below: clients cannot select system/developer roles, replace stored tool results, or raise server-owned limits. Authorize conversation and retrieval access per caller and tenant.
+
+Keep retrieved documents, user content, and tool results separate from trusted instructions. Treat generated tool arguments as proposals: validate and authorize them at execution, outside the model. Structured output and prompt delimiters do not enforce permissions. Shared defenses and adversarial checks belong to [[z-security-hardening]].
+
+Validate output before it reaches a tool, renderer, or external destination. If policy requires whole-response review, buffer until review completes. Once streamed, content cannot be recalled. Treat Markdown links and images as possible outbound requests; prevent unauthorized destinations and secret disclosure. Exclude raw prompts, responses, credentials, and provider bodies from routine telemetry.
+
 ## Interface: decorate the SDK, don't wrap it again
 
 When a provider SDK is already in play (eino, an OpenAI client, etc.), decorate its own
@@ -59,9 +67,7 @@ type ChatCompleter interface {
 }
 ```
 
-A typed `StatusError{Code int; Body string}` surfaced by the concrete provider for
-non-2xx responses lets callers classify 401/403 (fatal) from 429/5xx (retryable) without
-inspecting raw HTTP.
+A typed provider status error lets callers classify authentication failures separately from transient failures. Keep raw response bodies bounded and private; do not include them in client errors or routine logs. Retry only when replay is safe and the shared request budget remains.
 
 ## Resilience decorator
 
@@ -74,9 +80,7 @@ raw   := newOpenAIProvider(cfg)
 resil := newResilientChat(raw, resilientOptions{MaxRetries: 3, Fallback: fallback})
 ```
 
-A cumulative token-budget cap (an `ErrBudgetExceeded`-style sentinel) is a natural
-extension of this layer but not yet built anywhere — add it once a feature needs a hard
-spend ceiling, don't build it speculatively.
+For exposed features, enforce server-owned input/output, retry, tool-chain, concurrency, and spending limits. Count retries and fallbacks against the same allowance; switching providers must not reset it. Reuse existing quota controls and reserve capacity atomically before concurrent work. Reconcile actual usage afterward and do not assume a timeout means the provider incurred no cost. See [OWASP GenAI Top 10 2026](https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/).
 
 ## Instrumentation: use the SDK's callback mechanism when one exists
 
@@ -132,7 +136,12 @@ type event struct {
     Data any
 }
 
-func emitSSE(w http.ResponseWriter, flusher http.Flusher, ev event) error {
+func emitSSE(w http.ResponseWriter, ev event) error {
+    switch ev.Name {
+    case "token", "error", "answer", "question":
+    default:
+        return errors.New("invalid event name")
+    }
     payload, err := json.Marshal(ev.Data)
     if err != nil {
         return fmt.Errorf("marshal event: %w", err)
@@ -140,14 +149,19 @@ func emitSSE(w http.ResponseWriter, flusher http.Flusher, ev event) error {
     if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", ev.Name, payload); err != nil {
         return fmt.Errorf("write event: %w", err)
     }
-    flusher.Flush()
+    if err := http.NewResponseController(w).Flush(); err != nil {
+        return fmt.Errorf("flush event: %w", err)
+    }
     return nil
 }
 
-func streamToClient(ctx context.Context, w http.ResponseWriter, emit func(func(event) error) error) error {
-    flusher, ok := w.(http.Flusher)
-    if !ok {
-        return errors.New("streaming unsupported")
+func streamToClient(ctx context.Context, w http.ResponseWriter, writeTimeout time.Duration, emit func(func(event) error) error) error {
+    if writeTimeout <= 0 {
+        return errors.New("write timeout must be positive")
+    }
+    controller := http.NewResponseController(w)
+    if err := controller.SetWriteDeadline(time.Now().Add(writeTimeout)); err != nil {
+        return fmt.Errorf("set stream write deadline: %w", err)
     }
     w.Header().Set("Content-Type", "text/event-stream")
     w.Header().Set("Cache-Control", "no-cache")
@@ -159,7 +173,10 @@ func streamToClient(ctx context.Context, w http.ResponseWriter, emit func(func(e
             return ctx.Err()
         default:
         }
-        return emitSSE(w, flusher, ev)
+        if err := controller.SetWriteDeadline(time.Now().Add(writeTimeout)); err != nil {
+            return fmt.Errorf("set stream write deadline: %w", err)
+        }
+        return emitSSE(w, ev)
     })
 }
 ```
@@ -167,6 +184,10 @@ func streamToClient(ctx context.Context, w http.ResponseWriter, emit func(func(e
 Emit `token` events per delta, `question`/`answer` for structured turns the feature
 defines, and a terminal `error` event for a failure — the client's `EventSource` (or
 equivalent) dispatches on `event.type` instead of parsing a sentinel out of `data`.
+
+Close the client's `EventSource` after a terminal event. Its automatic reconnection must not start another billable generation; use an explicit operation identity and replay policy when reconnection is supported.
+
+Keep event names server-owned; JSON encoding protects data, not SSE field names. The example requires Go 1.20+ response-controller support, including deadline support through middleware. Choose the write timeout from the deployment's slow-client policy. The emitter must use the same cancellable context for upstream work, stop on callback errors, and enforce maximum stream lifetime and output size. Cancel upstream work when this function returns. Send only safe terminal errors; failed writes may prevent any terminal event.
 
 Only add `X-Accel-Buffering: no` if a real deployment actually sits behind an
 nginx-buffering ingress — don't add it speculatively.
@@ -186,12 +207,12 @@ histogram ahead of that need.
   exposes a callback/hook mechanism.
 - Call `WithTools` on a decorated `ToolCallingChatModel` without re-wrapping the result —
   it returns the undecorated inner model.
-- Build a cumulative token-budget cap before a feature actually needs a spend ceiling.
+- Let retry, fallback, or tool loops bypass the caller's quota and authorization.
 - Emit bare `data: %s\n\n` + `[DONE]` SSE framing when the feature has more than one kind
   of event to distinguish — use named `event:` lines instead.
 - Add `X-Accel-Buffering: no` without a real nginx-buffering deployment behind it.
 - Add per-feature telemetry constants before a second LLM feature needs the breakdown.
-- Set `Timeout` on a hand-rolled streaming `http.Client` — it terminates mid-response.
+- Use a short bounded-call timeout for a long stream, or disable it without replacement limits.
 - Omit the `ctx.Done()` check in a hand-rolled SSE loop — the upstream LLM call continues
   billing after the client disconnects.
 
@@ -207,3 +228,5 @@ curl -N -H "Accept: text/event-stream" http://localhost:8080/api/v1/chat/stream
 # cancel curl mid-stream; the service should log no further chunk emissions
 # and the LLM API request should close promptly
 ```
+
+Test forged roles/history, unauthorized conversation access, malformed event names, failed writes/flushes, slow clients, and exhausted limits across retries/fallbacks. Include split-chunk Markdown injection and malicious retrieved/tool content. Assert that protected actions and outbound requests remain denied, rather than grading only the model's refusal text.

@@ -277,6 +277,7 @@ Label Schema coverage includes compatibility with its OCI successor.
 
 ## Public cleanup applied
 
+- Updated security guidance from OWASP and MCP primary sources reviewed on 2026-10-13. Added a shared agent-security reference and aligned Go, memory, and skill-authoring boundaries. Sources remain linked beside the guidance.
 - Corrected executable examples and version-dependent claims during the October 2026 catalog review. Removed unsupported private-project assertions and consolidated duplicated workflow guidance. Kept upstream notices beside adapted material.
 - Replaced the personal npm scope example in `z-npm-publish` with `@scope/*`.
 - Replaced absolute local QA delegation paths with local skill references.

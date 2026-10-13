@@ -10,6 +10,8 @@ description: >
 
 # Go Security
 
+Apply Go-specific controls here. Use [[z-security-hardening]] for threat modeling, authorization boundaries, and LLM prompt-injection defenses.
+
 ## Quick Reference
 
 | Severity | Vulnerability | Fix |
@@ -20,14 +22,14 @@ description: >
 | Critical | Ignoring crypto errors | always check; fail closed, never open |
 | High | `math/rand` for tokens | `crypto/rand` — `math/rand` output is predictable |
 | High | AES without GCM | GCM provides auth+encrypt; ECB/CBC do not |
-| High | MD5/SHA1 for passwords | `bcrypt` (house default, cost 12) — fast hashes are brute-forceable; `argon2id` is a documented alternative |
+| High | Fast password hashes | Argon2id for new systems; preserve and migrate approved legacy bcrypt |
 | High | Path traversal | Go 1.24+: `os.Root`; older Go: a vetted traversal-resistant open implementation |
 | High | Secret `==` comparison | `crypto/subtle.ConstantTimeCompare` — `==` leaks timing |
 | High | Race condition | `sync.Mutex` or channels; test with `-race` |
 | High | Trusting client headers | `X-Forwarded-For`, `X-Is-Admin` are trivially forged |
 | Medium | TLS misconfiguration | outbound clients: `tls.Config{MinVersion: tls.VersionTLS12}`; server-side TLS usually terminates at ingress |
-| Medium | Detailed error to client | log detail server-side; return generic message |
-| Medium | Binding `0.0.0.0` | bind to specific interface |
+| Medium | Detailed error to client | log safe diagnostic context; return generic message |
+| Medium | Unintended network exposure | bind only where required and restrict ingress |
 
 ## Injection
 
@@ -87,16 +89,16 @@ Never reuse a GCM nonce with a key; rotate before the random-nonce bound of 2^32
 
 Password hashing:
 
+Prefer Argon2id for new password stores. Use a maintained password-storage implementation with random per-password salts, encoded parameters, and constant-time verification. Benchmark work factors under expected authentication load and bound concurrent hashing. Store the algorithm, salt, and parameters with each hash so verification and upgrades remain possible. Follow [OWASP's current parameter guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+
+For an existing bcrypt store, preserve compatibility and plan upgrades on successful authentication. Validate the 72-byte input limit without truncation; bytes are not characters. Choose the work factor from measured latency and capacity, with OWASP's minimum of 10. This example uses 12:
+
 ```go
-// bcrypt — house default, cost 12
 hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 if err != nil {
     return fmt.Errorf("hash password: %w", err)
 }
 err = bcrypt.CompareHashAndPassword(hash, []byte(password)) // nil on match
-
-// argon2id — documented alternative, stronger against GPU cracking
-hash := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, 32)
 ```
 
 Constant-time comparison for secrets, tokens, and webhook checks —
@@ -153,15 +155,20 @@ Use `,notEmpty` not `,required` — required accepts empty strings (see [[z-go-e
 
 ## HTTP Security
 
-Outbound HTTP clients: set `tls.Config{MinVersion: tls.VersionTLS12}` on the
-`http.Transport`. Server-side, TLS usually terminates at the ingress/load
-balancer in front of the service — a Go `http.Server` rarely needs its own
-`tls.Config`; if it does terminate TLS directly, apply the same `MinVersion`
-there. Regardless of where TLS terminates, always set the server's four
-timeouts (`ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout`, `IdleTimeout`).
-Set headers: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`,
-`X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'self'`.
-Rate-limit with `golang.org/x/time/rate`.
+Require verified TLS for sensitive connections. Set a minimum of TLS 1.2 or a stricter deployment policy; never disable certificate verification. Identify the actual TLS termination point and protect the hop behind it according to the trust boundary.
+
+Set header and idle timeouts. Bound body reads and response writes for each endpoint. Ordinary endpoints can use `ReadTimeout` and `WriteTimeout`; uploads and streams need deliberate per-request limits. A short global write timeout can terminate a healthy stream. See [Go server deadlines](https://pkg.go.dev/net/http#Server) and [[z-go-llm-streaming]].
+
+Limit inbound bodies before decoding, independently of `Content-Length`:
+
+```go
+r.Body = http.MaxBytesReader(w, r.Body, maxRequestBytes)
+defer r.Body.Close()
+```
+
+Choose `maxRequestBytes` from the endpoint contract, handle `*http.MaxBytesError`, and reject oversize requests. Limit decompressed data separately when accepting compressed bodies. Set appropriate header limits and bound concurrent work. Apply rate limits per authenticated principal where possible; a process-local limiter does not enforce a fleet-wide quota.
+
+For browser-facing responses, select CSP, framing, MIME-sniffing, and HSTS policies for the served content and TLS deployment. Do not copy a blanket policy into every API. For cookie-authenticated mutations, enforce CSRF protection. For outbound URLs, use the SSRF controls in [[z-go-http-client]].
 
 ## Concurrency
 
@@ -169,7 +176,7 @@ Protect shared state with `sync.RWMutex` or channels; a race under auth logic ca
 
 ## Error Handling
 
-Log full detail server-side; return a generic message to the caller. Never swallow errors from `crypto/rand`, cipher operations, or TLS setup — always fail closed.
+Log safe diagnostic context server-side; return a generic message to the caller. Error chains can contain credentials, URLs, or provider bodies: redact before logging. Never swallow errors from `crypto/rand`, cipher operations, or TLS setup — always fail closed.
 
 ## Do not
 
@@ -197,3 +204,5 @@ golangci-lint run
 # Race detector
 timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./...
 ```
+
+Exercise rejected authorization, oversized bodies, path escapes, invalid signatures, and malformed password hashes at the changed boundary. For LLM features, verify tool authorization independently of the model's refusal text; see [[z-security-hardening]].

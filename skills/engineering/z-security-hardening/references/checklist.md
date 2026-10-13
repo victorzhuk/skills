@@ -1,55 +1,48 @@
 # Security review checklist
 
-Work through every section that applies to the touched surface. Each unchecked box is a finding, not a formality.
+For each applicable item, record pass with evidence, an open gap, or unknown. Explain exclusions. An unchecked item needs investigation.
 
-## Authentication
+## Authentication and authorization
 
-- [ ] Passwords hashed with bcrypt/scrypt/argon2 (work factor current, e.g. bcrypt cost ≥ 12)
-- [ ] Session tokens httpOnly, secure, sameSite
-- [ ] Login and token endpoints rate-limited
-- [ ] Password-reset and verification tokens expire and are single-use
+- [ ] Password storage uses reviewed algorithms, salts, encoded parameters, and measured work factors; legacy upgrade policy is explicit.
+- [ ] Session and CSRF controls match browser flows; login, recovery, and token endpoints have abuse limits.
+- [ ] Reset and verification tokens expire, are single-use, and do not appear in logs.
+- [ ] Protected operations verify actor, action, resource, tenant, and sensitive fields server-side.
+- [ ] Tests cover allowed access, cross-user/tenant denial, revoked access, and privilege escalation.
 
-## Authorization
+## Input, output, and data
 
-- [ ] Every endpoint checks permissions, not just identity
-- [ ] Users can reach only their own resources (ownership/tenancy check)
-- [ ] Admin actions verify the admin role server-side
+- [ ] External input has enforced type, field, range, byte, and processing limits.
+- [ ] Database queries use parameters; rendered output uses context-appropriate encoding.
+- [ ] Uploads validate supported content, bound decompression, and prevent unintended execution or disclosure.
+- [ ] URL fetching enforces destination policy at connection time, including redirects and internal/metadata addresses.
+- [ ] Responses expose only authorized fields; errors follow the contract without disclosing internals.
+- [ ] Sensitive data has appropriate transport, storage, access, retention, and deletion controls.
+- [ ] Secret scanning covers the changed scope; known exposure has a revocation and investigation record.
+- [ ] Logs record useful security decisions without credentials or unnecessary payloads; log access is restricted.
 
-## Input
+## Deployment and dependencies
 
-- [ ] All external input validated against a schema at the boundary
-- [ ] Database queries parameterized — no string concatenation
-- [ ] HTML output encoded/escaped; no raw interpolation into markup
-- [ ] File uploads: MIME allowlist, size cap, extension not trusted
-- [ ] Server-side URL fetches allowlisted — scheme, host, resolved IP not private/reserved, redirects forbidden
+- [ ] Browser headers, CORS, and cookie policies fit the deployed authentication flow.
+- [ ] Requests, concurrency, retries, and expensive operations have enforced limits.
+- [ ] Dependencies and executable scripts come from reviewed sources; locked installs are used where supported.
+- [ ] Vulnerabilities are assessed for runtime and build-time exposure; deferred fixes have owners and review dates.
+- [ ] New/changed skills and tool definitions are reviewed before activation; detection-only scanners are identified as such.
 
-## Data
+## LLM and agents
 
-- [ ] No secrets in code or version-control history
-- [ ] Sensitive fields excluded from API responses (explicit public shape)
-- [ ] Sensitive data absent from logs
-- [ ] PII encrypted at rest where required
+Use [Agent security](agent-security.md) for control ownership and the abuse-case matrix.
 
-## Infrastructure
-
-- [ ] Security headers configured (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)
-- [ ] CORS restricted to known origins — no wildcard with credentials
-- [ ] Error responses generic; stack traces never reach the client
-- [ ] Rate limiting active, stricter on auth
-
-## Supply chain
-
-- [ ] Lockfile committed; CI installs with the locked command (`npm ci` or equivalent)
-- [ ] Dependency audit run; critical/high findings fixed or documented with a review date
-- [ ] New dependencies reviewed: maintenance, downloads, postinstall scripts, typosquat check
-
-## AI / LLM (if used)
-
-- [ ] Model output validated and encoded before use — never into eval/SQL/shell/innerHTML/file paths
-- [ ] Secrets and cross-tenant data kept out of prompts
-- [ ] Tool/agent permissions minimal; destructive actions require confirmation; tool arguments validated
-- [ ] Token, rate, and loop-depth caps in place
-- [ ] RAG stores partitioned per tenant; documents validated before indexing
+- [ ] Trusted roles and history are server-owned; external content cannot grant permission or redefine the task.
+- [ ] Tool execution verifies identity, resource scope, arguments, and allowed destinations outside the model.
+- [ ] Required approvals bind the actual action; changed arguments, expiry, and replay cannot widen authorization.
+- [ ] Sensitive context is limited to authorized data and destinations, including fallback providers and outbound tools.
+- [ ] Retrieval enforces current ACLs before context assembly; revocation reaches chunks, indexes, and caches.
+- [ ] Persistent memory retains provenance and scope; retrieved instructions cannot become durable policy or user approval.
+- [ ] MCP token audiences, downstream credentials, and resource permissions are validated; tool annotations do not grant authority.
+- [ ] Resource limits apply across model calls, retries, tool chains, and fallbacks; cancellation reaches active work.
+- [ ] Tests inspect actual effects for injection, disclosure, approval bypass, and budget exhaustion, with benign controls.
+- [ ] Incident procedures can stop affected capabilities, revoke credentials, and recover approved state without destroying necessary evidence.
 
 ---
 
