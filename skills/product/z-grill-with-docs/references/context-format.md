@@ -1,5 +1,7 @@
 # CONTEXT.md format
 
+Use this fallback only when the project has no authoritative glossary in its existing OpenSpec records or other documentation. Update the owning record instead of creating a duplicate. Preserve established locations and structure.
+
 ## Structure
 
 ```md
@@ -72,7 +74,7 @@ Infer which structure applies:
 
 - If `CONTEXT-MAP.md` exists, read it to find contexts
 - If only a root `CONTEXT.md` exists, single context
-- If neither exists, create a root `CONTEXT.md` lazily when the first term is resolved
+- If neither exists and no authoritative glossary exists elsewhere, create a root `CONTEXT.md` lazily when the first term is resolved within the authorized documentation scope
 
 When multiple contexts exist, infer which one the current topic relates to. If unclear, ask.
 

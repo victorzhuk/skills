@@ -9,14 +9,14 @@ Synthesize what is already decided — grilled idea, glossary, ADRs, design brie
 
 ## Gather what is on record
 
-- `CONTEXT.md` and `docs/adr/` — use glossary vocabulary throughout; respect recorded decisions in the touched area.
+- The authoritative glossary and decisions — use existing OpenSpec specs/design when present, otherwise the project's glossary/ADR convention. Do not create a second record.
 - `docs/design/<slug>-brief.md` and the handoff doc's Results — screens, actions, prototype deviations ([[z-design-brief]], [[z-design-handoff]]).
 - The conversation — decisions resolved during grilling ([[z-grill-with-docs]]).
 - The codebase — current state of the modules the feature touches.
-- Testing seams — where the feature will be tested. Prefer existing seams over new ones, at the highest level possible, ideally one seam across the codebase; test depth per [[z-testing-strategy]].
-- Testing flow — TDD (test-first, [[z-tdd]]) or tests-after. Never assume; the choice shapes every downstream `tasks.md`.
+- Testing seams — preserve already-approved seams. Otherwise choose the lowest interface that proves the behavior without hiding integration risk, per [[z-testing-strategy]].
+- Testing flow — preserve the caller-approved TDD or tests-after choice. Without a prior choice, propose test-first per [[z-testing-strategy]].
 
-Confirm both with the user — seam choice and testing flow are the only two interview questions this skill allows. Ask each as option cases per [[z-grill-with-docs]] question discipline: candidate seams found in the repo, and TDD vs tests-after with the trade-off — recommended option first, one-line rationale per option.
+Resolve only missing testing decisions; existing approval is sufficient. Present candidate seams and the proposed flow with their trade-offs. Do not reopen a settled choice or re-interview unrelated requirements.
 
 ## Write the PRD
 
@@ -40,7 +40,7 @@ Done when the PRD is written and gaps are flagged. Report the path and the open 
 
 ## Do not
 
-- Re-interview — the seam and testing-flow confirmations, nothing else.
+- Re-interview settled decisions; resolve only missing seam and testing-flow choices.
 - Publish anywhere; the PRD is a file, and decomposition is [[z-prd-to-openspec]]'s job.
 - Include speculative file paths or code no prototype validated.
 - Copy the brief wholesale — the PRD records decisions, not screen walkthroughs.
@@ -51,7 +51,7 @@ Done when the PRD is written and gaps are flagged. Report the path and the open 
     fd -e md . docs/prd/    # PRD exists
 
 - All seven sections present; unfillable ones flagged as gaps, not padded.
-- Vocabulary matches CONTEXT.md; nothing contradicts a recorded ADR.
+- Vocabulary and decisions match the authoritative project records.
 - User stories cover every primary-path action in the brief.
 
 see [[z-grill-with-docs]], [[z-design-brief]], [[z-testing-strategy]], [[z-tdd]], [[z-prd-to-openspec]]

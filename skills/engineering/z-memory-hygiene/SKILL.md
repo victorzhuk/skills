@@ -1,62 +1,44 @@
 ---
 name: z-memory-hygiene
-description: Use when storing, updating, or reviewing long-term agent memory. Covers the four memory types (user/feedback/project/reference), the two-file save shape, the MEMORY.md index, cross-linking, and verification by recall.
+description: Store, update, and review durable memory using the active host's supported backend and scope. Use for remembered preferences, corrections, project decisions, or recall checks. Avoid duplicate and stale entries. Transient session state belongs to [[z-session-handoff]].
 ---
 
-# Memory Hygiene
+# Memory hygiene
 
-Store only durable, useful facts. Memory is for future sessions, not scratch space.
+Store durable, useful facts through the active host's supported memory system.
 
-## Type, not scope×category
+## Discover the storage contract
 
-Classify every entry into exactly one type — not a scope/category matrix:
+Inspect available memory tools, host instructions, and existing project conventions. Determine scope, storage location, entry format, retrieval behavior, and whether saving is authorized.
 
-- **user** — who the user is, their role, expertise, working style.
-- **feedback** — a correction or confirmation about how to approach work; the most common type in practice.
-- **project** — in-flight work state: who's doing what, why, current epic/task status.
-- **reference** — a stable fact about how something works, or a pointer to an external system.
+Do not replace a native backend with files merely because this skill describes a file pattern. Do not assume `MEMORY.md` is automatically loaded or that a particular taxonomy is required.
 
-## Shape — two files, not one
+## Select content
 
-Saving is a two-step write, not a single entry:
+- Keep durable preferences, corrections, ongoing project decisions, and stable reference pointers.
+- Distinguish user facts from inferred preferences.
+- Record the source, relevant scope, and uncertainty when useful.
+- Store the reason and application trigger for behavioral feedback.
+- Keep transient run state in a handoff or task record.
 
-**Step 1** — the entry itself, its own file, with minimal frontmatter:
+Use host-supported types. Where a file-based convention already uses user, feedback, project, and reference categories, preserve those categories.
 
-```text
----
-name: {{short-kebab-case-slug}}
-description: {{one-line summary — used to judge relevance later}}
-metadata:
-  type: {{user, feedback, project, reference}}
----
+## Update without duplication
 
-{{content}}
-```
+Retrieve related entries before saving. Update the existing topic when its meaning changes; link related topics instead of copying them.
 
-For `feedback`/`project` entries, structure the body as the rule/fact itself,
-then a `**Why:**` line and a `**How to apply:**` line — this is what makes
-the entry usable months later instead of a bare, unqualified statement.
-
-**Step 2** — a pointer in `MEMORY.md`, the index: one line, under ~150 chars,
-`- [Title](file.md) — one-line hook`. `MEMORY.md` is always loaded into
-context — it is an index, never memory content directly.
-
-Rules:
-
-- One entry per topic, not one entry per sentence — bundle related facts under one named file rather than fragmenting.
-- Link related entries with `[[entry-name]]` instead of duplicating their content; check existing links and `MEMORY.md` before creating a near-duplicate.
-- Mark uncertainty explicitly or do not store.
-- Keep the index terse — content belongs in the entry file, not in `MEMORY.md`.
+For a host that uses entry files plus an index, keep one focused entry per topic and a short index pointer. Match its existing frontmatter and link syntax. This is a conditional convention, not a new backend to install.
 
 ## Do not
 
-- Invent a scope/category taxonomy — use the four real types (user, feedback, project, reference).
-- Write memory content directly into `MEMORY.md` — it's a pointer index only.
-- Store one-off task state, secrets/tokens, raw logs, unverified guesses, sensitive personal data, or facts already obvious from committed repo files.
-- Store praise, blame, or vague lessons like "be more careful" — convert to an observable trigger and action instead.
+- Store secrets, raw logs, sensitive personal data, or unverified guesses.
+- Preserve stale task status as a durable fact.
+- Copy facts already maintained authoritatively in the repository without a retrieval reason.
+- Turn praise or blame into memory; record an observable trigger and action.
+- Assume a successful write proves the next session can retrieve it.
 
 ## Verify
 
-After storing important memory, recall it once with the words a future agent would use. If recall fails, rewrite the entry with clearer terms, and confirm its `MEMORY.md` line still points to it.
+Use the supported recall path with words a future task would use. Confirm the saved entry has the intended scope and supersedes obsolete content. Report storage or recall limitations.
 
-Before overwriting or forgetting memory, recall related entries and check `MEMORY.md` first — update the existing entry when the meaning is the same rather than duplicating it.
+See [[z-session-handoff]].

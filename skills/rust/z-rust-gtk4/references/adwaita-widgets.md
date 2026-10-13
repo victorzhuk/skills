@@ -2,11 +2,11 @@
 
 ## Window Patterns
 
-### AdwApplicationWindow — manual Box + HeaderBar + ToastOverlay (real shape)
+### AdwApplicationWindow — Box + HeaderBar + ToastOverlay example
 
-The real, in-use shell composes a vertical `gtk::Box` holding a `HeaderBar`
-and a `ToastOverlay` as siblings — not `AdwToolbarView` (that widget exists
-and works, it's just not what real apps here build):
+This example composes a vertical `gtk::Box` holding a `HeaderBar` and a
+`ToastOverlay`. `AdwToolbarView` is another supported composition; preserve
+the target application's conventions.
 
 ```rust
 view! {
@@ -188,11 +188,12 @@ dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
 dialog.set_default_response("cancel");
 dialog.set_close_response("cancel");
 
-dialog.connect_response(None, clone!(@strong sender => move |_, response| {
+let sender = sender.clone();
+dialog.connect_response(None, move |_, response| {
     if response == "delete" {
         sender.input(Msg::ConfirmDelete);
     }
-}));
+});
 
 dialog.present(Some(root));
 ```

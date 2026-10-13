@@ -1,6 +1,6 @@
 ---
 name: z-go-env-v11
-description: Parse environment configuration in Go with caarlos0/env v11 — generics, env.Options, struct tags, custom parsers, and injecting a custom env source for hermetic tests. Use when adding env-driven config, choosing required vs notEmpty, bridging a getenv seam to env.Options.Environment, or parsing durations/slices/enums. Triggers on "caarlos0/env", "env.Parse", "ParseAsWithOptions", "envDefault", "env tag", "config from env", "notEmpty".
+description: Parse environment configuration in Go with caarlos0/env v11 — generics, env.Options, struct tags, custom parsers, and injecting a custom env source for hermetic tests. Use when adding env-driven config, choosing required vs notEmpty, injecting env.Options.Environment, or parsing durations/slices/enums. Triggers on "caarlos0/env", "env.Parse", "ParseAsWithOptions", "envDefault", "env tag", "config from env", "notEmpty".
 ---
 
 # caarlos0/env v11
@@ -25,35 +25,15 @@ already hold a struct (e.g. partially pre-filled).
 
 ## Inject a custom source (the test seam)
 
-`env.Options{Environment: map[string]string}` replaces `os.Environ()`. This is the
-idiomatic way to keep config loading hermetic: pass `getenv func(string) string` down
-from `main`, bridge it to a map, and tests supply a map closure instead of `os.Setenv`.
-
-env wants a `map`, but a `getenv` is a function — enumerate the struct's keys by reflection:
+Pass `env.Options{Environment: map[string]string}` to replace `os.Environ()` in tests. Preserve key presence separately from its string value; do not enumerate struct tags with a custom reflection walker, which can miss prefixes, pointer fields, and library options.
 
 ```go
-func envMap[T any](getenv func(string) string) map[string]string {
-    m := map[string]string{}
-    var walk func(reflect.Type)
-    walk = func(t reflect.Type) {
-        for i := 0; i < t.NumField(); i++ {
-            f := t.Field(i)
-            key, _, _ := strings.Cut(f.Tag.Get("env"), ",")
-            if key == "" {
-                if f.Type.Kind() == reflect.Struct {
-                    walk(f.Type) // recurse embedded/nested config
-                }
-                continue
-            }
-            if v := getenv(key); v != "" { // see "empty vs unset" below
-                m[key] = v
-            }
-        }
-    }
-    walk(reflect.TypeFor[T]())
-    return m
+func loadConfig(values map[string]string) (Config, error) {
+    return env.ParseAsWithOptions[Config](env.Options{Environment: values})
 }
 ```
+
+Use a non-nil map for hermetic tests, including an empty one. At the composition root, either use normal `env.ParseAs` or supply a complete environment map. Preserve an existing approved lookup seam, but translate it without losing prefix or presence semantics.
 
 ## Empty vs unset (the load-bearing gotcha)
 
@@ -67,9 +47,7 @@ with value `""` is **SET**, not unset:
 | key present, value   | passes      | passes      | no (value wins)      |
 
 Consequence: `,required` alone does **not** reject an empty secret. To require non-empty,
-use `,notEmpty` (or drop empties from the injected map, as the `v != ""` filter above does
-— that converts empty→absent so `,required` rejects it). Prefer `,notEmpty` for explicit
-intent at the tag.
+use `,notEmpty`. Keep explicit empty values in injected maps so tests exercise the same semantics as production.
 
 ## Struct tags
 
@@ -129,5 +107,5 @@ flags not represented as struct fields.
 ## Verify
 
 ```sh
-go build ./... && go test -short -timeout 2m ./internal/config/...
+go build ./... && timeout 5m go test -parallel 4 -p 2 -short -timeout 2m ./internal/config/...
 ```

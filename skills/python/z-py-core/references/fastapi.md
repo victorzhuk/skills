@@ -41,7 +41,7 @@ Chain dependencies (auth depends on session) instead of duplicating session setu
 
 ## Request/response models
 
-pydantic models cross the wire; ORM objects never do. A response model that returns a SQLAlchemy instance directly leaks columns you didn't mean to expose and breaks the moment the schema drifts from the API contract.
+Define an explicit response model. FastAPI validates and filters returned data against it, including ORM attributes when configured; returning an ORM object is not inherently a column leak. Avoid unfiltered serialization or bypassing the response model.
 
 ```python
 class UserResponse(BaseModel):
@@ -50,8 +50,10 @@ class UserResponse(BaseModel):
     email: str
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: int, session: Session = Depends(get_session)) -> UserResponse:
+def get_user(user_id: int, session: Session = Depends(get_session)) -> UserResponse:
     user = session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
     return UserResponse.model_validate(user)
 ```
 
@@ -69,7 +71,7 @@ Don't call a sync, blocking library from inside `async def` without offloading i
 
 ```python
 @router.post("/signup")
-async def signup(data: SignupRequest, background_tasks: BackgroundTasks) -> UserResponse:
+def signup(data: SignupRequest, background_tasks: BackgroundTasks) -> UserResponse:
     user = create_user(data)
     background_tasks.add_task(send_welcome_email, user.email)
     return user

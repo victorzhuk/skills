@@ -15,7 +15,7 @@ Write idiomatic, zero-cost Rust: make ownership and lifetimes explicit, model er
 4. **Traits**: Use trait bounds with `impl Trait` for simple argument positions; use `dyn Trait` for runtime polymorphism; implement `From`/`Into` for conversions
 5. **Project Layout**: For GUI desktop apps ([[z-rust-gtk4]]), split by concern, not by domain/service/handler layers — a workspace with one crate per feature (`core/`, `subscription/`, `ui/`, ...) or a single crate with modules per concern (`api/`, `app/`, `platform/`, `ui/`, ...). See [[z-rust-web]] for HTTP-service layout.
 6. **Safety**: Minimize `unsafe`; document all safety invariants when unavoidable; use `#[must_use]` on types where ignoring the return is a bug; use `#[non_exhaustive]` on public enums for future compatibility
-7. **Tooling**: Run `cargo fmt` and `cargo clippy` denying default + `clippy::all` in CI (`-D warnings` or `-W clippy::all`); don't reach for `clippy::pedantic` without a concrete reason; use `cargo test -- --nocapture` for debug output
+7. **Tooling**: Run `cargo fmt` and `cargo clippy -- -D warnings` in CI. `-W clippy::all` enables warnings but does not fail on them. Add `--nocapture` only to an already bounded test command when debug output helps.
 8. **Testing**: Unit tests in `#[cfg(test)]` module in the same file; integration tests in `tests/`; use `proptest`/`quickcheck` for property-based tests; use `mockall` for mocking traits and `mockito` to stub HTTP responses in adapter/client tests. `cargo test` has no timeout and spawns one thread per core — run dev suites as `timeout 5m cargo test -- --test-threads=4` (or via a runner target carrying the same limits); [[z-testing-strategy]] has the per-runner floor
 
 ## Do not
@@ -33,8 +33,15 @@ If a trait needs to be object-safe: Avoid associated types that differ per impl;
 
 If an async trait needs to be used as a trait object (`Arc<dyn Trait>`, `&dyn Trait`): use `#[async_trait]` — `async fn` in traits still isn't dyn-compatible without boxing, regardless of MSRV. This isn't a legacy fallback: it's the live pattern once dynamic dispatch is in play. Skip `async-trait` only when every call site is static dispatch (`impl Trait` / `<T: Trait>`), never boxed.
 
-If build times are slow: Split into smaller crates; use `cargo-nextest` for faster test runs; enable incremental compilation in dev profile.
+If build times are slow: Measure compilation and test execution separately. Check existing profile settings and dependency costs before splitting crates or adding a runner.
 
 If FFI boundary is needed: Isolate all `unsafe` in a dedicated module; wrap in a safe Rust API immediately; document all invariants.
 
 If deadlock is suspected in async code: Avoid holding `std::sync::Mutex` across `.await`; use `tokio::sync::Mutex` for async-aware locking.
+
+## Verify
+
+- Use the existing project wrapper for formatting, linting, and tests.
+- Confirm `cargo fmt --check` and the project's Clippy policy pass.
+- Bound the whole test process and parallel workers; use supported per-test limits when the runner provides them. See [[z-testing-strategy]].
+- Exercise changed error, cancellation, and ownership boundaries, not only the success path.

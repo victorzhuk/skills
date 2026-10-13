@@ -261,8 +261,23 @@ second debugging skill.
 | `z-obsidian-cli` | `engineering` | authored in the private skills directory, copied here | [`skills/engineering/z-obsidian-cli/SKILL.md`](../skills/engineering/z-obsidian-cli/SKILL.md) |
 | `z-systematic-debugging` (`references/`) | `engineering` | reworked from `debug-like-expert` in [cfircoo/claude-code-toolkit](https://github.com/cfircoo/claude-code-toolkit), MIT | [`skills/engineering/z-systematic-debugging/references/`](../skills/engineering/z-systematic-debugging/references/) |
 
+## Phase 11 — metadata and schema standards
+
+Five skills authored directly in this repository from the official specifications.
+Each skill links its sources and separates vocabulary, storage, and validation concerns.
+Label Schema coverage includes compatibility with its OCI successor.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-container-metadata` | `infra` | OCI Image Specification, Label Schema convention, and Docker documentation | [`skills/infra/z-container-metadata/SKILL.md`](../skills/infra/z-container-metadata/SKILL.md) |
+| `z-schema-org` | `engineering` | Schema.org, W3C JSON-LD, Google Search, and Next.js documentation | [`skills/engineering/z-schema-org/SKILL.md`](../skills/engineering/z-schema-org/SKILL.md) |
+| `z-json-schema` | `engineering` | JSON Schema Draft 2020-12 and OpenAPI specifications | [`skills/engineering/z-json-schema/SKILL.md`](../skills/engineering/z-json-schema/SKILL.md) |
+| `z-cloudevents` | `engineering` | CloudEvents 1.0.2 core, JSON format, HTTP binding, and primer | [`skills/engineering/z-cloudevents/SKILL.md`](../skills/engineering/z-cloudevents/SKILL.md) |
+| `z-open-graph` | `engineering` | Open Graph protocol, Next.js, LinkedIn, and Slack documentation | [`skills/engineering/z-open-graph/SKILL.md`](../skills/engineering/z-open-graph/SKILL.md) |
+
 ## Public cleanup applied
 
+- Corrected executable examples and version-dependent claims during the October 2026 catalog review. Removed unsupported private-project assertions and consolidated duplicated workflow guidance. Kept upstream notices beside adapted material.
 - Replaced the personal npm scope example in `z-npm-publish` with `@scope/*`.
 - Replaced absolute local QA delegation paths with local skill references.
 - Replaced a local layer-rules reference in `z-go-sqlc` with generic repository-layer guidance.

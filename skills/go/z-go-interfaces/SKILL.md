@@ -7,7 +7,7 @@ description: Interface design, struct embedding, type assertions, compile-time c
 
 ## Interface design
 
-**1–3 methods.** Large interfaces weaken abstraction; split and compose:
+**Keep interfaces focused.** Prefer small consumer contracts; split unrelated capabilities rather than enforcing a universal method count:
 
 ```go
 type Reader interface{ Read(p []byte) (n int, err error) }
@@ -35,7 +35,7 @@ func NewService(store UserStore) ServiceInterface  // bad — never do this
 ```
 
 **Don't extract interfaces prematurely.** Start concrete; extract when a second
-consumer or a test mock demands it. One implementation → no interface yet.
+consumer or a test mock demands it. One implementation alone does not justify an interface; an established boundary or test seam can.
 
 ## Compile-time interface check
 
@@ -58,8 +58,8 @@ s := val.(string)       // panics on mismatch
 Optional capability check (stdlib pattern — `http.Flusher`, `io.ReaderFrom`):
 
 ```go
-if f, ok := w.(interface{ Flush() error }); ok {
-    return f.Flush()
+if f, ok := w.(http.Flusher); ok {
+    f.Flush()
 }
 ```
 

@@ -129,8 +129,7 @@ func Search(ctx context.Context, db *pgxpool.Pool, embedding []float32, k int) (
 }
 ```
 
-Post-filter by a distance threshold in the use case, not in SQL — keeps the
-query stable and avoids returning zero results when the threshold is tight:
+Apply a distance threshold in SQL or after retrieval according to the contract. Either can yield zero matches. Post-filtering a limited candidate set can yield fewer than k results:
 
 ```go
 const maxDistance = 0.35
@@ -173,8 +172,8 @@ providers must be supported.
 | Index | none | `CREATE INDEX … USING ivfflat` | `CREATE INDEX … USING hnsw` |
 | Build time | — | fast | slow (memory-intensive) |
 | Query speed | O(n) full scan | fast | faster |
-| Recall | 100 % | ~95–99 % (tune `lists`) | ~99 % (tune `m`, `ef_construction`) |
-| When to add | < 100 k rows | 100 k – 1 M rows | > 1 M rows, latency-critical |
+| Recall | exact | measure against exact search; tune lists/probes | measure against exact search; tune ef_search and index construction |
+| When to add | meets measured latency | representative recall/latency justifies the index | representative recall/latency/memory justifies the index |
 
 Start without an index. Exact scan is accurate and simple; add an index only
 after profiling shows it matters.
@@ -198,8 +197,7 @@ must match the distance operator used in queries.
   can't infer the column type from a bare string parameter.
 - Change the vector column dimension without re-embedding all rows and running
   a migration.
-- Apply distance thresholds in SQL (`WHERE embedding <=> $1 < 0.35`) — this
-  prevents index use for `hnsw`/`ivfflat`.
+- Assume a WHERE distance predicate categorically disables ANN indexing. Preserve an indexable distance ORDER BY and LIMIT; inspect EXPLAIN. For filtered ANN search, evaluate iterative scans and the documented materialized-CTE pattern for distance filters. See [pgvector filtering](https://github.com/pgvector/pgvector#filtering).
 - Mix operator classes between the index and query — results will be wrong
   or the index unused.
 
@@ -212,8 +210,8 @@ psql -c "SELECT extversion FROM pg_extension WHERE extname = 'vector';"
 # column type and dimension
 psql -c "\d+ items"
 
-# query uses index (look for "Index Scan" when index exists)
-psql -c "EXPLAIN SELECT id, embedding <=> '[0,1,0]'::vector AS d FROM items ORDER BY d LIMIT 5;"
+# inspect the actual query with a nonzero vector matching the column dimension
+# compare ANN recall against exact search on representative data
 
-go test -short -race -timeout 5m ./internal/repository/...
+timeout 5m go test -parallel 4 -p 2 -short -race -timeout 5m ./internal/repository/...
 ```

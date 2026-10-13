@@ -5,55 +5,46 @@ description: Deep-module design vocabulary — depth as leverage at the interfac
 
 # Deep modules
 
-Design deep modules: a lot of behaviour behind a small interface, placed at a clean seam, testable through that interface. The aim is leverage for callers, locality for maintainers, and testability for everyone.
+Hide useful behavior behind a small interface. Apply this as a design lens while preserving the project's vocabulary and established architecture.
 
-## Glossary
+## Terms
 
-Use these terms exactly — consistent language is the point.
+- **Module:** an interface and its implementation, from a function to a larger subsystem.
+- **Interface:** what callers must know, including types, invariants, ordering, errors, configuration, and performance.
+- **Depth:** useful behavior hidden relative to the interface a caller must learn.
+- **Seam:** a point where behavior can be substituted without editing callers.
+- **Adapter:** an implementation that translates or supplies behavior at a seam.
+- **Locality:** how closely a change, its consequences, and its verification stay together.
 
-- **Module** — anything with an interface and an implementation. Scale-agnostic: a function, class, package, or tier-spanning slice. *Avoid*: unit, component, service.
-- **Interface** — everything a caller must know to use the module correctly: the type signature, plus invariants, ordering constraints, error modes, required configuration, and performance characteristics. *Avoid*: API, signature — too narrow, type-level only.
-- **Implementation** — what is inside a module.
-- **Depth** — leverage at the interface: how much behaviour a caller (or test) exercises per unit of interface they must learn. Deep = lots of behaviour behind a small interface; shallow = interface nearly as complex as the implementation.
-- **Seam** — a place where behaviour can be altered without editing in that place; the location where a module's interface lives. Where the seam goes is its own design decision, distinct from what goes behind it. *Avoid*: boundary — overloaded with DDD's bounded context.
-- **Adapter** — a concrete thing that satisfies an interface at a seam. Names a role, not substance: a Postgres repo is a small adapter with a large implementation; an in-memory fake is the reverse.
-- **Leverage** — what callers get from depth: one implementation pays back across N call sites and M tests.
-- **Locality** — what maintainers get from depth: change, bugs, and verification concentrate in one place. Fix once, fixed everywhere.
+Use the project's terms such as service, component, API, or boundary when they carry the intended meaning. Do not rename concepts merely to adopt this glossary.
 
-## Principles
+## Evaluate the interface
 
-- **Depth is a property of the interface, not the implementation.** A deep module may be internally composed of small, swappable parts — they just aren't part of the interface. Internal seams (private, used by the module's own tests) can coexist with the external seam.
-- **The deletion test.** Imagine deleting the module. If complexity vanishes, it was a pass-through. If complexity reappears across N callers, it was earning its keep.
-- **The interface is the test surface.** Callers and tests cross the same seam. Wanting to test *past* the interface means the module is probably the wrong shape.
-- **One adapter means a hypothetical seam. Two adapters means a real one.** Don't introduce a seam unless something actually varies across it — a fake for tests counts as a second adapter only when the test genuinely needs substitution.
+- Ask whether fewer methods or simpler parameters can express the contract.
+- Move internal coordination behind the interface when callers should not own it.
+- Include errors, side effects, and required sequencing when judging interface complexity.
+- Use the deletion test: if removing the module duplicates its hidden logic across callers, it earns its place.
+- Do not use implementation line count as a depth score.
 
-## Shrinking an interface
+Information hiding does not require multiple implementations. A single implementation may justify a package or module through ownership, invariants, or reuse.
 
-When designing or reviewing an interface, ask:
+A polymorphic seam needs a concrete reason: runtime variation, an external dependency, a required test substitute, or an established architectural boundary. Do not invent a second adapter solely to justify an interface.
 
-- Can the number of methods go down?
-- Can the parameters get simpler?
-- Can more complexity move inside?
+## Test the behavior
 
-And for testability: accept dependencies instead of constructing them inside; return results instead of producing side effects; keep the surface small — fewer methods means fewer tests, fewer params means simpler setup.
+Use the lowest public interface that proves the contract without hiding integration risk. Internal tests can serve invariants that are not externally distinguishable; avoid coupling assertions to incidental call order or private layout.
 
-## Rejected framings
-
-- **Depth as implementation-lines over interface-lines** — rewards padding the implementation. Depth is leverage, not a ratio.
-- **Interface as the language's `interface` keyword or public method list** — too narrow; interface here includes every fact a caller must know.
-- **"Boundary"** — say seam or interface.
+Substitute dependencies only where the test needs control. Do not mock the module under test.
 
 ## Do not
 
-- Call a module deep because its implementation is big — measure at the interface.
-- Add a seam for a hypothetical second adapter.
-- Test past the interface instead of reshaping the module.
-- Ship a pass-through module that fails the deletion test — merge it into its caller or deepen it.
+- Declare every single-implementation module premature.
+- Keep a pass-through layer without an ownership or contract reason.
+- Force every test through one system-wide interface.
+- Rewrite established project terminology to match this skill.
 
 ## Verify
 
-- Each new or changed module passes the deletion test.
-- Every seam has (or will imminently have) two real adapters.
-- Tests exercise the module only through its interface.
+Each new boundary has a current reason, callers need fewer implementation facts, and tests survive internal refactors while detecting behavioral regressions.
 
-see [[z-domain-modeling]], [[z-no-over-engineering]], [[z-go-interfaces]], [[z-tdd]]
+See [[z-domain-modeling]], [[z-no-over-engineering]], [[z-go-interfaces]], [[z-tdd]].

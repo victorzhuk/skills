@@ -1,4 +1,4 @@
-# WCAG 2.1 Quick Reference
+# WCAG 2.2 Quick Reference
 
 ## Success criteria by level
 
@@ -34,7 +34,6 @@
 | **3.2.2** On Input | Input doesn't trigger unexpected changes |
 | **3.3.1** Error Identification | Input errors clearly described |
 | **3.3.2** Labels or Instructions | Form inputs have labels or instructions |
-| **4.1.1** Parsing | HTML is well-formed (no duplicate IDs, proper nesting) |
 | **4.1.2** Name, Role, Value | UI components have accessible names and correct roles |
 
 ### Level AA (standard)
@@ -160,3 +159,18 @@
 | NVDA | Screen reader (Windows) | [nvaccess.org](https://www.nvaccess.org/) |
 | VoiceOver | Screen reader (Mac) | Built into macOS |
 | Colour Contrast Analyser | Desktop app | [tpgi.com](https://www.tpgi.com/color-contrast-checker/) |
+## WCAG 2.2 additions
+
+| Criterion | Level | Check |
+|---|---|---|
+| 2.4.11 Focus Not Obscured (Minimum) | AA | Focus is not entirely hidden by author-created content |
+| 2.4.12 Focus Not Obscured (Enhanced) | AAA | No part of the focused component is hidden |
+| 2.4.13 Focus Appearance | AAA | Meet focus-indicator area and contrast requirements |
+| 2.5.7 Dragging Movements | AA | Provide a single-pointer alternative unless dragging is essential |
+| 2.5.8 Target Size (Minimum) | AA | At least 24 CSS px, or a specified spacing/equivalent/inline/essential exception |
+| 3.2.6 Consistent Help | A | Repeated help mechanisms keep consistent relative order |
+| 3.3.7 Redundant Entry | A | Reuse previously entered information where required |
+| 3.3.8 Accessible Authentication (Minimum) | AA | Avoid cognitive-function tests unless a defined alternative or exception applies |
+| 3.3.9 Accessible Authentication (Enhanced) | AAA | Apply the stricter authentication criterion |
+
+Criterion 4.1.1 Parsing was removed in 2.2. Consult the [normative standard](https://www.w3.org/TR/WCAG22/) for exact scope and exceptions.

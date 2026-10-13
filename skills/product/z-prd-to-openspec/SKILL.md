@@ -18,13 +18,13 @@ Decompose a PRD into OpenSpec change proposals, one per vertical slice. Each sli
 - Vertical, not horizontal: each slice cuts schema → API → UI → tests end-to-end. "All the endpoints" is a layer, not a slice.
 - A finished slice is demoable or verifiable on its own.
 - Prefactoring that makes later slices easy goes in its own first slice — make the change easy, then make the easy change.
-- Use glossary vocabulary from `CONTEXT.md`; respect ADRs in the touched area.
+- Use the existing OpenSpec glossary and decisions. Fall back to the project's CONTEXT/ADR convention only when it is the authoritative record.
 
 ## Quiz the user
 
 Present the breakdown as a numbered list — per slice: title, blocked-by, user stories covered. Ask whether the granularity feels right, the dependencies are correct, and anything should merge or split. Iterate until approved; only then write.
 
-Take the testing flow — TDD or tests-after — from the PRD's Testing decisions. When the PRD doesn't record one, ask before writing any change; never default silently.
+Take testing flow and seams from the PRD or other caller-approved record. Preserve tests-after when approved. If missing, propose test-first and the lowest adequate seam per [[z-testing-strategy]], then resolve the missing decision before writing changes.
 
 ## Write each change
 

@@ -1,6 +1,6 @@
 ---
 name: z-no-over-engineering
-description: YAGNI discipline for the smallest correct change — no interfaces "for testing", no DTOs when a domain struct suffices, no premature package splits or config layers. Use when designing a new type, weighing an abstraction, or reviewing a PR for scope creep before a second concrete need exists. Triggers on "interface for testing", "just in case", "future flexibility", "extensible". Once complexity is real, the pattern choice belongs to [[z-go-clean-arch-di]] or [[z-go-interfaces]].
+description: YAGNI for new types, abstractions, and PR scope review. Use for "interface for testing", "just in case", "future flexibility", or "extensible". Reject speculative interfaces, DTOs, splits, and configuration layers. Established architecture belongs to [[z-go-clean-arch-di]] and [[z-go-interfaces]].
 ---
 
 # No over-engineering
@@ -12,7 +12,7 @@ Build the smallest thing that solves the problem in front of you. Add the next l
 - Order of work: make it work → make it right → make it fast. Don't skip ahead to "make it extensible."
 - One concrete implementation doesn't need an interface. Extract the interface when a second real implementation (or a test double you actually need) shows up.
 - A domain struct that already carries the right fields doesn't need a DTO wrapping it "for the API layer" — add the DTO when the API shape actually diverges from the domain shape.
-- Don't split a package before it has two callers with different needs. A single-caller package is premature.
+- Split a package for a current ownership, invariant, dependency, or caller need. Caller count alone does not establish whether the boundary is useful.
 - Don't add a config knob, feature flag, or plugin point for a variation nobody has asked for yet.
 - "We might need this later" is not a requirement. A requirement is a ticket, a caller, or a failing test.
 
@@ -26,4 +26,4 @@ Build the smallest thing that solves the problem in front of you. Add the next l
 
 ## Verify
 
-Ask of any new abstraction: what is the second concrete case that needs it? If the honest answer is "none yet," delete it and inline the simpler version.
+Ask what current behavior, substitution, ownership, or established architectural contract the abstraction serves. Remove it when the only reason is hypothetical future flexibility; do not erase a valid boundary merely because it has one caller.

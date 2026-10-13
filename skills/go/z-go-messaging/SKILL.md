@@ -169,7 +169,7 @@ Changing a Kafka topic's partition count changes `hash(key) % partitions` for ev
 ## Verify
 
 ```sh
-go test -race -timeout 10m ./internal/consumer/... ./internal/outbox/...
+timeout 15m go test -parallel 4 -p 2 -race -timeout 10m ./internal/consumer/... ./internal/outbox/...
 ```
 
 - Idempotency: replay the same message ID twice through the handler in a test; assert the business effect applied exactly once.
@@ -182,5 +182,7 @@ go test -race -timeout 10m ./internal/consumer/... ./internal/outbox/...
 - `references/brokers.md` — client choice per broker (franz-go vs segmentio/kafka-go, amqp091-go, nats.go/JetStream) and minimal consume-loop shapes.
 
 ## See also
+
+Use [[z-cloudevents]] for event envelopes, identity, and protocol mappings.
 
 Context cancellation inside a consumer loop: [[z-go-context]]. Consumer lag, DLQ counters, and per-message tracing: [[z-go-observability]]. Repository/transaction wiring beneath the outbox: [[z-go-database]]. Worker-pool shape for parallel handler execution: [[z-go-concurrency]].

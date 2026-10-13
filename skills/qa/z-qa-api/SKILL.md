@@ -3,137 +3,75 @@ name: z-qa-api
 description: "API testing in Go: net/http/httptest for handler-level contract tests and testcontainers-go for real-boundary integration against a live Postgres. Auto-activates for: API testing, REST contract tests, handler test, endpoint health check, auth flow testing, testcontainers integration test. Does not cover browser/UI flows; see [[z-qa-browser]]. Does not cover load/throughput testing; see [[z-qa-performance]]."
 ---
 
-# API QA Skill
+# API testing
 
-## Philosophy
+Discover the service's test runner and existing contract-test style. Prefer in-process handler tests for behavior they can prove, and real dependency tests for storage or transport risks they cannot.
 
-- `httptest` is the real anchor — `net/http/httptest` handler contract tests assert status/body/headers in-process, no live server, no network hop. This is the actual pattern across Go services: health checks, journeys, routers, all tested this way.
-- `testcontainers-go` for real-boundary integration — self-provisions an ephemeral Postgres (`modules/postgres`), no docker-compose file or kubectl context to inspect. `TestIntegration*` naming, gated behind `testing.Short()`.
-- `xh` + `jaq` for one-off ad-hoc calls against a running service.
-- `curl | jq` is a real, legitimate smoke/health-check pattern in committed test scripts — not something to replace with a "proper" tool.
-- `hurl` (`.hurl` files) is a viable declarative alternative for multi-step flows, but no project here actually uses it. Reach for it only if a team already committed to it, not by default.
+## Handler contracts
 
-## httptest — handler contract tests
+Use `net/http/httptest` with the repository's assertion library. Verify status, relevant headers, response shape, and caller-visible error behavior.
+
+Cover authentication and resource authorization separately. A 200 response alone does not establish correct data or permissions.
+
+Use `httptest.NewServer` when the network/client interaction is part of the contract. A recorder proves handler behavior without a network hop.
+
+## Integration setup
+
+Inspect existing fixtures, build tags, and wrappers before adding testcontainers, compose, or another mechanism. Match the database version and migration path used by the project.
+
+If the project uses short-mode guards, put one in each integration entry point before accessing its fixture:
 
 ```go
-func TestReadinessHandler(t *testing.T) {
-	t.Parallel()
+func TestIntegrationStore(t *testing.T) {
+    if testing.Short() {
+        t.Skip("requires database")
+    }
 
-	tests := []struct {
-		name       string
-		pingErr    error
-		wantStatus int
-		wantBody   string
-	}{
-		{name: "healthy", wantStatus: http.StatusOK, wantBody: `{"status":"ok"}`},
-		{name: "db down", pingErr: assert.AnError, wantStatus: http.StatusServiceUnavailable,
-			wantBody: `{"status":"not_ready","checks":{"db":"down"}}`},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
-			w := httptest.NewRecorder()
-			ReadinessHandler(stubPinger{err: tt.pingErr}).ServeHTTP(w, req)
-
-			assert.Equal(t, tt.wantStatus, w.Code)
-			assert.JSONEq(t, tt.wantBody, w.Body.String())
-		})
-	}
+    // Create the existing fixture and exercise its public contract here.
 }
 ```
 
-`ServeHTTP` runs the handler in-process against `httptest.NewRecorder()` — no port binding. Table-driven per status/body combination; see [[z-go-testing]] for the general table-driven/testify pattern this builds on.
+`TestIntegration` naming alone does not skip tests. A `TestMain` branch that calls `m.Run()` still executes selected tests. If short mode omits shared setup, all dependent tests must skip before using it.
 
-## testcontainers-go — real-boundary integration
+- Bound dependency startup and connection attempts.
+- Check container startup, connection-string, migration, pool-creation, and readiness errors.
+- Register cleanup immediately after each successful allocation. Close clients before terminating containers.
+- Isolate records or transactions across tests. Do not share mutable test state accidentally.
+- Keep Ryuk enabled by default. Disable it only for a documented CI limitation with an alternative cleanup mechanism.
+- Confirm both short mode without external services and the actual integration target.
 
-```go
-func TestMain(m *testing.M) {
-	flag.Parse()
-	if testing.Short() {
-		os.Exit(m.Run())
-	}
+## Live smoke checks
 
-	ctx := context.Background()
-	container, err := tcpostgres.Run(ctx, "postgres:16-alpine",
-		tcpostgres.WithDatabase("app"),
-		tcpostgres.WithUsername("postgres"),
-		tcpostgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForListeningPort("5432/tcp").WithStartupTimeout(60*time.Second),
-		),
-	)
-	if err != nil {
-		panic("start postgres container: " + err.Error())
-	}
-	dsn, _ := container.ConnectionString(ctx, "sslmode=disable")
-	runMigrations(ctx, dsn)
+Use the project's established HTTP client. Require a verified target; use test credentials and controlled fixtures.
 
-	testPool, _ = pgxpool.New(ctx, dsn)
-	code := m.Run()
-	testPool.Close()
-	_ = testcontainers.TerminateContainer(container)
-	os.Exit(code)
-}
-```
+For a service whose documented healthy response is HTTP 200 with `{"status":"ok"}`, this shell example checks both transport and body:
 
 ```bash
-# CI: disable the Ryuk reaper sidecar, not the containers under test
-TESTCONTAINERS_RYUK_DISABLED=true go test -timeout 10m -run TestIntegration -v ./internal/infra/store/...
+set -o pipefail
+response=$(curl --fail --silent --show-error --connect-timeout 5 --max-time 15 \
+  --write-out '\n%{http_code}' "$HEALTH_URL") || exit 1
+code=${response##*$'\n'}
+body=${response%$'\n'*}
+[ "$code" = 200 ] || exit 1
+printf '%s' "$body" | jq -e '.status == "ok"' >/dev/null
 ```
 
-`testing.Short()` in `TestMain` lets `go test -short` skip these while a dedicated make target runs the full suite. Self-provisions the database from an image tag — nothing to stand up by hand.
+Set `HEALTH_URL` from the verified target. This Bash/Zsh example requires exactly HTTP 200; `--fail` alone accepts other successful responses. Match the actual service contract. Do not use substring matching: `unhealthy` contains `healthy`.
 
-## xh + jaq — ad-hoc calls
-
-```bash
-xh GET localhost:8080/api/users
-xh POST localhost:8080/api/users email=test@test.com name="John"
-xh GET localhost:8080/me "Authorization: Bearer $TOKEN"
-xh GET localhost:8080/openapi.json | jaq '.paths | keys[]'
-```
-
-## curl + jq — smoke / health checks
-
-```bash
-curl -s http://localhost:8080/health > /dev/null && echo ok
-
-RESPONSE=$(curl -s -X POST http://localhost:8080/mcp/start -d '{"config":"x"}')
-if echo "$RESPONSE" | jq -r '.status' | grep -q healthy; then
-	echo PASS
-fi
-```
-
-Extract the field with `jq` first, then check it — don't `grep` the raw response body.
-
-## hurl — optional declarative alternative
-
-```hurl
-GET https://api.example.com/health
-HTTP 200
-[Asserts]
-jsonpath "$.status" == "ok"
-```
-
-```bash
-hurl --test --variables-file .env.test tests/api/
-```
-
-No project here has adopted `hurl`. It's a fallback for a team that wants readable, chainable `.hurl` files over Go tests — not the starting point.
+A declarative tool such as Hurl is appropriate when already adopted. Do not add it merely to replace working repository tests.
 
 ## Do not
 
-- Reach for `hurl` as the default API test layer — httptest + testcontainers-go is the real pattern; pick `hurl` only if a team already committed to it.
-- Skip `TESTCONTAINERS_RYUK_DISABLED=true` in a CI runner without a privileged Docker daemon — orphaned Ryuk containers pile up.
-- Assert only the status code in a handler test — check body/headers too, table-driven per case.
-- Treat `curl | jq` smoke scripts as an anti-pattern to fix — it's a real, legitimate lightweight pattern for health checks.
-- Hardcode tokens or DSNs in committed test scripts or `.hurl` files — pull from env vars or a gitignored variables file.
+- Treat a received HTTP error response as request success.
+- Ignore errors during fixture setup.
+- Disable cleanup globally to hide a container startup failure.
+- Copy real tokens, credentials, or sensitive responses into committed fixtures.
+- Assume all Go services provision dependencies in the same way.
 
 ## Verify
 
-- `go test -timeout 2m -run TestReadiness ./...` (or the project's handler package) exercises the httptest suite.
-- `TESTCONTAINERS_RYUK_DISABLED=true go test -timeout 10m -run TestIntegration ./...` runs the testcontainers suite — needs a running Docker daemon.
-- `curl -s http://localhost:PORT/health | jq -r '.status'` confirms a smoke target is up before a deeper suite runs.
+Run the repository's bounded handler and integration targets. Confirm a failing status, invalid body, unauthorized request, and unavailable dependency fail their intended checks. Report scope and unavailable external checks.
 
-Load/throughput testing: see [[z-qa-performance]]. Browser/UI flows: see [[z-qa-browser]]. General Go test hygiene (table-driven, testify, parallelism): see [[z-go-testing]]. Test planning and priority mapping: see [[z-qa-analyst]]. Running and triaging the suite: see [[z-qa-debugger]].
+[TestMain](https://pkg.go.dev/testing#hdr-Main), [Testcontainers cleanup](https://golang.testcontainers.org/features/garbage_collector/).
+
+See [[z-go-testing]], [[z-testing-strategy]], [[z-qa-debugger]], [[z-qa-browser]], [[z-qa-performance]].

@@ -56,7 +56,7 @@ Escape hatches stay narrow: `# type: ignore[attr-defined]` with the error code a
 
 `src/` layout — `src/pkgname/`, tests in `tests/` outside the package. Forces the package to be imported as installed, catching accidental relative-import bugs that a flat layout hides.
 
-`__init__.py` re-exports the public surface; don't drop logic into it. Empty is fine for a pure namespace package.
+`__init__.py` re-exports the public surface; don't drop logic into it. An empty file is fine for a regular package; an implicit namespace package omits it.
 
 ## Typing
 
@@ -90,7 +90,7 @@ Plain `@dataclass` for internal domain shapes once validated data has crossed th
 - Fixtures over `setUp`/`tearDown`.
 - `@pytest.mark.parametrize` over copy-pasted test methods.
 - How much to cover isn't a pytest question — see [[z-testing-strategy]].
-- pytest has no timeout of its own — add `pytest-timeout` as a dev dep and pin `timeout = 60` in `addopts`/`pyproject.toml` (or prefix `timeout 10m uv run pytest`); with `pytest-xdist`, cap `-n`, never `-n auto` on a dev machine.
+- Use the project's bounded wrapper. With `pytest-timeout` installed, set `timeout = 60` in pytest configuration or `--timeout=60` in `addopts`; also bound the whole process. With `pytest-xdist`, set a finite worker cap, never `-n auto`.
 
 ## Errors
 
@@ -109,7 +109,7 @@ Catch specific exception types. A bare `except Exception` belongs only at a real
 
 `asyncio` only when the workload is actually IO-bound — network, disk, subprocess. Wrapping a CPU-bound loop in `async def` buys nothing; it still blocks the event loop.
 
-Don't mix sync and async call paths in one component. Calling `asyncio.run()` from inside a thread that's already running a loop deadlocks; pick one discipline per component and keep the boundary where sync meets async explicit (a thread pool executor, not an ad hoc `run_until_complete`).
+Don't mix sync and async call paths in one component. Calling `asyncio.run()` in a thread with an active event loop raises `RuntimeError`; pick one discipline per component and keep the boundary where sync meets async explicit (a thread pool executor, not an ad hoc `run_until_complete`).
 
 ## Framework routing
 
@@ -135,7 +135,7 @@ Read the matching reference before writing framework-specific code — this file
 ```bash
 uv run ruff check
 uv run mypy .
-uv run pytest --timeout=60   # pytest-timeout; or pin timeout in addopts
+timeout 10m uv run pytest --timeout=60   # requires pytest-timeout; cap workers if xdist is enabled
 ```
 
 see [[z-testing-strategy]], [[z-no-over-engineering]]

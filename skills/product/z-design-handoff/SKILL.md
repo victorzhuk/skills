@@ -1,6 +1,6 @@
 ---
 name: z-design-handoff
-description: Turns a design brief into a tool-agnostic handoff package for a cloud design tool (Figma Make, Google Stitch, v0, Lovable) — a design-system spec of tokens, component inventory, states, plus one generation prompt per screen. Use after [[z-design-brief]] produces a brief, when moving a brief into a design tool, or on "design system", "handoff package", "generate this in Figma/Stitch/v0". Does not operate the tool, and doesn't turn the resulting prototype into a PRD; see [[z-to-prd]].
+description: Design handoff from [[z-design-brief]] to Figma Make, Google Stitch, v0, or Lovable. Use for "design system", "handoff package", or "generate this in Figma/Stitch/v0". Produce tokens, components, states, and per-screen prompts. Does not operate tools. Prototype-to-PRD work belongs to [[z-to-prd]].
 ---
 
 # Design handoff

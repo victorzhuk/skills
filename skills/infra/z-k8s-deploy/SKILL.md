@@ -23,7 +23,7 @@ spec:
         capabilities: { drop: ["ALL"] }
 ```
 
-Pod-level `runAsNonRoot` fails the pod at admission if the image's own `USER` is root — set it even when the image already declares a non-root user, so a future base-image regression is caught here instead of in prod. `readOnlyRootFilesystem` forces any scratch space (temp files, caches) through an explicit `emptyDir` volume mount — that's the intended friction, not a bug to work around with a writable root.
+The kubelet enforces `runAsNonRoot` against the effective container user; an explicit nonzero `runAsUser` can override an image's root default. Admission policies may impose additional checks. With `readOnlyRootFilesystem`, provide writable mounts only for required scratch space.
 
 ## Resources
 
@@ -44,8 +44,9 @@ startupProbe:   { httpGet: { path: /healthz, port: 8080 }, periodSeconds: 2, fai
 lifecycle:
   preStop:
     exec: { command: ["sleep", "5"] }
-terminationGracePeriodSeconds: 30
 ```
+
+The probes and lifecycle above belong to the container. Set `spec.terminationGracePeriodSeconds: 30` on the Pod. The exec hook requires `sleep` in the image; for distroless images, use a supported lifecycle sleep handler for the cluster version or an application-supported drain hook.
 
 - **liveness** — restart the container if it's wedged; keep this cheap, no dependency checks.
 - **readiness** — pull the pod out of Service endpoints without restarting it; this is where a broken DB connection belongs.
@@ -73,7 +74,7 @@ None of these is a default add for a single-tenant, low-traffic service — each
 ## Rollout and debug flow
 
 ```sh
-kubectl rollout status deployment/app
+kubectl rollout status deployment/app --timeout=5m
 kubectl rollout undo deployment/app                    # back to previous revision
 kubectl rollout undo deployment/app --to-revision=N
 ```
@@ -99,6 +100,6 @@ For a distroless image with no shell, `kubectl debug -it pod/app --image=busybox
 ```sh
 helm lint ./chart
 helm template ./chart | kubeconform -summary -
-kubectl diff -f ./chart/rendered.yaml     # or: helm diff upgrade (if the plugin is installed)
-kubectl rollout status deployment/app
+helm template ./chart | kubectl diff -f -
+kubectl rollout status deployment/app --timeout=5m
 ```

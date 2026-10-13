@@ -21,7 +21,7 @@ description: >
 | High | `math/rand` for tokens | `crypto/rand` — `math/rand` output is predictable |
 | High | AES without GCM | GCM provides auth+encrypt; ECB/CBC do not |
 | High | MD5/SHA1 for passwords | `bcrypt` (house default, cost 12) — fast hashes are brute-forceable; `argon2id` is a documented alternative |
-| High | Path traversal | Go 1.24+: `os.Root`; pre-1.24: `filepath.IsLocal` + `filepath.Rel` |
+| High | Path traversal | Go 1.24+: `os.Root`; older Go: a vetted traversal-resistant open implementation |
 | High | Secret `==` comparison | `crypto/subtle.ConstantTimeCompare` — `==` leaks timing |
 | High | Race condition | `sync.Mutex` or channels; test with `-race` |
 | High | Trusting client headers | `X-Forwarded-For`, `X-Is-Admin` are trivially forged |
@@ -41,17 +41,17 @@ db.QueryContext(ctx, "SELECT * FROM users WHERE id = '"+id+"'")
 db.QueryContext(ctx, "SELECT * FROM users WHERE id = $1", id)
 ```
 
-**Command** — separate args, never shell interpolation:
+**Command** — separate args, never shell interpolation. Also reject option injection: allowlist argument shapes and use an end-of-options delimiter only where the selected command supports it. Separate arguments alone do not make arbitrary input safe:
 
 ```go
 // bad — shell parses metacharacters
 exec.Command("bash", "-c", "convert "+userInput)
 
-// good
+// avoids shell parsing; validate the argument shape separately
 exec.Command("convert", userInput)
 ```
 
-**HTML/template** — use `html/template`, never `text/template` for user-visible output.
+**HTML/template** — use `html/template`, reserve `text/template` for non-HTML output.
 
 ## Cryptography
 
@@ -68,12 +68,22 @@ token := hex.EncodeToString(b)
 Encryption — AES-GCM (authenticated):
 
 ```go
-block, err := aes.NewCipher(key)   // key must be 16, 24, or 32 bytes
+block, err := aes.NewCipher(key)
+if err != nil {
+    return nil, fmt.Errorf("create cipher: %w", err)
+}
 gcm, err := cipher.NewGCM(block)
+if err != nil {
+    return nil, fmt.Errorf("create gcm: %w", err)
+}
 nonce := make([]byte, gcm.NonceSize())
-rand.Read(nonce)
+if _, err := rand.Read(nonce); err != nil {
+    return nil, fmt.Errorf("create nonce: %w", err)
+}
 ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
 ```
+
+Never reuse a GCM nonce with a key; rotate before the random-nonce bound of 2^32 messages per key. Go 1.24+ also offers [NewGCMWithRandomNonce](https://pkg.go.dev/crypto/cipher#NewGCMWithRandomNonce), which manages the nonce in the ciphertext.
 
 Password hashing:
 
@@ -111,23 +121,22 @@ if !hmac.Equal(computedDigest, receivedDigest) {
 
 ## Path Traversal
 
-Go 1.24+:
+Use `os.Root` on Go 1.24+ to enforce containment during the open operation:
 
 ```go
-root, err := os.OpenRoot("/var/uploads")
-f, err := root.Open(userFilename)  // rejects ".." and absolute paths
-```
-
-Pre-1.24:
-
-```go
-clean := filepath.Join(root, userFilename)
-rel, err := filepath.Rel(root, clean)
-if err != nil || !filepath.IsLocal(rel) {
-    return ErrForbidden
+root, err := os.OpenRoot(uploadDir)
+if err != nil {
+    return fmt.Errorf("open upload root: %w", err)
 }
-// do not use strings.HasPrefix — it's suffix-unsafe
+defer root.Close()
+f, err := root.Open(userFilename)
+if err != nil {
+    return fmt.Errorf("open upload: %w", err)
+}
+defer f.Close()
 ```
+
+Root rejects escapes through relative paths and symlinks; safe `..` traversal within the root is allowed. On older Go, use a vetted traversal-resistant open implementation or raise the minimum version. `filepath.IsLocal` and `filepath.Rel` only check names lexically; they cannot prevent symlink escapes. Resolve-then-open also races filesystem changes. See [Go's traversal-resistant file APIs](https://go.dev/blog/osroot).
 
 ## Secrets
 
@@ -156,7 +165,7 @@ Rate-limit with `golang.org/x/time/rate`.
 
 ## Concurrency
 
-Protect shared state with `sync.RWMutex` or channels; a race under auth logic can bypass authorization. Run `go test -race -timeout 5m ./...` in CI — treat every race as high-severity.
+Protect shared state with `sync.RWMutex` or channels; a race under auth logic can bypass authorization. Run `timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./...` in CI — treat every race as high-severity.
 
 ## Error Handling
 
@@ -186,5 +195,5 @@ govulncheck ./...
 golangci-lint run
 
 # Race detector
-go test -race -timeout 5m ./...
+timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./...
 ```

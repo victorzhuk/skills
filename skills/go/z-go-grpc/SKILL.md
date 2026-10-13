@@ -17,7 +17,7 @@ first, regenerate, then implement.
 | Transport | `grpc-go` (`google.golang.org/grpc`) | connectrpc when browser/curl clients matter more than the existing grpc-go/xDS ecosystem |
 | RPC shape | unary | streaming once one request/response can't carry the payload, or the client needs partial results before completion |
 | Server instrumentation | `grpc.StatsHandler(otelgrpc.NewServerHandler())` | never an interceptor — otelgrpc's interceptor forms are deprecated |
-| buf breaking category | `WIRE_JSON` | `WIRE` only if you control every client and can promise binary-only encoding |
+| buf breaking category | `FILE` | Deliberately select `WIRE_JSON` when generated-source compatibility is not required; `WIRE` excludes JSON guarantees |
 | Keepalive | library defaults | tune only after a specific idle-connection or GOAWAY incident |
 | Client construction | `grpc.NewClient` | never `grpc.Dial`/`DialContext` — deprecated since v1.63 |
 
@@ -71,15 +71,10 @@ lint:
     - STANDARD
 breaking:
   use:
-    - WIRE_JSON
+    - FILE
 ```
 
-`STANDARD` is buf's own lint default — naming and versioning on top of basic
-hygiene, a sane starting point. `FILE` is buf's breaking-change default, but it
-only guards generated-code file placement; `WIRE_JSON` actually protects wire and
-JSON compatibility — worth it the moment anything besides binary wire format
-touches these messages (`grpcurl -format json`, a Connect/gRPC-Web client) — set
-it explicitly.
+`STANDARD` is Buf's lint default. Breaking categories decrease in strictness: `FILE` → `PACKAGE` → `WIRE_JSON` → `WIRE`. `FILE` also protects generated source compatibility; it is not limited to file placement. Keep it unless the project deliberately accepts a weaker boundary. See [Buf breaking rules](https://buf.build/docs/breaking/rules/).
 
 `buf.gen.yaml` (v2) wires plugins under `local:` — a plain `$PATH` lookup for a
 `protoc-gen-*` binary. Pin the installed plugin version the same way in dev and
@@ -171,16 +166,14 @@ func (s *OrderServer) GetOrder(ctx context.Context, req *pb.GetOrderRequest) (*p
     case errors.Is(err, domain.ErrNotFound):
         return nil, status.Error(codes.NotFound, "order not found")
     case err != nil:
+        slog.ErrorContext(ctx, "get order failed", "err", err)
         return nil, status.Error(codes.Internal, "internal error")
     }
     return toProtoOrder(order), nil
 }
 ```
 
-`status.Error`/`status.Errorf` is the transport boundary: use `%v` if you must
-interpolate, never `%w` — the domain error chain must not leak past this point (see
-[[z-go-errors]] for the general single-handling rule). `codes.Internal` gets a flat
-generic message; the real `err` goes to the logging interceptor, not the client.
+Translate at the transport boundary. Formatting with `%v` does not sanitize an error. Log an unexpected cause once before returning a generic status, as above, or preserve it in a private boundary type until a translating interceptor logs it. A generic status alone cannot carry the original cause to a later logging interceptor. Request-summary logging should not duplicate the internal-error log.
 
 For structured, machine-parseable detail (field violations, quota info), attach
 `errdetails` instead of stuffing it into the message string:
@@ -207,26 +200,19 @@ outermost, the last is closest to the handler:
 srv := grpc.NewServer(
     grpc.StatsHandler(otelgrpc.NewServerHandler()),
     grpc.ChainUnaryInterceptor(
+        loggingUnaryInterceptor,
         recoveryUnaryInterceptor,
         authUnaryInterceptor,
-        loggingUnaryInterceptor,
     ),
     grpc.ChainStreamInterceptor(
+        loggingStreamInterceptor,
         recoveryStreamInterceptor,
         authStreamInterceptor,
-        loggingStreamInterceptor,
     ),
 )
 ```
 
-Order, same reasoning for unary and stream:
-
-1. **Recovery outermost** — a panic anywhere below must never take the process
-   down; nothing else is allowed to run unprotected.
-2. **Auth next** — reject unauthenticated calls before spending any cycles on
-   business logic or logging them as if they mattered.
-3. **Logging innermost** — closest to the handler, so it logs the auth-resolved
-   identity and the actual outcome/status code.
+The outer request logger observes authentication failures and recovered panic status. Recovery protects auth and handlers; the outer logger must be panic-safe. Auth rejects unauthorized calls before business logic. Do not assume identity placed in a child context by auth becomes visible in an outer context; use the project's explicit request-attribute mechanism. Test success, auth rejection and panic paths for one request summary and a safe client status.
 
 otelgrpc is not in this chain. `UnaryServerInterceptor`/`StreamServerInterceptor`
 are deprecated (otelgrpc v0.46+) in favor of the `grpc.StatsHandler` shown above,

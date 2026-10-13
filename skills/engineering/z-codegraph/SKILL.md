@@ -1,75 +1,41 @@
 ---
 name: z-codegraph
-description: "Use when working with CodeGraph code intelligence: symbol search, call graph exploration, impact analysis, affected tests, route-to-handler lookup, or codebase understanding in repositories that already have a .codegraph/ index. Prefer this over grep/read for structural code questions when .codegraph/ exists; do not initialize indexes unless the user asks or approves."
+description: "Use an existing CodeGraph integration for call graphs, impact analysis, affected tests, or route discovery. Discover installed tools and index freshness; follow host LSP precedence and verify current source. Do not initialize indexes without user authorization."
 ---
 
 # CodeGraph
 
-Use CodeGraph as the primary local code-intelligence layer for repositories that already contain a `.codegraph/` directory.
+Use an existing CodeGraph index when the installed integration can answer the structural question.
 
-## Routing
+## Discover access
 
-1. Find the repository root for the task.
-2. If `<repo>/.codegraph/` exists, use CodeGraph before `rg`, `fd`, or file reads for structural code questions.
-3. If `.codegraph/` is absent, skip CodeGraph. Do not run `codegraph init` unless the user explicitly asks or approves indexing that repo.
-4. Use exact tools (`rg`, `fd`, `read`) for literal searches and final verification.
-5. Use CocoIndex/`ccc` only as a semantic-search fallback when CodeGraph is unavailable, insufficient, or the user asks for CocoIndex.
+1. Find the task's repository and inspect whether it has a CodeGraph index.
+2. Discover available host tools and installed CLI help. An index directory alone does not prove that a server, binary, or watcher works.
+3. Follow the host's code-intelligence precedence. Use LSP for definitions, references, and implementations when that is its primary route.
+4. Use CodeGraph for supported graph exploration, impact analysis, or affected-test discovery.
+5. Use native text/file tools for exact searches and current-source verification.
 
-## Best uses
+Do not initialize an index unless the user requests or approves it. Do not activate another indexing backend automatically as a fallback.
 
-Use CodeGraph for:
+## Query narrowly
 
-- "How does X work?" architecture and flow questions.
-- Symbol, class, function, handler, and route discovery.
-- Caller/callee traversal and dynamic-dispatch-aware call paths.
-- Impact analysis before changing a symbol.
-- Finding affected tests for changed files.
-- Reading current source for a known symbol or file through the graph.
+Start with a known symbol, route, file, or question. Read the tool's current schema before calling it. Inspect returned source and graph limitations; dynamic dispatch and runtime registration may be incomplete.
 
-Do not use CodeGraph for:
+If only CLI access is available, discover its supported verbs and flags with local help. Do not assume commands from another CodeGraph distribution apply.
 
-- Repositories without `.codegraph/`, unless the user approves initialization.
-- Exact text searches where `rg` is simpler.
-- Documentation/library API lookup outside the current repo.
+## Check freshness
 
-## Access
+Read stale or pending files directly. Inspect status through the installed interface. Synchronize only when supported and needed within the authorized scope; do not assume a daemon is active.
 
-Prefer MCP tools when available:
+For impact or affected-test output, confirm relevant callers and tests against current source before treating absence from the graph as evidence of no dependency.
 
-- `codegraph_explore` — answers most code questions with relevant source and call paths.
-- `codegraph_node` — loads one symbol or file with caller/callee context.
+## Do not
 
-Shell equivalents always work:
+- Treat an index directory as proof of available tools or current data.
+- Override host LSP routing because this skill loaded.
+- Initialize a broad root, dependency cache, or unrelated repository.
+- Use graph results as external library documentation.
 
-```bash
-codegraph explore -p <repo> "<question or symbols>"
-codegraph node -p <repo> <symbol-or-file>
-codegraph query -p <repo> "<symbol search>"
-codegraph callers -p <repo> <symbol>
-codegraph callees -p <repo> <symbol>
-codegraph impact -p <repo> <symbol>
-codegraph affected -p <repo> <changed-files...>
-codegraph status <repo>
-```
+## Verify
 
-## Freshness
-
-CodeGraph normally auto-syncs through its daemon. If output reports pending or stale files:
-
-1. Read those files directly for live content.
-2. Run `codegraph status <repo>` to inspect sync state.
-3. Run `codegraph sync <repo>` only when the watcher is unavailable or a script needs an explicit pre-flight sync.
-
-## Initialization safety
-
-Do not initialize broad or ambiguous roots such as `$HOME`, filesystem roots, dependency caches, or large monorepos without user approval. If initialization is approved, run:
-
-```bash
-codegraph init <repo>
-```
-
-Then verify:
-
-```bash
-codegraph status <repo>
-```
+Report repository, access method, freshness limits, and source evidence supporting the answer. If unavailable, use the host's existing fallback rather than installing tools.

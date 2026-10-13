@@ -5,14 +5,13 @@ description: Go naming conventions — MixedCaps, package stuttering, constructo
 
 # Go Naming
 
-All identifiers: `MixedCaps` or `mixedCaps`. Never underscores — the only exceptions are
-test subcase names (`TestFoo_EmptyInput`), generated code, and OS/cgo interop.
+Prefer `MixedCaps` or `mixedCaps` for Go identifiers. Preserve established public names and project conventions; generated names, tests and interop can differ. These are naming conventions, not additional language restrictions.
 
 ## Quick Reference
 
 | Element | Rule | Example |
 |---|---|---|
-| Package | lowercase single word, no plurals | `json`, `http`, `tabwriter` |
+| Package | short lowercase name; plural when natural | `json`, `http`, `tabwriter` |
 | File | lowercase, underscores OK | `user_handler.go` |
 | Exported | UpperCamelCase | `ReadAll`, `HTTPClient` |
 | Unexported | lowerCamelCase | `parseToken`, `userCount` |
@@ -20,7 +19,7 @@ test subcase names (`TestFoo_EmptyInput`), generated code, and OS/cgo interop.
 | Interface | verb/noun + `-er` suffix | `Reader`, `Stringer`, `Closer` |
 | Constructor (single type) | `New()` | `ring.New()`, `user.New()` |
 | Constructor (multi-type) | `NewTypeName()` | `http.NewRequest()` |
-| Boolean field | `is`/`has`/`can` prefix | `isConnected`, `hasPermission` |
+| Boolean field | clear predicate; prefix only when useful | `isConnected`, `hasPermission` |
 | Boolean getter | prefix kept | `IsConnected() bool` |
 | Non-bool getter | no `Get` prefix on field accessors; `Get` is idiomatic on repo/store/query methods | `user.Name()` not `GetName()`; `repo.GetByID(id)` is fine |
 | Setter | `Set` prefix | `SetTimeout(d time.Duration)` |
@@ -28,11 +27,11 @@ test subcase names (`TestFoo_EmptyInput`), generated code, and OS/cgo interop.
 | Enum zero value | plain `iota` is the default; sentinel only if zero-value ambiguity is a real risk | `StatusPending = iota` |
 | Sentinel error var | `Err` prefix | `ErrNotFound`, `ErrTimeout` |
 | Error type | `Error` suffix | `PathError`, `SyntaxError` |
-| Error string | fully lowercase, no punctuation | `"invalid message id"` |
+| Error string | lowercase start except proper names/initialisms; no trailing punctuation | `"invalid message id"` |
 | Sentinel error string | package-prefix when it helps, not universal | `"apiclient: not found"` or plain `"not found"` |
 | Acronym | all caps or all lower | `URL`, `HTTPServer`, `xmlParser` |
 | Context variant | `WithContext` suffix | `FetchWithContext()` |
-| In-place mutation | `In` suffix | `SortIn()`, `ReverseIn()` |
+| In-place mutation | follow established API and document mutation | `slices.Sort()`, `slices.Reverse()` |
 | Panic-on-error | `Must` prefix | `MustParse()` |
 | Functional option | `With` + field | `WithPort()`, `WithLogger()` |
 | Format func | `f` suffix | `Errorf`, `Wrapf` |
@@ -40,7 +39,7 @@ test subcase names (`TestFoo_EmptyInput`), generated code, and OS/cgo interop.
 
 ## MixedCaps is non-negotiable
 
-Go's export mechanism depends on capitalization. Tooling assumes MixedCaps throughout.
+Go's export mechanism depends on capitalization. MixedCaps is the standard naming convention; underscores are not a language error.
 
 ```go
 // good
@@ -86,7 +85,7 @@ func NewServeMux() *ServeMux
 
 ## Booleans
 
-Unexported fields: `is`/`has`/`can` prefix. The exported getter keeps it.
+Use a readable predicate. `connected`, `isConnected`, `hasPermission` and `canRetry` can all be clear; preserve the package's convention.
 
 ```go
 type conn struct {
@@ -97,7 +96,7 @@ type conn struct {
 func (c *conn) IsConnected() bool { return c.isConnected }
 ```
 
-Bare `connected bool` is ambiguous — the prefix makes it read as a true/false question.
+Do not rename a clear boolean merely to add a prefix.
 
 ## Getters
 
@@ -134,8 +133,7 @@ const (
 
 ## Error strings
 
-Fully lowercase — including acronyms. No trailing punctuation. Strings are concatenated
-(`fmt.Errorf("parsing token: %w", err)`) and mixed-case looks wrong mid-sentence.
+Start errors lowercase unless a proper name or initialism begins the message. Preserve meaningful acronym spelling, and omit trailing punctuation so wrapped errors compose.
 
 ```go
 // good
@@ -153,7 +151,7 @@ skip the prefix.
 
 ## Packages
 
-- Lowercase, single word, no plurals: `url` not `urls`, `user` not `users`.
+- Use a short lowercase package name; plurals can be natural (`strings`, `errors`, `slices`). Avoid unnecessary renames of established packages.
 - No `util`, `helper`, `common` — these say nothing. Name the abstraction: `middleware`,
   `validator`, `retry`.
 - Avoid stuttering in file names too: `user/store.go` not `user/user_store.go`.
@@ -169,13 +167,10 @@ skip the prefix.
 | `util`/`helper` packages | Name the domain: `retry`, `validator` |
 | `http.HTTPClient` | `http.Client` — package name is already at the call site |
 | `user.NewUser()` | `user.New()` — single type, no stutter |
-| `connected bool` field | `isConnected bool` — prefix makes it a question |
-| `"invalid ID"` error | `"invalid id"` — fully lowercase including acronyms |
 | zero value drives a billing/permission decision | add `StatusUnknown` at 0 for that case — plain iota is the default otherwise |
 | ambiguous sentinel shared across packages | `"mypackage: not found"` — prefix when it disambiguates |
 | `userSlice` type | `users` — no type-encoding in names |
 | `FetchCtx()` | `FetchWithContext()` — standard Go suffix |
-| `sort()` mutates in-place | `sortIn()` — `In` signals mutation |
 | `parse()` panics | `mustParse()` — `Must` prefix warns caller |
 | `Set*`/`Use*` options | `With*` — standard convention for functional options |
 

@@ -25,14 +25,14 @@ services:
     networks: [app-net]
 
 networks:
-  app-net:
-    name: app-net
+  app-net: {}
 ```
 
 - `restart: unless-stopped` over `always` — it honors a deliberate `docker compose stop`, `always` fights you back on the next boot.
 - `deploy.resources.limits` applies outside Swarm mode under the Compose Specification (Compose v2) — no need for the older standalone `mem_limit`/`cpus` keys on a current Compose version.
 - Pin an explicit tag or digest. `:latest` means the next `docker compose pull` silently ships whatever the registry has today.
-- A named network per stack keeps one Compose project's containers from resolving another's by service name on the default bridge.
+- Keep Compose's project-scoped network name. An explicit global `name` can accidentally join separate projects to the same network.
+- The healthcheck command must exist in the image. For minimal images, use an application health subcommand or another supported probe instead of assuming `curl` is installed.
 
 ## systemd units for non-container daemons
 
@@ -55,7 +55,7 @@ User=app
 WantedBy=multi-user.target
 ```
 
-`After=network-online.target` (not plain `network.target`) actually waits for a configured interface, not just the networking service having started. `EnvironmentFile` keeps secrets out of the unit file itself — root-only permissions on that file, not on the unit.
+`network-online.target` waits only when the network manager's wait-online service is enabled and configured; it does not guarantee remote connectivity. The application still needs reconnect behavior. Restrict permissions on the environment file and keep secrets out of version control.
 
 ## Reverse proxy and TLS
 
@@ -92,6 +92,7 @@ Caddy is the simpler default for a handful of services on one host — no separa
 
 - SSH key-only auth: `PasswordAuthentication no` in `sshd_config`; disable root login (`PermitRootLogin no`) once a non-root sudo user is confirmed working.
 - Firewall default-deny inbound, explicit allows only (`ufw default deny incoming`, then `ufw allow 22,80,443/tcp`).
+- Docker-published ports can bypass UFW's normal input rules. Omit host publication for private services, or bind to loopback when appropriate. Apply forwarding policy for the actual Docker firewall backend and verify exposure from another host; a local UFW listing is insufficient.
 - Unattended security upgrades (`unattended-upgrades` on Debian/Ubuntu) so a known CVE doesn't sit unpatched for a release cycle.
 - `fail2ban` is optional hardening on top of key-only SSH — worth adding once the host is internet-facing and you want automatic banning of brute-force scan noise, not required to be safe.
 
@@ -102,7 +103,7 @@ Dokploy (and similar self-hosted PaaS tools) wraps most of the above — Compose
 ## Do not
 
 - Ship `:latest` to a production Compose file — pin a tag or digest.
-- Rely on `restart: always` to survive a deliberate stop-then-reboot cycle — use `unless-stopped`.
+- Expect `restart: always` to preserve a deliberate stop across daemon restart; use `unless-stopped` for that behavior.
 - Store secrets inline in a unit file or `docker-compose.yml` — an `EnvironmentFile`/`.env` with restricted permissions, not committed.
 - Keep backups only on the host they protect.
 - Leave password SSH auth on "just in case" once key auth is confirmed working.

@@ -61,7 +61,7 @@ Pin the version in CI; never rely on "latest" from CI runners.
 
 Generated code (sqlc, protoc, mockgen, ogen output) doesn't need lint findings acted on — the v2 replacement for the old `issues.exclude-files`/`issues.exclude-dirs` keys is `linters.exclusions.generated` (`strict`/`lax`/`disable`, default `strict`, detected via the `// Code generated ... DO NOT EDIT.` header) plus `linters.exclusions.paths` / `formatters.exclusions.paths` for explicit patterns outside that convention (`zz_generated\..+\.go$`, vendored dirs).
 
-## Two real tiers, not one allowlist
+## Choose the project's lint scope
 
 Real repos split into two tiers rather than one shared "essentials" list — pick the tier that
 matches the project's risk profile, don't default to a merged superset.
@@ -79,7 +79,7 @@ linters:
     - misspell
 ```
 
-**Strict** (homyak, go-ent) — adds contract- and correctness-focused linters on top:
+**Strict** — adds contract- and correctness-focused linters on top:
 
 ```yaml
 linters:

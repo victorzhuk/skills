@@ -1,6 +1,6 @@
-# WCAG 2.1 AA Accessibility Audit Guide
+# WCAG 2.2 AA Accessibility Audit Guide
 
-Comprehensive checklist for building accessible web interfaces. Every requirement maps to WCAG 2.1 Level AA success criteria.
+Comprehensive checklist for building accessible web interfaces. Use [[z-accessibility]] and the normative WCAG criteria for conformance. This checklist also includes explicitly stronger design preferences.
 
 ---
 
@@ -141,7 +141,7 @@ The first rule of ARIA: do not use ARIA if a native HTML element provides the be
 }
 ```
 
-- Focus indicators must meet 3:1 contrast ratio against adjacent colors (WCAG 2.4.11)
+- WCAG 2.4.11 (AA) concerns focus not being entirely obscured. Focus Appearance is 2.4.13 (AAA), with area and contrast requirements; required non-text contrast is assessed separately under 1.4.11.
 - Minimum focus indicator area: at least 2px perimeter around the component
 
 ### Modal Focus Trapping
@@ -361,7 +361,7 @@ CSS custom property approach:
 | Tool | Usage |
 |---|---|
 | axe-core | `npm install jest-axe` for unit tests; `expect(container).toHaveNoViolations()` |
-| Lighthouse | Accessibility score target: 90+ |
+| Lighthouse | Diagnostic audit only; no score proves conformance |
 | eslint-plugin-jsx-a11y | Static analysis for JSX accessibility issues |
 | pa11y | CLI/CI integration for automated page-level audits |
 | Playwright/axe | `@axe-core/playwright` for integration test accessibility checks |
@@ -370,7 +370,7 @@ CSS custom property approach:
 
 1. **Keyboard-only navigation**: unplug mouse, navigate entire page with Tab, Enter, Arrows, Escape
 2. **Screen reader**: VoiceOver (macOS: Cmd+F5), NVDA (Windows, free), JAWS (Windows)
-3. **Zoom 200%**: content should reflow without horizontal scrolling or content clipping
+3. **Resize/reflow**: test 200% text resizing and 400% zoom/reflow where applicable
 4. **Zoom 400%**: text should remain readable (WCAG 1.4.10 Reflow)
 5. **Focus indicators**: every interactive element shows a visible focus ring when focused via keyboard
 6. **Forced colors mode**: test in Windows High Contrast Mode (use `forced-colors` media query)
@@ -380,7 +380,7 @@ CSS custom property approach:
 
 ```bash
 # Example: axe-core with Playwright in CI
-npx playwright test --workers=2 --project=accessibility
+timeout 10m npx playwright test --workers=2 --timeout=30000 --project=accessibility
 ```
 
 ---
@@ -402,7 +402,7 @@ npx playwright test --workers=2 --project=accessibility
 | `aria-hidden="true"` on focusable elements | Remove from tab order or remove `aria-hidden` |
 | Missing `lang` attribute on `<html>` | Set `<html lang="en">` (or appropriate language code) |
 | Autoplaying video/audio with sound | Require user interaction to start, or mute by default with controls |
-| Tiny tap targets on mobile | Minimum 44x44 CSS pixels for touch targets |
+| Tiny tap targets on mobile | WCAG 2.2 AA: 24 CSS px or a defined exception; 44px is a stronger house preference |
 | Using `title` attribute as primary label | `title` is unreliable; use `aria-label` or visible `<label>` |
 | Links that say "click here" or "read more" | Descriptive link text: "Read the accessibility guide" |
 | Missing form error summary | On submit failure, show summary of all errors at top of form |
@@ -417,9 +417,9 @@ Before marking any component as complete, verify:
 2. Does it have a visible focus indicator?
 3. Does it announce correctly in a screen reader?
 4. Does it meet color contrast ratios?
-5. Does it work at 200% zoom?
+5. Does it support 200% text resizing and applicable 400% reflow?
 6. Does it respect `prefers-reduced-motion`?
 7. Does it pass `jest-axe` / axe-core automated checks?
 8. Does it have appropriate semantic HTML or ARIA roles?
 9. Are all images, icons, and media labeled?
-10. Can it be operated with one hand on mobile (44x44px touch targets)?
+10. Does it meet the applicable target-size criterion, with 44px preferred for touch?

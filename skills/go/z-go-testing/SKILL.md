@@ -114,7 +114,7 @@ Optional, rarely needed here — `suite.Suite` (`SetupTest`/`TearDownTest` lifec
 
 ## Goroutine leaks and fuzzing
 
-Detect leaks globally via `goleak.VerifyTestMain(m)` in `TestMain`, or per-test with `defer goleak.VerifyNone(t)`.
+Use `goleak.VerifyTestMain(m)` for packages with parallel tests. Per-test `defer goleak.VerifyNone(t)` is only appropriate for serial tests with a controlled goroutine baseline; concurrent tests can otherwise look like leaks. See [goleak's parallel-test limitation](https://github.com/uber-go/goleak).
 
 Fuzz with corpus seeds; the invariant goes inside `f.Fuzz`:
 
@@ -148,22 +148,18 @@ slice you can't cover with one end-to-end test is too wide; narrow it.
 
 ## Quick Reference
 
-Always pass `-timeout` — the 10m default is far too long for a dev loop, and a
-deadlocked test otherwise stalls the whole session: `-timeout 2m` for unit runs,
-`-timeout 10m` for integration/testcontainers suites. Bake it into the project's
-Makefile (`GOTESTFLAGS`) rather than retyping it; see [[z-testing-strategy]] for
-the per-runner limit floor.
+Prefer the project wrapper. Standalone runs need a whole-process deadline, a per-test-binary timeout, and explicit package/test worker caps. Keep fixed bounds separate from optional selectors; see [[z-go-makefile]] and [[z-testing-strategy]]. Preserve approved caller-emitted commands.
 
 | Command | Purpose |
 |---|---|
-| `go test -timeout 2m ./...` | all tests |
-| `go test -timeout 2m -run TestName/subtest ./...` | specific subtest |
-| `go test -timeout 5m -race ./...` | race detection — when concurrency is in play; roughly doubles run time |
-| `go test -race -timeout 5m -count=1 ./...` | disable test caching — merge gates only, never the inner loop: an unchanged package re-runs in full; use the project's cached fast target narrowed to the touched packages |
-| `go test -timeout 10m -tags=integration ./...` | integration build tag |
-| `go test -timeout 10m -bench=. -benchmem ./...` | benchmarks |
-| `go test -timeout 10m -fuzz=FuzzName -fuzztime 30s ./...` | fuzzing — `-fuzztime` or it never stops |
-| `go test -timeout 5m -coverprofile=c.out ./... && go tool cover -html=c.out` | coverage |
+| `timeout 5m go test -parallel 4 -p 2 -timeout 2m ./...` | all tests |
+| `timeout 5m go test -parallel 4 -p 2 -timeout 2m -run TestName/subtest ./...` | specific subtest |
+| `timeout 5m go test -parallel 4 -p 2 -timeout 5m -race ./...` | race detection — when concurrency is in play; budget for its measured overhead |
+| `timeout 5m go test -parallel 4 -p 2 -race -timeout 5m -count=1 ./...` | disable caching when fresh execution is needed, especially service-backed integration tests; otherwise preserve the project's cached fast target |
+| `timeout 15m go test -parallel 4 -p 2 -timeout 10m -tags=integration ./...` | integration build tag |
+| `timeout 15m go test -parallel 4 -p 2 -timeout 10m -bench=. -benchmem ./...` | benchmarks |
+| `timeout 15m go test -parallel 4 -p 2 -timeout 10m -fuzz=FuzzName -fuzztime 30s ./path/to/package` | fuzzing — `-fuzztime` or it never stops |
+| `timeout 5m go test -parallel 4 -p 2 -timeout 5m -coverprofile=c.out ./... && go tool cover -html=c.out` | coverage |
 
 ## Do not
 
@@ -179,7 +175,7 @@ the per-runner limit floor.
 ## Verify
 
 ```sh
-go test -timeout 5m -race ./...
+timeout 5m go test -parallel 4 -p 2 -timeout 5m -race ./...
 ```
 
 Under a zapply dispatch, verify with the chunk's literal verify command instead — touched packages named literally, `-race` only when the chunk touched concurrency; `-race ./...` belongs to the caller's merge-gate floor.

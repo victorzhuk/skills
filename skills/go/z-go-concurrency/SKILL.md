@@ -177,7 +177,7 @@ func TestMain(m *testing.M) {
 ```
 
 ```sh
-go test -race -timeout 2m -p 2 -parallel 2 ./...
+timeout 5m go test -race -timeout 2m -p 2 -parallel 2 ./...
 runtime.NumGoroutine()           # runtime count
 curl http://localhost:6060/debug/pprof/goroutine?debug=2  # stack dump
 ```
@@ -185,7 +185,7 @@ curl http://localhost:6060/debug/pprof/goroutine?debug=2  # stack dump
 ## Verify
 
 ```sh
-go test -race -timeout 2m -p 2 -parallel 2 ./...
+timeout 5m go test -race -timeout 2m -p 2 -parallel 2 ./...
 golangci-lint run ./...
 ```
 

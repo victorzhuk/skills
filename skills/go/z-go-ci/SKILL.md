@@ -28,15 +28,16 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - run: go test -race -timeout 10m ./...
+      - run: timeout 15m go test -parallel 4 -p 2 -race -timeout 10m ./...
 ```
 
-Pin one Go version — either `go-version-file: go.mod` (tracks the module automatically) or a literal `go-version: "1.24"`. No version matrix by default. `-count=1` on integration jobs to disable caching for service-backed tests. Always `-timeout` — a hung test otherwise burns the runner until the job's 6-hour default kills it.
+Pin one Go version — either `go-version-file: go.mod` (tracks the module automatically) or the project's explicitly selected supported Go version. No version matrix by default. `-count=1` on integration jobs to disable caching for service-backed tests. Set a job deadline, a process deadline, a per-test-binary timeout, and package/test worker caps; none substitutes for all the others.
 
 ## Lint workflow
 
@@ -49,13 +50,18 @@ on: [push, pull_request]
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.13
 ```
+
+The action/linter pair above follows the [official compatibility example](https://github.com/golangci/golangci-lint-action#compatibility), checked 2026-10-13. Preserve a verified project pin and check runner/Go compatibility before upgrading it.
 
 ## Security workflow
 
@@ -68,6 +74,7 @@ on: [push, pull_request]
 jobs:
   govulncheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -90,6 +97,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
     steps:
@@ -108,45 +116,40 @@ Minimal `.goreleaser.yml`: `builds` → `main: ./cmd/myapp`, `goos: [linux, darw
 
 ## Docker workflow
 
-`.github/workflows/build.yml` — single context, single platform, triggered after CI passes:
+Add the publisher to the same workflow as the required `test`, `lint`, and `security` jobs. All jobs must check the same commit. The following job publishes trusted default-branch pushes only; a PR cannot enter the privileged path:
 
 ```yaml
-name: build
-on:
-  workflow_run:
-    workflows: [test]
-    types: [completed]
-
 jobs:
   build:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: [test, lint, security]
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: ghcr.io/${{ github.repository }}
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
 ```
+
+The snippets above are job ingredients, not independent publication gates: merge them under one workflow and name the vulnerability job `security`, or adjust `needs` to its actual ID. If an existing design requires `workflow_run`, restrict its triggering event/branch, bind checkout to the verified head SHA, and require every release check before publishing. Never execute an arbitrary PR head with registry credentials.
 
 One `docker/build-push-action` call, one platform. Multi-platform builds, provenance/sbom attestations, and image scanning are real options — see Optional hardening — not part of the baseline.
 
-Repository settings: branch protection on `master` (required status checks, PR approval, no force push); `contents: read` as the default workflow permission; grant write only per-job where needed; credentials in repository secrets, never inline.
+Repository settings: protect the actual default/release branch (required status checks, PR approval, no force push); `contents: read` as the default workflow permission; grant write only per-job where needed; credentials in repository secrets, never inline.
 
 ## Optional hardening
 

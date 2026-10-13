@@ -22,16 +22,16 @@ Can't name the trust boundaries? Not ready to secure the feature — most breach
 
 **Always (no exceptions):** validate all external input at the system boundary; parameterize every database query; encode output via the framework's auto-escaping; TLS for all external traffic; hash passwords with bcrypt/scrypt/argon2; security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options); httpOnly + secure + sameSite session cookies; dependency audit before release.
 
-**Ask the user first:** new or changed auth flows; storing new categories of sensitive data; new external integrations; CORS changes; file-upload handlers; rate-limit changes; granting elevated roles.
+**Resolve scope before changing:** auth flows, sensitive-data categories, external integrations, CORS, uploads, rate limits, or elevated roles. Existing user approval or an approved plan is sufficient; ask only when the proposed change exceeds it.
 
 **Never:** secrets in version control; sensitive data in logs; client-side validation as a security boundary; `eval`/`innerHTML` with user data; auth tokens in client-accessible storage; stack traces or internals in user-facing errors.
 
 ## Recurring patterns
 
 - **Authorization, not just authentication** — every endpoint checks that *this* user may act on *this* resource (`ownerId` match, role check); 403 otherwise.
-- **Schema validation at the boundary** — parse external input into a typed, validated shape (zod, JSON Schema, validator of the stack) before any business logic touches it; reject with 422 and field-level detail.
+- **Schema validation at the boundary** — parse external input into a typed, validated shape before business logic. Match the API’s documented status/error contract and avoid exposing sensitive field details.
 - **File uploads** — allowlist MIME types, cap size, never trust the extension; check magic bytes when it matters.
-- **SSRF** — server fetching a user-influenced URL (webhooks, import-from-URL, previews) must allowlist scheme and host, resolve DNS and reject private/reserved ranges (cloud metadata `169.254.169.254` is the #1 target), and forbid redirects. DNS rebinding remains — for high-risk surfaces, pin the resolved IP or front with a filtering agent.
+- **SSRF** — server fetching a user-influenced URL (webhooks, import-from-URL, previews) must allowlist scheme and host, resolve DNS and reject private/reserved ranges (cloud metadata `169.254.169.254` is the #1 target), and forbid redirects. Prevent DNS rebinding by enforcing the validated destination at connection time or using an egress filter that does so.
 - **Rate limiting** — general API limit plus a much stricter one on auth endpoints.
 - **Secrets** — only `.env.example` with placeholders is committed; real env files and key material are gitignored. A secret that ever reached a remote is compromised: rotate first, then purge history. Before committing: `git diff --cached | grep -iE 'password|secret|api_key|token'`.
 - **Supply chain** — commit the lockfile, install with the locked command (`npm ci` etc.) in CI, review new dependencies (maintenance, downloads, postinstall scripts), watch for typosquats. Audit findings triage by severity × reachability: critical/high and reachable → fix now; dev-only or unreachable → scheduled; deferred fixes get a documented reason and review date.

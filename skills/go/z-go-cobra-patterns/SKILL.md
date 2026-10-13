@@ -161,7 +161,7 @@ Never `Run` (can't return errors), `len(args)` in RunE, `os.Stdout`/`os.Stderr` 
 ## Verify
 
 ```sh
-go build ./... && go test -race -timeout 5m ./internal/cli/...
+go build ./... && timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./internal/cli/...
 ```
 
 ## Related skills

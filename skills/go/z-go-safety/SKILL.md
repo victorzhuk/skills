@@ -15,7 +15,7 @@ description: Defensive Go against panics and silent data corruption — nil pani
 | Bare type assertion | Always comma-ok: `v, ok := x.(T)` |
 | `defer` in loop | Extract body to a function |
 | Integer narrowing | Bounds-check against `math.MaxInt32` first |
-| Float `==` | `math.Abs(a-b) < 1e-9` |
+| Float comparison | choose domain-specific absolute/relative tolerances; handle NaN/infinity explicitly |
 | Iota enum | Plain `iota` from 0 with a real state at zero (default); `iota + 1` only if zero-as-invalid genuinely matters |
 | Mutable global | Inject `func() time.Time` |
 | Crypto keys | `rand.Read()` + `hex.EncodeToString` (or `rand.Int(rand.Reader, ...)`); `rand.Text()` (Go 1.24+) is a shorthand alt |
@@ -124,7 +124,7 @@ if val > math.MaxInt32 || val < math.MinInt32 {
 }
 ```
 
-Float: `math.Abs((a+b)-c) < 1e-9` not `a+b == c`. Guard division by zero.
+Float comparisons need scale-appropriate absolute/relative tolerances; no universal epsilon works for every domain. Decide how NaN, infinity and exact representable values should behave. Guard division by zero where the domain forbids it.
 
 ---
 
@@ -142,14 +142,7 @@ Float: `math.Abs((a+b)-c) < 1e-9` not `a+b == c`. Guard division by zero.
 
 ## Zero-Value & Initialization
 
-Design types so `var x T` is safe to use — init maps in the constructor or lazily. `sync.Once` for thread-safe lazy init:
-
-```go
-func (db *DB) conn() *sql.DB {
-    db.once.Do(func() { db.c, _ = sql.Open("postgres", dsn) })
-    return db.c
-}
-```
+Design zero values deliberately. Initialize fallible dependencies explicitly and return errors. If an existing API uses sync.Once, store both the value and initialization error; sync.Once will not retry a failed call. Do not discard sql.Open errors or assume opening validates connectivity; use a bounded PingContext when startup readiness requires it.
 
 Enums — plain `iota` from 0, with a real state at zero (observed default):
 `const ( Add Operation = iota; Subtract; Multiply )`. Use `iota + 1` only when

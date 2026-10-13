@@ -9,8 +9,8 @@ Write every artifact as a human maintainer would, with no trace of the process t
 
 ## Core rules
 
-- Never mention AI tools, models, or assistants in code, docs, comments, configs, commits, or changelog entries.
-- Never state that code was "generated" or "AI-assisted," and never leave meta-commentary about the generation process.
+- Omit irrelevant authorship and generation claims. Preserve accurate tool/model names when they are the artifact’s subject, integration contract, or required attribution.
+- Omit generation meta-commentary except genuine generated-file markers, required licenses, or provenance the artifact’s contract requires.
 - Never cite an internal rule name, prompt, or instruction you're following inside the artifact itself — the artifact should stand on its own.
 - Exception: planning artifacts that need traceability (change proposals, task briefs, test plans, QA reports, internal review reports) may cite real tracker/ticket IDs — that's operator-facing traceability, not process metadata.
 - Diagnostic reports may include evidence and verification commands; put tool/process detail in a debug appendix only when the artifact's audience explicitly wants that.

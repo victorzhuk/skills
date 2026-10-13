@@ -9,9 +9,9 @@ RAII owns every resource — if a type manages one without it, that's the bug to
 
 ## Baseline standard
 
-- target C++20 by default — universally available across current GCC/Clang/MSVC
-- treat C++23 as available only after checking the actual toolchain pin (`--std=c++23` and see if it compiles, or check `CMakePresets.json`) — don't assume it's there
-- C++26 (ratified by WG21 in March 2026) is experimental-only right now — only bleeding-edge GCC and a forked Clang implement the new reflection/contracts features; don't target it for anything that ships
+- Use the project's standard; C++20 is the house baseline for new code. Check compiler and standard-library support for each required feature.
+- For C++23, inspect the toolchain pin and CMake presets, then compile a representative use (`-std=c++23` on GCC/Clang). A language-mode flag alone does not prove library completeness.
+- C++26 completed its technical work in March 2026; that is not final ISO publication. Check the current standard status and compiler feature tables before adopting reflection or contracts.
 
 ## RAII and ownership
 
@@ -47,7 +47,7 @@ RAII owns every resource — if a type manages one without it, that's the bug to
 ## Verify
 
 - `cmake --build .` with warnings-as-errors
-- `ctest`
+- Existing test wrapper first; otherwise `timeout 5m ctest --timeout 120 --parallel 4`.
 - the sanitizer build run through the real test suite, not just compiled
 
 See [[z-rust-core]] for the equivalent ownership discipline in Rust.

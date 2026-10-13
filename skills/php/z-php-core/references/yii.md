@@ -4,11 +4,11 @@ Most Yii2 work is maintaining an app someone else wrote years ago, not greenfiel
 
 ## Support status
 
-Yii2 has no fixed end-of-life date — the project's stated policy ties Yii2 support to five years past Yii3's official release, not a calendar cutoff. Yii 1.1 (the older branch) has its own separate, extended support timeline. Don't state a specific Yii2 EOL date without checking the current release-cycle page (`yiiframework.com/release-cycle`) or find-docs first — the policy has been discussed for revision and a stale date is worse than none.
+Check the installed Yii release against the [official release cycle](https://www.yiiframework.com/release-cycle) before stating support or end-of-life dates. Yii 1.1, Yii 2, and Yii 3 have separate policies; do not substitute an older relative-date policy for the current table.
 
 ## ActiveRecord patterns
 
-- `ActiveRecord::find()` and query methods return the model itself for chaining — same N+1 risk as any ORM: `with('relation')` eager-loads, a bare `foreach` over a collection followed by `->relatedModel` access without `with()` fires one query per row.
+- `ActiveRecord::find()` returns an `ActiveQuery`; query methods chain on that query until execution — same N+1 risk as any ORM: `with('relation')` eager-loads, a bare `foreach` over a collection followed by `->relatedModel` access without `with()` fires one query per row.
 - Validation rules live in the model's `rules()` method, keyed by scenario — see the scenario section below before touching an existing `rules()` array, its conditions are often load-bearing for behavior you can't see from the method alone.
 - Business logic creeps into AR models over time in inherited apps (`save()` overridden with side effects, static methods doing orchestration). Don't add more of it — new logic goes in a service/component, even if the surrounding model doesn't already separate it.
 

@@ -9,9 +9,15 @@
     },
     {
       "id": "TM1",
-      "path": "scripts/block-dangerous-git.sh",
+      "path": "scripts/test_check_git.py",
+      "message": "*git*push*origin*main\",*\"git*-C*/tmp*push*origin*main\",*\"git*-C*'/tmp/repo*with*spaces'*--no-pager*push\",*\"git*-c*advice.pushUpdateRejected=false*push\",*",
+      "reason": "reviewed 2026-10-13: literal negative-test input passed to the parser; no destructive Git operation is executed"
+    },
+    {
+      "id": "TM1",
+      "path": "scripts/test_check_git.py",
       "message": "*git*reset*--hard*",
-      "reason": "reviewed 2026-09-26"
+      "reason": "reviewed 2026-10-13: literal negative-test input passed to the parser; no destructive Git operation is executed"
     }
   ],
   "fingerprints": []

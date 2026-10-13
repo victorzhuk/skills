@@ -21,6 +21,9 @@ jobs:
       - name: Check skill metadata
         run: npm run check
 
+      - name: Check Git filter
+        run: timeout 60s npm run test:guard
+
   scan:
     name: Scan skills
     runs-on: ubuntu-latest

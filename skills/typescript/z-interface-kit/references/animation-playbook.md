@@ -351,11 +351,8 @@ or paint (background-color, box-shadow, border). Both are expensive.
 
 ### CSS vs JavaScript animations
 
-- **CSS animations and transitions** run off the main thread on the compositor. Use them
-  for predetermined animations (hover effects, enter/exit, state changes).
-- **Framer Motion `x`/`y` props are NOT hardware-accelerated.** They animate inline
-  styles, which run on the main thread. Use the full transform string or CSS-based
-  approaches for performance-critical animations.
+- **CSS animations and transitions** can run on the compositor for eligible properties and conditions. Verify with browser performance tools; CSS is not itself a guarantee.
+- Motion library acceleration depends on the installed version, API, and animated property. Measure the actual animation rather than inferring its execution thread from a prop name.
 - **CSS variables on parent elements** cause expensive style recalculation when updated.
   If animating a CSS variable, update the `transform` property directly instead.
 
@@ -373,7 +370,7 @@ element.animate(
 );
 ```
 
-WAAPI runs on the compositor like CSS animations but is controlled from JavaScript.
+WAAPI is controlled from JavaScript and may use compositor execution for eligible properties. Profile the actual effect.
 
 ### Blur and filter performance
 
@@ -384,7 +381,7 @@ WAAPI runs on the compositor like CSS animations but is controlled from JavaScri
 ### will-change
 
 - Only use `will-change` for `transform`, `opacity`, or `filter`.
-- **Never** use `will-change: all` — it promotes every property and wastes GPU memory.
+- `will-change: all` is invalid. Name only the measured property needing preparation; unnecessary hints can consume resources.
 - Add `will-change` only when you observe first-frame stutter on an animation. It is a
   last resort, not a default.
 - Remove `will-change` after the animation completes if the element is long-lived.
@@ -416,9 +413,7 @@ wrong. The component should feel right out of the box.
 
 ### Use transitions, not keyframes, for dynamic UI
 
-Toasts are added rapidly and unpredictably. Keyframe animations have fixed timelines
-that cannot adapt to rapid state changes. CSS transitions respond to the current state
-and interpolate naturally.
+Toasts change rapidly. Transitions naturally retarget from the current state. Keyframe animations can also be paused or cancelled; manage those transitions explicitly when using them.
 
 ### Handle edge cases invisibly
 

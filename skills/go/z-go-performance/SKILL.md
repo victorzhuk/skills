@@ -11,20 +11,19 @@ Profile → hypothesize → change ONE thing → re-measure. Choose CPU, allocat
 
 Before touching Go code, verify the bottleneck is *in your process* — if 90% of latency is a slow DB query or upstream API, reducing allocations won't help.
 
-```bash
-fgprof -http :6060 &
-```
+Use the project's existing CPU, wall-time and trace instrumentation. If adding fgprof, follow the pinned package's integration instructions; it is not a universal standalone `-http` launcher.
 
 ## Iteration cycle
 
 ```bash
+set -o pipefail
 timeout 5m go test -run='^$' -bench=BenchmarkFoo -benchmem -count=10 -cpu=2 -timeout 2m -p 2 -parallel 2 ./pkg/... | tee bench-before.txt
-# apply ONE change
+# apply ONE change; these sequential runs are exploratory, not a causal A/B claim
 timeout 5m go test -run='^$' -bench=BenchmarkFoo -benchmem -count=10 -cpu=2 -timeout 2m -p 2 -parallel 2 ./pkg/... | tee bench-after.txt
 benchstat bench-before.txt bench-after.txt
 ```
 
-Paste `benchstat` output in the commit body (`perf(scope): ...`). Never claim improvement with `~` (no statistical significance).
+Record the measurement evidence with the change. Use the paired/interleaved design in [[z-go-bench-ab]] before claiming a small causal improvement; sequential before/after runs can be confounded by machine drift. `~` alone neither proves equality nor demonstrates an improvement.
 
 For A/B validity traps — interleaving, arm symmetry, control cells, contention-profile attribution — see [[z-go-bench-ab]].
 
@@ -161,14 +160,12 @@ For a measured indexing hotspot, inspect bounds checks with `go build -gcflags='
 
 ## I/O & networking
 
-`http.DefaultTransport` caps `MaxIdleConnsPerHost` at 2 — always configure:
+For a measured connection-reuse bottleneck, clone the default transport before tuning it:
 
 ```go
-transport := &http.Transport{
-    MaxIdleConnsPerHost: 64,
-    MaxIdleConns:        256,
-    IdleConnTimeout:     90 * time.Second,
-}
+transport := http.DefaultTransport.(*http.Transport).Clone()
+transport.MaxIdleConnsPerHost = 64
+transport.MaxIdleConns = 256
 ```
 
 Prefer streaming over read-all for large payloads (`io.Copy`, `json.Decoder` over `json.Unmarshal` on a fully-buffered body). Batch DB operations — one `INSERT ... VALUES (…),(…)` beats N single-row inserts.
@@ -204,6 +201,7 @@ Precompile regexps at init, precompute lookup tables, cache parsed config. For p
 ## Verify
 
 ```bash
+set -o pipefail
 timeout 5m go test -run='^$' -bench=. -benchmem -count=10 -cpu=2 -timeout 2m -p 2 -parallel 2 ./... | tee bench-after.txt
 benchstat bench-before.txt bench-after.txt
 go build -gcflags="-m=2" ./... 2>&1 | rg "escapes to heap"

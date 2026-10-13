@@ -24,11 +24,33 @@ func NewBot(token string, client *http.Client) *Bot {
 }
 ```
 
-### Per-method request/response (real default)
+`http.Client.Do` errors include the request URL, whose path contains the bot token. Sanitize request-construction and transport errors before returning them; URL.Redacted only covers userinfo passwords, not this path. Keep the underlying cause for errors.Is/As, but never log it separately:
 
-Each method marshals its body, POSTs, and decodes the `{ok, result,
-description}` envelope inline. This is what real code does — repeated
-boilerplate per method, no shared helper:
+```go
+type transportError struct {
+    message string
+    cause   error
+}
+
+func (e *transportError) Error() string { return e.message }
+func (e *transportError) Unwrap() error { return e.cause }
+
+func safeTransportError(err error) error {
+    var ue *url.Error
+    if errors.As(err, &ue) {
+        err = ue.Err
+    }
+    return &transportError{message: "telegram transport failed", cause: err}
+}
+```
+
+Validate a nonempty token at configuration time. Test transport and URL-parse failures with a synthetic token and assert no returned message contains it.
+
+### Per-method request/response
+
+For a small client, each method can marshal its body, POST, and decode the
+`{ok, result, description}` envelope inline. Share the transport/error handling
+once repetition would make fixes drift between methods:
 
 ```go
 func (b *Bot) SendMessage(ctx context.Context, chatID int64, text, parseMode string) error {
@@ -43,12 +65,12 @@ func (b *Bot) SendMessage(ctx context.Context, chatID int64, text, parseMode str
 	u := "https://api.telegram.org/bot" + b.token + "/sendMessage"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("sendMessage: new request: %w", err)
+		return fmt.Errorf("sendMessage: new request: %w", safeTransportError(err))
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := b.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("sendMessage: %w", err)
+		return fmt.Errorf("sendMessage: %w", safeTransportError(err))
 	}
 	defer func() { _ = resp.Body.Close() }()
 	var envelope struct {
@@ -93,12 +115,12 @@ func call[T any](ctx context.Context, b *Bot, method string, body any) (T, error
 	u := "https://api.telegram.org/bot" + b.token + "/" + method
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(encoded))
 	if err != nil {
-		return zero, fmt.Errorf("%s: new request: %w", method, err)
+		return zero, fmt.Errorf("%s: new request: %w", method, safeTransportError(err))
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := b.client.Do(req)
 	if err != nil {
-		return zero, fmt.Errorf("%s: %w", method, err)
+		return zero, fmt.Errorf("%s: %w", method, safeTransportError(err))
 	}
 	defer func() { _ = resp.Body.Close() }()
 	var envelope struct {
@@ -169,7 +191,7 @@ const mdv2Reserved = "_*[]()~`>#+-=|{}.!"
 func EscapeMarkdownV2(s string) string {
 	var b strings.Builder
 	for _, r := range s {
-		if strings.ContainsRune(mdv2Reserved, r) {
+		if r == '\\' || strings.ContainsRune(mdv2Reserved, r) {
 			b.WriteByte('\\')
 		}
 		b.WriteRune(r)
@@ -179,8 +201,7 @@ func EscapeMarkdownV2(s string) string {
 ```
 
 Call `EscapeMarkdownV2` on every dynamic value (user names, IDs, numbers
-formatted as strings). Static decoration characters in the template (`*bold*`,
-`_italic_`) are already written escaped by hand.
+formatted as strings). Keep intentional template markup separate from escaped plain-text values. Code/pre blocks and link destinations have different escape rules; this helper is for ordinary text, not those contexts.
 
 ## Webhook security
 
@@ -192,7 +213,7 @@ before processing the body:
 ```go
 func validateWebhookSecret(r *http.Request, expected string) bool {
 	got := r.Header.Get("X-Telegram-Bot-Api-Secret-Token")
-	return subtle.ConstantTimeCompare([]byte(got), []byte(expected)) == 1
+	return expected != "" && subtle.ConstantTimeCompare([]byte(got), []byte(expected)) == 1
 }
 ```
 
@@ -274,7 +295,7 @@ func (b *Bot) CreateInvoiceLink(
 		"title":          title,
 		"description":    description,
 		"payload":        payload,
-		"provider_token": "", // must be empty string for Stars, not omitted
+		"provider_token": "", // Stars use no payment-provider token
 		"currency":       "XTR",
 		"prices":         prices,
 	})
@@ -310,7 +331,7 @@ payment given the charge ID from the successful-payment update.
 
 - Compare secrets or tokens with `==` — use `subtle.ConstantTimeCompare` for
   secret/token comparison, `hmac.Equal` only for digest-vs-digest checks.
-- Omit `provider_token` from Stars invoice requests — it must be `""`, not absent.
+- Supply a payment-provider token for Stars. The current API marks this field optional; an explicit empty string follows its documented Stars example ([Bot API](https://core.telegram.org/bots/api#sendinvoice)).
 - Embed dynamic values in MarkdownV2 text without `EscapeMarkdownV2`.
 - Call `context.Background()` inside bot methods — propagate `ctx` from the caller.
 - Skip `defer resp.Body.Close()` — leaks the HTTP connection.
@@ -327,7 +348,7 @@ rg 'subtle\.ConstantTimeCompare' internal/
 # Confirm no bare == on secret/token strings
 rg '(secret|hash|token).*==|== .*(secret|hash|token)' internal/
 
-go test -race -timeout 5m ./internal/infra/telegram/...
+timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./internal/infra/telegram/...
 ```
 
 ## See also

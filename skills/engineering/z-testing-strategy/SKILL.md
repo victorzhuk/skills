@@ -5,95 +5,90 @@ description: Choose test depth by type of work, not a fixed coverage target — 
 
 # Testing strategy
 
-Before writing code with observable behavior, classify the work and pick the matching test depth — then write the failing test before the implementation. Under a zapply dispatch the mode arrives fixed in the prompt — apply it, don't re-derive it.
+Choose test depth by risk and existing guarantees. Default to test-first for observable behavior.
 
-## Step 1 — classify
+## Preserve the agreed contract
 
-**Observable behavior** (needs a test before the code): API/CLI response, business workflow, permission or auth check, billing/money/retry/idempotency, state transition, persistence effect, external side effect, user-visible error, a bug someone can describe by what the system does wrong.
+Use the caller's approved testing mode, flow, seams, and verification scope. An approved tests-after flow remains valid. Do not reopen those decisions because a skill loaded. Under zapply, the dispatch supplies this contract; report missing decisions to the driver.
 
-**Internal-only** (a test may not be worth it): private helper, mechanical refactor with no behavior change, generated code, a mapper with no logic.
+Without an agreed flow, propose test-first and the lowest interface that proves the behavior. Confirm genuinely unresolved seam decisions before expanding scope.
 
-## Step 2 — pick the mode
+## Classify the work
 
-| Work type | Mode | Depth |
-|---|---|---|
-| New MVP/greenfield service | MVP | Tight TDD on core business behavior; light integration smoke only |
-| New feature in an existing service | Existing-service | Regression/characterization test first; cover recurrent cases around the touch point |
-| Bug fix in an existing service | Existing-service | Reproduction test first, then the fix |
-| Refactor with no intended behavior change | Existing-service | Characterization test around the touched behavior before moving code |
-| Risky domain — auth, money, data loss, permissions, irreversible state | Existing-service depth, even inside an MVP | Cover the edge cases before shipping, regardless of project maturity |
+Observable behavior includes API/CLI responses, business rules, permissions, money, retries, state transitions, persistence, external effects, and user-visible errors.
 
-### MVP / greenfield
+Mechanical edits, generated code, trivial mappings, and internal refactors may need existing checks rather than new tests. Read existing coverage before adding a test.
 
-Goal: learn fast without freezing an unstable design.
-
-- Start business behavior with TDD: one failing test per small behavior, smallest code to pass, refactor while green.
-- Prefer domain/use-case tests over transport tests.
-- Add one smoke integration test per real boundary that can break independently (DB, HTTP, queue, external client).
-- Cover: one happy path, one main business rejection, one real integration path, and any auth/money/permissions/data-loss rule even at this stage.
-- Skip: DTO/getter/setter tests, framework-boot tests, mapper tests with no logic, exhaustive validation matrices, scaffolding that will be deleted soon.
-- Done when: core behavior is executable as tests, one real integration boundary is exercised, and anything deferred is named explicitly rather than silently dropped.
-
-### Existing business service
-
-Goal: change behavior without losing what's already guaranteed.
-
-- Read the existing tests before writing code.
-- Add a failing test before changing behavior — regression for a fix, characterization for a refactor, new-behavior test for a feature.
-- Cover, when touched: permissions, validation boundaries, state transitions, idempotency/retries, persistence and transaction behavior, external side effects, user-visible error mapping, backward compatibility, migrations.
-- Run the targeted test first, then the relevant suite through the project's own wrappers — under a zapply dispatch, stop at the targeted run; the suite is the caller's merge-gate floor.
-- Done when: old behavior stays covered, new behavior has direct tests, bug fixes carry a reproduction test, and no test is left flaky or skipped without a reason.
-
-## Step 3 — does this need a behavior contract (Gherkin/BDD)?
-
-Reach for a Gherkin/BDD-style contract when the behavior is readable by more than developers: a business workflow, an API/CLI contract, permissions/auth, billing/retries/idempotency, a cross-service or infrastructure boundary, or anything that doubles as release evidence.
-
-Prefer an ordinary test when the behavior is purely internal: an algorithm invariant, a validation helper, a parser/formatter edge case, a fast domain rule better expressed as a table test.
-
-If the project has no BDD harness and the behavior clearly warrants one, use the nearest behavior-level test in the ordinary framework and ask before adding a new dependency.
-
-## Test layer choice
-
-| Need | Layer |
+| Work | Default depth |
 |---|---|
-| Fast business feedback | domain/use-case unit test |
-| Contract with storage | repository integration test |
-| Request/response behavior | handler/API integration test |
-| External service behavior | adapter contract test with a fake/stub |
-| Critical user journey | E2E test |
-| Unknown legacy behavior | characterization test |
-| A previous production bug | regression test that fails before the fix |
+| MVP or greenfield | Core behavior tests plus smoke checks at real boundaries |
+| Feature in an existing service | New behavior and regression coverage around the touched contract |
+| Bug fix | Reproduction test that fails without the fix |
+| Refactor | Passing characterization coverage before moving behavior |
+| Auth, money, permissions, data loss | Existing-service depth even in an MVP |
 
-Prefer the lowest layer that proves the user-visible behavior; move up only when the lower layer would hide the real risk.
+### MVP
+
+- Test the main behavior, its principal rejection, and relevant auth/money/data-loss rules.
+- Prefer domain/use-case tests when they prove the outcome.
+- Exercise each touched real boundary that can fail independently.
+- Skip getters, DTOs, framework boilerplate, and logic-free mappers.
+- Name deferred risks; do not imply untested boundaries are verified.
+
+### Existing service
+
+- Read existing tests and identify guarantees callers already depend on.
+- Default to a failing behavior test before a feature or fix. Characterization tests for an unchanged refactor should pass first.
+- Cover touched validation, permissions, transactions, state, retries, error mapping, compatibility, and migrations.
+- Follow an already-approved tests-after flow when supplied. Still prove a regression test fails without the fix.
+- Run the targeted check and the relevant repository suite. Under zapply, run only the dispatched checks; the caller owns the merge floor.
+
+## Choose the layer
+
+| Risk | Lowest useful layer |
+|---|---|
+| Business rule or algorithm | Domain/use-case test |
+| Storage contract | Repository integration test |
+| Request/response behavior | Handler/API test |
+| External dependency behavior | Adapter contract test |
+| Critical journey across layers | E2E test |
+
+Move up when a lower layer hides the actual failure. Several implementation files may share one tested interface; one test file per source file is not a goal.
+
+Use BDD/Gherkin when a business-readable contract has an audience: workflows, permissions, billing, or release evidence. Use ordinary tests for internal algorithms and small rules. Without a BDD harness, use the existing framework; adding a dependency is a separate decision.
 
 ## Resource limits
 
-Never run a suite unbounded on a dev machine — a hung test blocks the session and a parallel storm eats every core. Every test invocation carries a wall-clock timeout, plus a worker cap where the runner parallelizes by default:
+Distinguish three controls:
 
-| Runner | Limit |
-|---|---|
-| `go test` | `-timeout 2m` unit, `-timeout 10m` integration; `-fuzz` needs `-fuzztime` |
-| `cargo test` | `timeout 5m cargo test -- --test-threads=4` — no built-in timeout |
-| vitest | `--maxWorkers=50%`, or `maxWorkers`/`testTimeout` in vitest.config |
-| playwright | `--workers=2` plus `globalTimeout` in playwright.config |
-| pytest | pytest-timeout `--timeout=60`, or a `timeout 10m` prefix |
+- A **process deadline** bounds setup, builds, execution, and shutdown.
+- A **test timeout** identifies an individual hung test or test binary.
+- **Parallel limits** bound packages, workers, tests, and build jobs where applicable.
 
-Land limits in the project's runner once — Makefile `GOTESTFLAGS`, vitest/playwright config, pytest `addopts` — instead of repeating inline flags. If the project's runner has no limits at all, ask the user, tune the config, then run.
+Inspect repository wrappers and effective settings first. Use existing limits. For ordinary runs lacking them, apply temporary invocation bounds; persistent runner edits are a separate tooling change.
 
-## Reporting evidence
+| Runner | Test control | Parallel control |
+|---|---|---|
+| Go | `-timeout 2m` unit or `10m` integration, per binary; fuzzing also needs `-fuzztime` | `-p` for packages/build jobs; `-parallel` for parallel tests/fuzz workers |
+| Cargo | External process deadline; no built-in test timeout | `--jobs` for builds; `-- --test-threads` for tests |
+| Vitest | Installed-version `testTimeout` and hook timeouts | `maxWorkers`, for example `50%` |
+| Playwright | Test/hook timeouts and `globalTimeout` for the run | `workers`, for example `2` |
+| pytest | `--timeout` only with pytest-timeout installed | Bound xdist `-n` if enabled; ordinary pytest is serial |
 
-When a behavior-changing task is done, state: what changed, which test/scenario proves it, the command that ran it, and the report path if one was generated. If no behavior test was added, say why in one sentence — don't leave it implicit.
+Use a host deadline or an available `timeout` wrapper for the whole invocation. Allow enough time for expected setup and cleanup. Per-test timeouts do not bound dependency downloads or compilation. Choose explicit worker values appropriate to the machine and record the effective limits.
+
+**Kernel-emitted commands are contracts.** Execute literal commands through the driver's prescribed lifecycle. Do not add flags, deadlines, or workers silently. Report a required but missing limit to the workflow owner.
 
 ## Do not
 
-- Chase a coverage percentage by testing boilerplate (getters, DTOs, framework wiring).
-- Mock the unit under test.
-- Assert a whole struct when one field is the actual contract.
-- Write Gherkin for a private helper or generated code — it adds ceremony with no audience.
-- Leave a skipped or flaky test without an owner and a reason.
-- Treat "MVP" as license to skip auth/money/permissions/data-loss coverage.
-- Run a suite with no timeout or worker cap — fix the runner config, don't fight the machine.
+- Chase coverage percentages through boilerplate tests.
+- Mock the unit under test or recompute expected values with its implementation.
+- Treat MVP scope as permission to omit high-risk rules.
+- Leave flaky/skipped tests without a reason and owner.
+- Rewrite a dispatched command to satisfy a generic example.
 
 ## Verify
 
-State in the plan or PR: testing mode chosen (MVP or existing-service), the test(s) written first, anything deliberately deferred, and the command used to run them.
+Report testing mode, approved flow and seams, command, effective limits, observed result, and deferred risks. A timeout means incomplete verification. If no new behavior test was warranted, explain why.
+
+see [[z-tdd]], [[z-go-testing]], [[z-go-bdd]], [[z-verify-before-done]]

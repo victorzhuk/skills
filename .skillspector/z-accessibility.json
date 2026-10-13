@@ -29,6 +29,12 @@
       "id": "RP1",
       "path": "references/testing-triage.md",
       "reason": "reviewed 2026-09-26"
+    },
+    {
+      "id": "P2",
+      "path": "SKILL.md",
+      "message": "*<!--*main*content*-->*</main>*</body>*```*```css*.skip-link*{*position:*absolute;*top:*-40px;*left:*0;*background:*#000;*color:*#fff;*padding:*8px*16px;*z-index:*100;*}*.skip-link:fo*",
+      "reason": "reviewed 2026-10-13: HTML example placeholders and skip-link CSS contain no hidden behavioral instruction."
     }
   ],
   "fingerprints": []

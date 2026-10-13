@@ -5,10 +5,7 @@ description: Author a Taskfile.yml (go-task) for orchestration around a Go proje
 
 # Go Taskfile (orchestration)
 
-Task owns **orchestration**: docker, databases, data pipelines, CLI shortcuts, E2E
-harnesses — the multi-step, environment-touching commands. The Go inner loop
-(build/test/lint) stays in the Makefile (see [[z-go-makefile]]); Task delegates to it so
-each command has exactly one definition.
+Preserve the project's existing build tool and approved commands. When Make and Task coexist, let Task compose environment operations and delegate existing build/test targets to [[z-go-makefile]]. Do not add Make to a Task-only project merely to enforce this split.
 
 ## Single source of truth — delegate, don't duplicate
 
@@ -28,7 +25,7 @@ build: { desc: Build the app, cmds: [make build] }
 ```
 
 A copied-out `go build`/`golangci-lint` drifts from the Makefile (missing flags, stale
-install step). Delegation keeps them identical.
+install step). Delegation keeps them identical. The Makefile must keep process/test timeouts and concurrency caps separate from `GOTESTFLAGS`, which carries optional selectors only; see [[z-go-makefile]]. A command-line assignment, even empty, overrides a Make `?=` default.
 
 ## Discoverability
 
@@ -53,7 +50,8 @@ tasks:
 migrate:create:
   desc: Create a migration (NAME=... required)
   requires: { vars: [NAME] }
-  cmds: [go tool goose -dir {{.MIGDIR}} create {{.NAME}} sql]
+  cmds:
+    - 'go tool goose -dir {{.MIGDIR | shellQuote}} create {{.NAME | shellQuote}} sql'
 ```
 
 - Free-form passthrough to a CLI: `{{.CLI_ARGS}}` (everything after `--`):
@@ -61,7 +59,8 @@ migrate:create:
 ```yaml
 run:
   desc: 'task run -- --source X --limit 10'
-  cmds: [go run ./cmd/tool {{.CLI_ARGS}}]
+  cmds:
+    - 'go run ./cmd/tool {{.CLI_ARGS}}'
 ```
 
 - Dynamic values via `sh:` (computed once at parse):
@@ -81,7 +80,8 @@ vars:
 migrate:up:
   desc: Apply migrations
   deps: [db:up]
-  cmds: [go tool goose -dir {{.MIGDIR}} postgres "$DATABASE_URL" up]
+  cmds:
+    - 'go tool goose -dir {{.MIGDIR | shellQuote}} postgres "$DATABASE_URL" up'
 
 db:nuke:
   desc: Drop the database volume (DESTRUCTIVE)

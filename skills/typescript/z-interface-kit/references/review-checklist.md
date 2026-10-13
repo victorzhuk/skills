@@ -78,7 +78,7 @@ Extended 30-item checklist for UI implementation quality. Run through this befor
 - **Failing looks like**: Inconsistent spacing that makes the layout feel uneven
 
 ### 14. Hit Areas Meet Minimum
-- **Check**: All interactive elements have at least 44×44px clickable area
+- **Check**: Check WCAG 2.2 AA target size (24 CSS px or a defined exception); prefer 44px for touch when practical
 - **How**: Use browser DevTools to measure element + padding dimensions
 - **Failing looks like**: Tiny icon buttons, close buttons, or links that are hard to tap on mobile
 

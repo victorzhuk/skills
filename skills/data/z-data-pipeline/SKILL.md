@@ -9,7 +9,8 @@ Analytics pipelines default to append-only, idempotent, and ClickHouse-shaped. R
 
 ## Batch ingestion
 
-- Idempotent loads: key every batch (source id + batch id, or a natural business key) so a rerun after a partial failure doesn't double-count. ClickHouse: `ReplacingMergeTree` keyed on that id, or dedupe at insert with an existence check. Postgres: `ON CONFLICT DO UPDATE`.
+- Key batches and events with stable identifiers. Use atomic conflict handling or the engine's documented insert-deduplication contract. A separate existence check can race another writer. PostgreSQL: use a matching unique constraint with `ON CONFLICT`.
+- `ReplacingMergeTree` deduplicates during background merges, not immediately. Use the intended `FINAL`/`argMax` query semantics for correct logical results. Verify concurrent replay and partial failures; do not promise unchanged physical row counts.
 - Backfill one partition or date range at a time, not "truncate and reload everything." A backfill that touches the whole table blocks readers and hides the actual gap you're fixing.
 
 ## Append-only modeling
@@ -36,7 +37,7 @@ One definition per metric, computed once — a view, a metrics table, a single q
 
 ## Data-quality gates at ingestion
 
-Run these immediately after load, before anything downstream reads the data:
+Load into staging or keep the batch unpublished. Run these checks before making it visible downstream:
 
 - **Row count** — expected vs actual, alarm past an N% deviation from the trailing average.
 - **Null threshold** — a required column's null rate crossing a set bound.
@@ -72,7 +73,7 @@ Reach for an orchestrator (dbt/Airflow-class) only once there's an actual DAG: m
 
 ## Verify
 
-- Rerunning the same batch leaves row counts unchanged (idempotency holds).
+- Replaying a batch, including concurrent and partial-failure retries, leaves published logical results unchanged. Distinguish logical results from physical rows when deduplication is asynchronous.
 - Freshness/row-count/null-threshold checks pass post-load on the actual data, not just "the job exited 0."
 - A late-arriving record lands in its correct event-time partition, not today's.
 

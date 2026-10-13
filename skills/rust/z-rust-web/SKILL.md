@@ -1,17 +1,24 @@
 ---
 name: z-rust-web
-description: Guardrail for Rust web work — no Axum/actix/sqlx/tower house convention exists yet in this corpus, so check the anchored facts (thiserror error enums, tracing-vs-log split) instead of inventing one, and defer to Axum's own docs for everything else. Triggers on rust web, actix, axum, sqlx, tower.
+description: Rust web stack discovery and boundaries — inspect the target service before choosing Axum, actix-web, sqlx, tower, or logging conventions. Use for Rust HTTP services and middleware. Core ownership and error handling belong to [[z-rust-core]].
 ---
 
 # Rust web
 
-No real Rust web service exists in this codebase yet. The Rust projects in this corpus are desktop GUI apps, not web servers — `axum`/`tower-http` only show up as transitive deps via `tonic`/`reqwest`, and no `Cargo.toml` declares `axum`, `actix-web`, `sqlx`, or `tower-http` directly. Treat everything here as reference material, not house convention — there's no anchor project to defer to.
+Inspect the target repository's manifests, lockfile, routes, adapters, and tests before proposing framework conventions. This catalog does not establish which framework an unrelated service uses.
 
-## What's actually anchored
+## Workflow
 
-- **Error enums**: use `thiserror` — real convention across the Rust projects in this corpus. See [[z-rust-core]] for the actual error-handling pattern; don't re-derive it here.
-- **Logging**: one project uses `tracing` + `tracing-subscriber`; another uses the older `log` crate instead. Split-brain — don't assert `tracing` as the settled default for this codebase.
+- Preserve the service's runtime, routing, error response, and logging patterns. Follow [[z-rust-core]] for ownership and typed errors.
+- Read the installed framework's official documentation for extractors, middleware order, body limits, authentication, and graceful shutdown. Use sqlx documentation for sqlx queries and migrations; do not infer them from Axum documentation.
+- Verify timeouts, cancellation, resource limits, and authorization at real HTTP boundaries. Use the existing bounded test wrapper and [[z-testing-strategy]].
 
-## Everything else
+## Do not
 
-For Router/extractors, `sqlx::query_as!`, tower middleware, and production hardening (graceful shutdown, health checks, TLS, deployment), go to Axum's own docs — there's no local convention to layer on top of them yet.
+- Infer direct dependencies or house conventions from another project's transitive dependencies.
+- Replace logging libraries or web frameworks without a requirement in the target service.
+
+## Verify
+
+- Identify direct dependencies and pinned versions supporting each proposed API.
+- Exercise the changed route through its actual middleware, including relevant error and authorization paths.

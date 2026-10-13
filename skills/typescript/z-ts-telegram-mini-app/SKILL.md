@@ -14,13 +14,9 @@ verification live server-side — see [[z-go-telegram-bot]].
 |---|---|
 | `@tma.js/sdk` (+ `@tma.js/sdk-react` for React) | Default. Any Mini App with a bundler — typed, tree-shakeable (`sideEffects: false`), one component per concern (`backButton`, `mainButton`, `viewport`, `themeParams`, `hapticFeedback`, `invoice`) |
 | Raw `window.Telegram.WebApp` | A single static page with one or two calls (`ready()`, `expand()`) and no bundler in play |
-| `@twa-dev/sdk` | Legacy code already on it — last released Feb 2025, don't start new work on it |
+| Existing SDK | Preserve it unless a required feature or support issue justifies migration |
 
-`@tma.js/sdk` is the same project once published as `@telegram-apps/sdk`
-(3.11.x, last release Oct 2025) — that scope stalled and development
-continued under `@tma.js/sdk` (3.2.x and climbing). If a tutorial imports from
-`@telegram-apps/sdk`, treat it as the same API under the old name, not a
-different library.
+Check the installed package name and major version against its migration guide. Tutorials for `@telegram-apps/sdk` or an earlier `@tma.js/sdk` major are not interchangeable API contracts. The examples below illustrate the component-style SDK; adapt them to verified installed signatures.
 
 ## initData is untrusted
 
@@ -37,12 +33,7 @@ const initDataRaw = retrieveRawInitData();
 fetch('/api/me', { headers: { Authorization: `tma ${initDataRaw}` } });
 ```
 
-Your backend verifies with HMAC-SHA256 over the bot token (the default —
-[[z-go-telegram-bot]] has the algorithm). Ed25519 verification (Bot API 8.0+;
-`validate3rd` in the JS/TS `@tma.js/init-data-node` server package) exists for
-a third party that must verify the data *without* your bot token — not a
-client-side concern either way, and not a replacement for the HMAC check when
-you own the bot.
+The backend must use Telegram's documented HMAC-SHA256 or Ed25519 validation procedure as appropriate, enforce freshness, and authorize the resulting identity. Never expose a bot token to the client. See [Telegram's validation instructions](https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app).
 
 ## Lifecycle: init → mount → ready
 
@@ -55,19 +46,17 @@ import { init, backButton, miniApp, viewport, themeParams } from '@tma.js/sdk';
 init();
 backButton.mount();
 miniApp.mount();
-viewport.mount();
+await viewport.mount();
 themeParams.mount();
 
 renderApp(); // your UI is now on screen
 
 if (miniApp.ready.isAvailable()) miniApp.ready();
-if (viewport.bindCssVars.isAvailable()) viewport.bindCssVars();
-if (themeParams.bindCssVars.isAvailable()) themeParams.bindCssVars();
+const unbindViewport = viewport.bindCssVars();
+const unbindTheme = themeParams.bindCssVars();
 ```
 
-`X.isAvailable()` guards every call whose underlying Bot API method may not
-exist on the user's Telegram client version — check it before every SDK
-method that isn't a pure getter, not just at startup.
+Await asynchronous mounts before calling APIs that require mounted state. Catch initialization failures and show a usable error state. Dispose CSS bindings and event subscriptions on teardown. Use the installed SDK's capability checks for version-dependent methods; not every helper exposes `.isAvailable()`.
 
 `viewport.expand()` grows to the maximum available height;
 `viewport.requestFullscreen()` (Bot API 8.0+) goes further and hides the
@@ -80,10 +69,10 @@ since the header is transparent in fullscreen.
 |---|---|---|
 | `viewport.height` | `--tg-viewport-height` | Live height, changes mid-gesture |
 | `viewport.stableHeight` | `--tg-viewport-stable-height` | Settled height — size layout off this, not `height` |
-| `viewport.safeAreaInsets()` | `--tg-safe-area-inset-*` | Device notch/home-indicator area |
-| `viewport.contentSafeAreaInsets()` | `--tg-content-safe-area-inset-*` | Area Telegram's own UI (header, bottom bar) overlays |
+| `viewport.safeAreaInsets()` | `--tg-viewport-safe-area-inset-*` | Device notch/home-indicator area |
+| `viewport.contentSafeAreaInsets()` | `--tg-viewport-content-safe-area-inset-*` | Area Telegram's own UI (header, bottom bar) overlays |
 
-Device notch and Telegram's UI chrome are two different insets — pad for both.
+Device notch and Telegram's UI chrome are different insets. Use the installed SDK's documented CSS bindings, and verify the resulting layout rather than blindly adding overlapping values.
 The device notch also needs the page-level opt-in:
 
 ```html
@@ -92,25 +81,13 @@ The device notch also needs the page-level opt-in:
 
 ```css
 .app {
-  padding-bottom: max(env(safe-area-inset-bottom), var(--tg-content-safe-area-inset-bottom, 0px));
+  padding-bottom: max(env(safe-area-inset-bottom), var(--tg-viewport-content-safe-area-inset-bottom, 0px));
 }
 ```
 
 ## Theme and dark mode
 
-`themeParams.bindCssVars()` exposes every theme color as
-`--tg-theme-{snake-to-kebab}` (`--tg-theme-bg-color`,
-`--tg-theme-button-color`, …) and `--tg-color-scheme` tracks `"light"` /
-`"dark"`. Style off these variables instead of hardcoding a palette — Telegram
-pushes `theme_changed` when the user flips their app theme, and the bound CSS
-vars update automatically.
-
-Android's WebView follows `color-scheme` automatically; iOS's WKWebView needs
-the explicit opt-in or native form controls stay light-only:
-
-```html
-<meta name="color-scheme" content="light dark">
-```
+Bind the installed SDK's theme variables and update them on theme changes. Confirm which component owns color-scheme binding; do not assume theme binding also creates `--tg-color-scheme`. Set the page's CSS `color-scheme` appropriately and test native controls in light and dark themes on supported clients.
 
 ## Navigation: BackButton
 
@@ -183,19 +160,9 @@ Two independent guards:
   a vertical swipe from the header area by default; disable it when your own
   UI has a competing vertical drag/scroll gesture near the top of the screen.
 
-## Platform quirks
+## Platform verification
 
-| Concern | iOS | Android | Desktop |
-|---|---|---|---|
-| WebView | WKWebView — strict, needs full cert chain | Chromium (Shared Runtime, ~119+) | Chromium (Electron) |
-| Dark mode | Needs explicit `<meta name="color-scheme">` | Follows `color-scheme` automatically | Follows `color-scheme` automatically |
-| Storage quota | ~5 MB before a prompt | ~50 MB before a prompt | Effectively unconstrained |
-| WebGL 2.0 | Disabled | Experimental | Enabled |
-| MainButton visibility | Hidden in the attachment panel until the user taps `/start` once | Visible immediately | Visible immediately |
-| Swipe-to-close | Swipe from header | Swipe from header | No gesture — closes via window chrome |
-
-Feature-detect (WebGL, storage) rather than branching on `platform` directly;
-`platform` tells you the client, not the capability.
+Test supported Telegram clients and launch modes directly. Embedded browser engines, storage quotas, WebGL support, and available native controls vary by client, OS, and version. Feature-detect browser capabilities and use Telegram/SDK capability checks; the platform string alone is not a capability guarantee. Verify safe areas, keyboard resizing, storage failures, theme changes, and native button behavior.
 
 ## Stars payments (client flow)
 
@@ -241,18 +208,7 @@ a web app at all, so plain `localhost` never works inside a real client:
    iteration than re-tunneling on every restart, at the cost of testing
    against a different backend.
 
-Outside any Telegram client, `window.Telegram` doesn't exist and every SDK
-call throws or no-ops. For browser-only development, mock it explicitly and
-gate the mock so it never ships:
-
-```ts
-import { isTMA } from '@tma.js/sdk';
-
-if (import.meta.env.DEV && !isTMA()) {
-  const { mockTelegramEnv } = await import('@tma.js/sdk');
-  mockTelegramEnv({ /* initDataRaw, themeParams, ... */ });
-}
-```
+For browser-only development, use the installed SDK's documented environment mock and a development-only entry point. Environment detection and mocking signatures vary by major; verify them before use. Ensure the production bundle cannot enable mocks.
 
 What breaks outside Telegram even with a mock: haptics (no-op, nothing to
 verify), Stars invoices (no real Bot API session), and any BackButton/
@@ -265,9 +221,7 @@ a plain browser tab.
   server-side, every request, before honoring the identity in it.
 - Call `ready()` before the UI is actually paintable — that just moves the
   blank-screen flash from "placeholder" to "your own blank page".
-- Call `viewport.expand()`/`requestFullscreen()`/`mainButton.setParams()`
-  without an `isAvailable()` guard — older Telegram clients silently lack
-  the method.
+- Call version-dependent SDK methods without the installed version's supported capability check.
 - Style off a hardcoded palette when `--tg-theme-*` vars exist — it breaks the
   instant a user switches Telegram's theme.
 - Fire haptics on every tap — reserve them for outcomes, not input events.
@@ -282,12 +236,14 @@ a plain browser tab.
 # No init-data field trusted for auth without a backend round-trip
 rg -n 'retrieveLaunchParams|retrieveRawInitData' src/ -A3
 
-# Every non-getter SDK call guarded by isAvailable()
-rg -n '\.isAvailable\(\)' src/
+# Inspect capability guards and mounted-state prerequisites against the installed SDK
+rg -n 'isAvailable|mount|bindCssVars' src/
 
 # No stray mockTelegramEnv import outside a dev-only branch
 rg -n 'mockTelegramEnv' src/
 ```
+
+Searches are review aids, not proof. Exercise initialization failure, teardown/remount, old-client fallbacks, and real-client viewport/theme changes. Check server authorization and payment confirmation independently of client signals.
 
 ## See also
 

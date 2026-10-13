@@ -16,13 +16,13 @@ Build Flutter clients as thin, typed consumers of an API — one Dart codebase p
 
 ## State management — Riverpod is house default
 
-- Riverpod 3 (`Notifier`/`AsyncNotifier` replacing `StateNotifier`) is actively maintained and the standard pick for a new Flutter project — use it unless the codebase already committed to Bloc/Provider
+- Riverpod is the house default for a new project. Check `pubspec.yaml`, the lockfile, and the installed major's migration guide before choosing APIs; preserve an existing Bloc/Provider design.
 - widgets stay dumb: read a provider, render, dispatch an event. Business logic and mutable state live in providers/notifiers, not in `State` objects
 - no `BuildContext` threading to reach state — that dependency is what Riverpod removes
 
 ## Project layout — feature-first
 
-- group by feature (`lib/features/orders/{data,domain,presentation}`), not by layer (`lib/models`, `lib/screens`, `lib/widgets`) — a feature should delete as one unit
+- Group by feature. Add `data`, `domain`, or `presentation` subdirectories only when existing code needs them; do not scaffold empty layers.
 - shared code (theming, the API client, common widgets) lives in `lib/core` or `lib/shared`
 
 ## API client discipline
@@ -53,4 +53,4 @@ Build Flutter clients as thin, typed consumers of an API — one Dart codebase p
 
 - `dart format --set-exit-if-changed .`
 - `flutter analyze`
-- `flutter test`
+- Existing bounded test wrapper first; otherwise use the installed runner's timeout and concurrency options inside a whole-process deadline. See [[z-testing-strategy]].

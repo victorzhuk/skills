@@ -3,138 +3,54 @@ name: z-qa-spec-writer
 description: 'Test framework auto-detection (Go testify/ginkgo/stdlib, JS/TS vitest/playwright, Python pytest) and compilable stub generation matched to the repo''s real import and assert style. Auto-activates for: test stub generation, test scaffolding, spec-first testing, framework detection, "add a skipped test for". Does not cover Gherkin/BDD scenarios or ginkgo priority Label tagging; see [[z-go-bdd]]. Does not cover writing the test plan itself; see [[z-qa-analyst]].'
 ---
 
-# Spec Writer QA Skill
+# Test scaffolding
 
-## Philosophy
+Generate skipped scaffolding only when requested. Executable regression tests and test-first implementation use [[z-tdd]].
 
-**Detect the framework, then speak its dialect** — read existing tests to learn the assertion
-library, import style, and naming before emitting a single stub. Rule: a stub that doesn't compile
-wastes more time than no stub — match the project's exact imports, never invent a framework it
-doesn't use.
+## Discover the dialect
 
-## Install
+Read the project runner, dependency manifest, test configuration, and one to three relevant tests. Match imports, assertions, names, fixtures, and module style.
 
-```bash
-# No installs required — the skill reads the project's existing toolchain
-# and reuses whatever the repo already declares:
-#   Go:     testing / testify / ginkgo   (go.mod)
-#   JS/TS:  vitest / playwright           (package.json)
-#   Python: pytest                        (pyproject.toml / conftest.py)
-```
+Detect the actual frameworks, including Jest, Vitest, Playwright, stdlib Go, testify, Ginkgo, or pytest when declared. Do not assume one from another project's history.
 
-## Framework Detection — Auto-detect
+Map requested scenarios to existing test interfaces. Several source files may be covered by one integration test; do not create one stub file per implementation file by default.
 
-```bash
-# Go: testify vs ginkgo vs stdlib
-rg -l 'testify/(assert|require|suite)' --type go && echo "-> testify"
-rg -l 'onsi/ginkgo' --type go && echo "-> ginkgo"
+## Write the stubs
 
-# JS/TS: read the manifest — vitest is the default assumption, playwright is
-# first-party for e2e (not a fallback), jest has no real footprint — don't detect for it
-jaq -r '.devDependencies // {} | keys[]' package.json 2>/dev/null | rg 'vitest|playwright'
-fd '^(vitest|playwright)\.config\.'
+- Reuse the project's skip/todo mechanism.
+- Name each test for the behavior from the approved plan.
+- Keep skipped bodies minimal and compilable; do not add meaningless assertions to consume imports.
+- Use only existing fixtures or clearly identified scaffolding placeholders.
+- Preserve acceptance IDs only when they already exist.
+- Record an owner/reason for deferred coverage according to project convention.
 
-# Python: pytest config + fixtures
-fd '^(pyproject\.toml|conftest\.py)$' && rg -l 'pytest' pyproject.toml conftest.py 2>/dev/null
-```
-Always read 1–3 existing test files of the detected framework **before** generating — copy their
-import block and assertion style verbatim.
+For a stdlib Go scaffold:
 
-## Go testify — Stub Pattern
 ```go
-// widget_test.go — stub for RejectExpiredJWT
-package widget
-
-import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
-)
-
-func TestRejectExpiredJWT(t *testing.T) {
-	tests := []struct {
-		name    string
-		token   string
-		wantErr bool
-	}{
-		{name: "expired token rejected", token: ""}, // TODO: real fixture
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Skip("stub: not implemented")
-			require.NotNil(t, tt)
-		})
-	}
+func TestRejectExpiredToken(t *testing.T) {
+    t.Skip("pending implementation")
 }
 ```
-Ginkgo variant (when `onsi/ginkgo` is detected): `var _ = Describe("...", func(){ It("...", func(){ Skip("stub") }) })`.
-Priority tagging via `Label("p0"/"p1"/"p2")` is a real ginkgo convention — see [[z-go-bdd]]; don't
-invent your own ID scheme on top of it.
 
-## Vitest — Stub Pattern
+For a Vitest scaffold:
+
 ```ts
-// auth.test.ts — match ESM/CJS + import style from the detected config
-import { describe, it } from "vitest";
+import { it } from 'vitest';
 
-describe("auth", () => {
-  it.todo("rejects an expired JWT");
-  it.todo("issues a token on valid login");
-});
+it.todo('rejects an expired token');
 ```
 
-## Playwright — Stub Pattern
-```ts
-// checkout.spec.ts
-import { test } from "@playwright/test";
+Do not treat these examples as framework installation instructions.
 
-test.describe("checkout", () => {
-  test.skip("completes a guest purchase", async ({ page }) => {
-    // TODO: navigate -> add to cart -> pay -> assert confirmation
-  });
-});
-```
-Playwright is genuinely first-party for e2e (real `playwright.config` + specs wired into CI), not
-a fallback tool — detect and stub it whenever a `playwright.config.*` exists, even in a
-vitest-primary repo.
+## Verify the artifact
 
-## pytest — Stub Pattern
-```python
-# test_auth.py — reuse fixtures discovered in conftest.py
-import pytest
+Use the repository's test-compilation or collection target.
 
+- **Go:** `go build` ignores `_test.go`. Use a bounded `go test -c` for each target package, with explicit build parallelism and outputs in the project's binary directory. A `go test -run '^$'` alternative still executes init/TestMain.
+- **TypeScript:** run the project's typecheck that includes the new test files, then the runner's collection or skipped-test check.
+- **Python:** `py_compile` checks syntax only. Use bounded pytest collection to resolve imports and fixtures; collection can execute module setup.
+- Confirm the requested stubs report skip/todo, not pass or fail. Report intentionally unimplemented coverage as a gap.
 
-@pytest.mark.skip(reason="not implemented")
-def test_reject_expired_jwt(client):  # client fixture from conftest.py
-    ...
-```
+Honor [[z-testing-strategy]] and literal dispatched command contracts. Do not call skipped stubs completed behavior tests.
 
-## Agent Patterns
-
-### Stubs from TEST_PLAN.md
-```
-1. Read TEST_PLAN.md -> collect rows for the target priority tier(s).
-2. Detect framework (above); read 1-3 existing tests for style.
-3. Emit one stub file per source file, mirroring TEST_PLAN.md's Source file -> Test file mapping.
-4. Report every file written.
-```
-Name tests descriptively from the row's behavior, not a synthetic ID — no real repo tags
-`t.Skip`/`it.todo`/`@pytest.mark.skip` with a `P0-1`-style marker; mirror the Source file -> Test
-file mapping instead.
-
-## Do not
-
-- Generating stubs without reading existing tests first — detect the framework and copy the real import/assert style
-- Emitting runnable (failing) tests — every stub stays `Skip`/`todo` so CI stays green until implemented
-- Inventing a framework the repo doesn't declare — never add testify to a stdlib-only project, never assume jest over vitest
-- Tagging stubs with synthetic `P0-1`/`P1-3` markers — mirror TEST_PLAN.md's Source file -> Test file mapping and a descriptive name instead
-- One giant test file — one stub file per source file, mirroring the source layout
-
-## Verify
-
-- Stub compiles/typechecks without running: `timeout 2m go build ./...`, `timeout 5m tsc --noEmit`, or `timeout 1m python -m py_compile <file>`.
-- Every stub is skipped, not failing: run the suite through the project's runner with its limits ([[z-testing-strategy]] floor) and confirm the new file reports skip/todo, not fail.
-- Stub file path mirrors the source file it covers, per TEST_PLAN.md's mapping.
-
-Consumes `TEST_PLAN.md` from [[z-qa-analyst]]; [[z-qa-debugger]] runs and triages the generated
-stubs. BDD/Gherkin scenarios and ginkgo priority `Label` tagging belong to [[z-go-bdd]]. Coordinated
-by [[z-qa-orchestrator]].
+See [[z-qa-analyst]], [[z-qa-debugger]], [[z-go-testing]], [[z-go-bdd]].

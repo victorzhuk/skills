@@ -6,22 +6,19 @@ Deep-dive reference for building production interfaces with shadcn/ui, Radix UI,
 
 ## 1. shadcn/ui Setup
 
-```bash
-npx shadcn@latest init
-npx shadcn@latest add button input form card dialog select sheet toast
-```
+Inspect the existing setup, installed versions, and component registry before changing dependencies. For an authorized new setup, use the current official CLI instructions and add only the components needed. Preserve an existing setup rather than re-running `init` or upgrading to `latest` as a side effect.
 
 Key concepts:
 
 - **Not an npm package** -- components are copied into your project. You own the code and can modify it freely.
-- Built on **Radix UI** primitives, which provide accessibility out of the box (focus management, ARIA attributes, keyboard navigation).
+- Built on **Radix UI** primitives, which supply accessibility behaviors such as focus management and keyboard navigation; application composition still needs verification.
 - Styled with **Tailwind CSS** utilities -- no CSS-in-JS runtime.
-- Required dependencies:
+- Common dependencies in this recipe (verify the actual registry output):
   - `class-variance-authority` (CVA) -- variant management
   - `clsx` -- conditional class joining
   - `tailwind-merge` -- deduplicates conflicting Tailwind classes
   - `lucide-react` -- icon library
-  - `tailwindcss-animate` -- animation utilities
+  - Match animation utilities to the installed setup: older Tailwind v3 recipes use `tailwindcss-animate`; current v4 recipes use `tw-animate-css`.
 
 The `cn()` utility combines `clsx` and `tailwind-merge`:
 
@@ -36,9 +33,9 @@ export function cn(...inputs: ClassValue[]) {
 
 ---
 
-## 2. CSS Variables for Theming (HSL Format)
+## 2. Legacy Tailwind v3 CSS Variables (HSL Format)
 
-shadcn uses HSL values without the `hsl()` wrapper so Tailwind can apply opacity modifiers:
+This older recipe uses HSL channels without the `hsl()` wrapper. Keep it only for projects configured this way. Tailwind v4 setup uses a different token mapping; follow the installed project's generated CSS and [current migration guidance](https://ui.shadcn.com/docs/tailwind-v4).
 
 ```css
 @layer base {
@@ -152,8 +149,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       className={cn(buttonVariants({ variant, size, className }))}
       ref={ref}
-      disabled={isLoading || props.disabled}
       {...props}
+      disabled={isLoading || props.disabled}
     >
       {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
       {children}
@@ -240,7 +237,7 @@ import {
   CardContent, CardFooter,
 } from "@/components/ui/card"
 
-<Card className="hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+<Card className="shadow-sm">
   <CardHeader>
     <CardTitle>Project Settings</CardTitle>
     <CardDescription>Manage your project configuration.</CardDescription>
@@ -257,7 +254,7 @@ import {
 
 Design rules:
 
-- **Concentric border radius**: Outer radius = inner radius + padding. If inner elements have `rounded-md` (6px) and padding is 16px, outer card should be `rounded-xl` (12px) or greater.
+- **Concentric border radius**: Outer radius = inner radius + padding. If inner elements have `rounded-md` (6px) and padding is 16px, the concentric outer radius is 22px; use the project's actual radius tokens instead of assuming class names map to these values.
 - **Layered shadows**: Use multiple shadow values for natural depth -- `shadow-sm` at rest, `shadow-lg` on hover.
 - **Hover lift**: Subtle `translateY(-2px)` on hover, never more than 4px.
 - Use semantic color tokens (`bg-card`, `text-card-foreground`) so cards adapt to theme changes.
@@ -386,7 +383,7 @@ Sheets share the same accessibility behavior as Dialog: focus trap, ESC to close
 Using the shadcn Toast (or Sonner for a lighter API):
 
 ```tsx
-// With shadcn toast
+// Legacy shadcn toast; retain only in projects using this API. New shadcn projects use Sonner.
 import { useToast } from "@/components/ui/use-toast"
 
 function SaveButton() {
@@ -420,9 +417,9 @@ toast.promise(saveSettings(), {
 
 Design and accessibility rules:
 
-- **Auto-dismiss**: 3-5 seconds for informational toasts. Errors should persist or have longer duration.
+- **Auto-dismiss**: Allow enough reading time, generally at least 5 seconds for brief information. Pause timers on hover/focus and hidden tabs; preserve important errors and actions until dismissed or resolved.
 - `aria-live="polite"` -- screen readers announce without stealing focus.
-- **CSS transitions, not keyframes** -- toasts can be triggered rapidly; transitions handle interruption gracefully while keyframes restart from the beginning.
+- Prefer transitions when rapid state changes need natural retargeting. Keyframes are also usable with explicit cancellation and interruption behavior.
 - **Pause timers** when the browser tab is hidden (`document.visibilityState`).
 - **Swipe to dismiss**: Support horizontal swipe with momentum detection (velocity > threshold = dismiss, otherwise snap back).
 
@@ -463,7 +460,7 @@ Rules:
 
 - **Responsive**: Wrap table in `overflow-x-auto` container. Below tablet breakpoint, allow horizontal scroll rather than collapsing columns.
 - **Sortable columns**: Use `aria-sort="ascending"` or `aria-sort="descending"` on the active `TableHead`. Show a visual indicator (chevron icon).
-- **Virtualization**: For lists exceeding ~50 items, use `@tanstack/react-virtual` or similar to render only visible rows.
+- **Virtualization**: Add it only after measuring list rendering cost; preserve keyboard navigation and accessible list context.
 - **Row distinction**: Use zebra striping (`even:bg-muted/50`) or subtle borders between rows. Never rely on color alone.
 
 ---
@@ -484,19 +481,7 @@ When integrating charts (Recharts, Chart.js, or similar):
 - **Screen reader alternative**: Provide a visually hidden `<table>` with the same data so screen readers can access it.
 - **Respect `prefers-reduced-motion`**: Skip entrance animations or reduce them to simple fades when the user has requested reduced motion.
 
-```tsx
-const prefersReducedMotion = window.matchMedia(
-  "(prefers-reduced-motion: reduce)"
-).matches
-
-<LineChart data={data}>
-  <Line
-    type="monotone"
-    dataKey="value"
-    animationDuration={prefersReducedMotion ? 0 : 500}
-  />
-</LineChart>
-```
+Read reduced-motion preference through the project's SSR-safe hook after hydration, and pass it to the chart's animation configuration. Do not access `window.matchMedia` at module scope or during server rendering. Disable decorative motion until the preference is known.
 
 ---
 

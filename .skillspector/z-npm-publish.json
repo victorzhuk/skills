@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "PE3",
+      "path": "SKILL.md",
+      "message": "*access*tokens*",
+      "reason": "reviewed 2026-10-13: The finding is the title of the official npm documentation link; it reads no credentials."
+    }
+  ],
+  "fingerprints": []
+}

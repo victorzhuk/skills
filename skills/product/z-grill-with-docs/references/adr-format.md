@@ -1,5 +1,7 @@
 # ADR format
 
+Update existing OpenSpec or other authoritative decision records first. Use this fallback when a consequential decision has no owning record, and preserve the project's established ADR convention.
+
 ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc.
 
 Create the `docs/adr/` directory lazily — only when the first ADR is needed.

@@ -78,7 +78,7 @@ Server-side flush triggers, whichever fires first: `async_insert_max_data_size` 
 
 ## Idempotent retries: insert_deduplication
 
-Synchronous inserts dedup by default (`insert_deduplicate=1`): a retried block — same rows, same order, same size — is silently dropped, so a blind retry after a network timeout can't double-insert. This only holds if the retry resends byte-identical blocks; don't reshuffle or re-batch rows between attempts.
+Retry deduplication is engine-, setting- and window-dependent. `insert_deduplicate=1` alone does not prove protection: inspect the actual table's replicated or nonreplicated deduplication window and verify a retry within it. Preserve block contents/order/boundaries; retries outside the retained window may duplicate data. Do not describe a network-timeout retry as universally safe. See [ClickHouse deduplication settings](https://clickhouse.com/docs/reference/settings/merge-tree-settings).
 
 Set `insert_deduplication_token` explicitly when you want dedup identity you control (e.g. a Kafka partition+offset range) instead of a content hash — needed when block boundaries can vary between retries but the logical unit of work is the same.
 
@@ -160,6 +160,6 @@ Events landing in ClickHouse from Kafka/RabbitMQ/NATS go through an ordinary con
 ```sh
 clickhouse-client --query "EXPLAIN indexes = 1 SELECT ... FORMAT PrettyCompact"  # confirm ORDER BY prefix is used (look for "Granules" pruning)
 clickhouse-client --query "SELECT table, partition, count() FROM system.parts WHERE active GROUP BY table, partition ORDER BY count() DESC LIMIT 20"  # catch partition explosion
-go test -race -timeout 10m ./internal/... # repository tests against a real clickhouse-server via testcontainers, not a fake
+timeout 15m go test -parallel 4 -p 2 -race -timeout 10m ./internal/... # repository tests against a real clickhouse-server via testcontainers, not a fake
 go vet ./...
 ```

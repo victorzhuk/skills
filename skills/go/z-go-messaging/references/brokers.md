@@ -22,11 +22,13 @@ cl, err := kgo.NewClient(
     kgo.ConsumerGroup("orders-service"),
     kgo.ConsumeTopics("orders.created"),
     kgo.Balancers(kgo.CooperativeStickyBalancer()),
+    kgo.DisableAutoCommit(),
+    kgo.BlockRebalanceOnPoll(),
 )
 if err != nil {
     return fmt.Errorf("new kafka client: %w", err)
 }
-defer cl.Close()
+defer cl.CloseAllowingRebalance()
 
 for {
     fetches := cl.PollFetches(ctx)
@@ -37,19 +39,19 @@ for {
         return fmt.Errorf("poll fetches: %w", err)
     }
 
-    fetches.EachRecord(func(r *kgo.Record) {
+    for _, r := range fetches.Records() {
         if err := handle(ctx, r); err != nil {
-            log.Error("handle record", "err", err, "offset", r.Offset)
-            return // do not commit — bounded retry/DLQ owns this record's fate
+            return fmt.Errorf("handle record at offset %d: %w", r.Offset, err)
         }
         if err := cl.CommitRecords(ctx, r); err != nil {
-            log.Error("commit record", "err", err)
+            return fmt.Errorf("commit record: %w", err)
         }
-    })
+    }
+    cl.AllowRebalance()
 }
 ```
 
-Commit per successfully handled record (or batch them and commit after the batch) — never `AutoCommitInterval` alone in front of a handler that can fail.
+Commit only a contiguous processed prefix in each partition. These serial loops stop on failure; a supervisor can restart and replay from committed offsets. Add bounded retry or durable DLQ handoff before advancing past a failed record. Bound each batch below the group rebalance timeout; release blocked rebalances after committing and during close. Parallel consumers must track partition ownership and completion gaps explicitly.
 
 ### kafka-go consumer loop
 
@@ -67,8 +69,7 @@ for {
         return fmt.Errorf("fetch message: %w", err)
     }
     if err := handle(ctx, msg); err != nil {
-        log.Error("handle message", "err", err, "offset", msg.Offset)
-        continue // skip commit — leave it for retry/DLQ handling
+        return fmt.Errorf("handle message at offset %d: %w", msg.Offset, err)
     }
     if err := reader.CommitMessages(ctx, msg); err != nil {
         return fmt.Errorf("commit message: %w", err)
@@ -76,7 +77,7 @@ for {
 }
 ```
 
-Producer key for ordering — `kafka.Writer{Balancer: &kafka.Hash{}}` (franz-go: `kgo.Record{Key: []byte(orderID)}`, default partitioner hashes it the same way).
+Producer key for ordering — `kafka.Writer{Balancer: &kafka.Hash{}}`; franz-go records carry `Key: []byte(orderID)`. Verify the partitioner and hash before migrating producers: identical keys do not imply identical partitions across clients.
 
 ## RabbitMQ: `rabbitmq/amqp091-go`
 

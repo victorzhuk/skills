@@ -16,11 +16,11 @@ description: 'Use this skill when designing or reviewing a PostgreSQL-specific s
 ## PostgreSQL “Gotchas”
 
 - **Identifiers**: unquoted → lowercased. Avoid quoted/mixed-case names. Convention: use `snake_case` for table/column names.
-- **Unique + NULLs**: UNIQUE allows multiple NULLs. Use `UNIQUE (...) NULLS NOT DISTINCT` (PG15+) to restrict to one NULL.
+- **Unique + NULLs**: UNIQUE allows multiple NULLs. Use `UNIQUE NULLS NOT DISTINCT (...)` (PG15+) when NULLs should compare equal for uniqueness.
 - **FK indexes**: PostgreSQL **does not** auto-index FK columns. Add them.
-- **No silent coercions**: length/precision overflows error out (no truncation). Example: inserting 999 into `NUMERIC(2,0)` fails with error, unlike some databases that silently truncate or round.
+- **Coercions**: numeric scale can round before precision is checked. Excess precision then errors; explicit casts to bounded character types can truncate. Validate the intended range and precision.
 - **Sequences/identity have gaps** (normal; don't "fix"). Rollbacks, crashes, and concurrent transactions create gaps in ID sequences (1, 2, 5, 6...). This is expected behavior—don't try to make IDs consecutive.
-- **Heap storage**: no clustered PK by default (unlike SQL Server/MySQL InnoDB); `CLUSTER` is one-off reorganization, not maintained on subsequent inserts. Row order on disk is insertion order unless explicitly clustered.
+- **Heap storage**: no clustered PK by default; `CLUSTER` is a one-off reorganization. Do not rely on physical ordering; use `ORDER BY` for defined result order.
 - **MVCC**: updates/deletes leave dead tuples; vacuum handles them—design to avoid hot wide-row churn.
 
 ## Data Types
@@ -60,7 +60,9 @@ description: 'Use this skill when designing or reviewing a PostgreSQL-specific s
 
 ## Row-Level Security
 
-Enable with `ALTER TABLE tbl ENABLE ROW LEVEL SECURITY`. Create policies: `CREATE POLICY user_access ON orders FOR SELECT TO app_users USING (user_id = current_user_id())`. Built-in user-based access control at the row level.
+Enable RLS on protected tables and define policies for required read and write operations. Derive identity through verified authentication; PostgreSQL has no built-in `current_user_id()`. A client-controlled tenant setting alone is not a trusted identity.
+
+Use a non-owner application role without superuser or `BYPASSRLS` privileges. Owners normally bypass RLS; `FORCE ROW LEVEL SECURITY` constrains owner access but not superusers or `BYPASSRLS` roles. Verify allowed and denied cross-tenant reads and writes under the actual application role.
 
 ## Constraints
 
@@ -73,9 +75,9 @@ Enable with `ALTER TABLE tbl ENABLE ROW LEVEL SECURITY`. Create policies: `CREAT
 ## Indexing
 
 - **B-tree**: default for equality/range queries (`=`, `<`, `>`, `BETWEEN`, `ORDER BY`)
-- **Composite**: order matters—index used if equality on leftmost prefix (`WHERE a = ? AND b > ?` uses index on `(a,b)`, but `WHERE b = ?` does not). Put most selective/frequently filtered columns first.
-- **Covering**: `CREATE INDEX ON tbl (id) INCLUDE (name, email)` - includes non-key columns for index-only scans without visiting table.
-- **Partial**: for hot subsets (`WHERE status = 'active'` → `CREATE INDEX ON tbl (user_id) WHERE status = 'active'`). Any query with `status = 'active'` can use this index.
+- **Composite**: choose column order from predicates and sorting. Leading equalities usually narrow B-tree scans most effectively. Non-leading predicates can still use the index; PG18 adds skip scans for suitable distributions. Verify the actual plan.
+- **Covering**: `CREATE INDEX ON tbl (id) INCLUDE (name, email)` enables potential index-only scans; visibility-map state determines whether heap visits remain necessary.
+- **Partial**: `CREATE INDEX ON tbl (user_id) WHERE status = 'active'` indexes a hot subset. The planner must prove the query implies that predicate; parameterized predicates can prevent this.
 - **Expression**: for computed search keys (`CREATE INDEX ON tbl (LOWER(email))`). Expression must match exactly in WHERE clause: `WHERE LOWER(email) = 'user@example.com'`.
 - **GIN**: JSONB containment/existence, arrays (`@>`, `?`), full-text search (`@@`)
 - **GiST**: ranges, geometry, exclusion constraints
@@ -88,9 +90,9 @@ Enable with `ALTER TABLE tbl ENABLE ROW LEVEL SECURITY`. Create policies: `CREAT
 - **RANGE**: common for time-series (`PARTITION BY RANGE (created_at)`). Create partitions: `CREATE TABLE logs_2024_01 PARTITION OF logs FOR VALUES FROM ('2024-01-01') TO ('2024-02-01')`. **TimescaleDB** automates time-based or ID-based partitioning with retention policies and compression.
 - **LIST**: for discrete values (`PARTITION BY LIST (region)`). Example: `FOR VALUES IN ('us-east', 'us-west')`.
 - **HASH**: for even distribution when no natural key (`PARTITION BY HASH (user_id)`). Creates N partitions with modulus.
-- **Constraint exclusion**: requires `CHECK` constraints on partitions for query planner to prune. Auto-created for declarative partitioning (PG10+).
+- **Partition pruning** uses declarative partition bounds. Constraint exclusion uses `CHECK` constraints and is mainly relevant to inheritance-based layouts.
 - Prefer declarative partitioning or hypertables. Do NOT use table inheritance.
-- **Limitations**: no global UNIQUE constraints—include partition key in PK/UNIQUE. FKs from partitioned tables not supported; use triggers.
+- **Limitations**: include partition keys in PK/UNIQUE constraints. FKs from partitioned tables are supported since PG11; references to partitioned tables since PG12. Prefer supported declarative constraints to triggers.
 
 ## Special Considerations
 
@@ -113,7 +115,7 @@ Enable with `ALTER TABLE tbl ENABLE ROW LEVEL SECURITY`. Create policies: `CREAT
 
 ### Upsert-Friendly Design
 
-- **Requires UNIQUE index** on conflict target columns—`ON CONFLICT (col1, col2)` needs exact matching unique index (partial indexes don't work).
+- **Requires a matching unique arbiter**: partial unique indexes can be inferred with `ON CONFLICT (...) WHERE <predicate>`.
 - **Use `EXCLUDED.column`** to reference would-be-inserted values; only update columns that actually changed to reduce write overhead.
 - **`DO NOTHING` faster** than `DO UPDATE` when no actual update needed.
 
@@ -121,7 +123,7 @@ Enable with `ALTER TABLE tbl ENABLE ROW LEVEL SECURITY`. Create policies: `CREAT
 
 - **Transactional DDL**: most DDL operations can run in transactions and be rolled back—`BEGIN; ALTER TABLE...; ROLLBACK;` for safe testing.
 - **Concurrent index creation**: `CREATE INDEX CONCURRENTLY` avoids blocking writes but can't run in transactions.
-- **Volatile defaults cause rewrites**: adding `NOT NULL` columns with volatile defaults (e.g., `now()`, `gen_random_uuid()`) rewrites entire table. Non-volatile defaults are fast.
+- **Volatile defaults cause rewrites**: `gen_random_uuid()` is volatile; `now()` is STABLE. Non-volatile defaults can avoid rewrites on supported versions. Check locking and constraint-validation cost separately.
 - **Drop constraints before columns**: `ALTER TABLE DROP CONSTRAINT` then `DROP COLUMN` to avoid dependency issues.
 - **Function signature changes**: `CREATE OR REPLACE` with different arguments creates overloads, not replacements. DROP old version if no overload desired.
 
@@ -137,7 +139,7 @@ Enable with `ALTER TABLE tbl ENABLE ROW LEVEL SECURITY`. Create policies: `CREAT
 - **`citext`**: case-insensitive text type. Prefer expression indexes on `LOWER(col)` unless you need case-insensitive constraints.
 - **`btree_gin`/`btree_gist`**: enable mixed-type indexes (e.g., GIN index on both JSONB and text columns).
 - **`hstore`**: key-value pairs; mostly superseded by JSONB but useful for simple string mappings.
-- **`timescaledb`**: essential for time-series—automated partitioning, retention, compression, continuous aggregates.
+- **`timescaledb`**: consider when automated retention, compression, or continuous aggregates justify an extension; ordinary time-series tables do not require it.
 - **`postgis`**: comprehensive geospatial support beyond basic geometric types—essential for location-based applications.
 - **`pgvector`**: vector similarity search for embeddings.
 - **`pgaudit`**: audit logging for all database activity.
@@ -152,7 +154,7 @@ Enable with `ALTER TABLE tbl ENABLE ROW LEVEL SECURITY`. Create policies: `CREAT
   - **Disjunction** `jsonb_col @> ANY(ARRAY['{"status":"active"}', '{"status":"pending"}'])`
 - Heavy `@>` workloads: consider opclass `jsonb_path_ops` for smaller/faster containment-only indexes:
   - `CREATE INDEX ON tbl USING GIN (jsonb_col jsonb_path_ops);`
-  - **Trade-off**: loses support for key existence (`?`, `?|`, `?&`) queries—only supports containment (`@>`)
+  - **Trade-off**: supports `@>`, `@?`, and `@@`, but not key-existence operators (`?`, `?|`, `?&`).
 - Equality/range on a specific scalar field: extract and index with B-tree (generated column or expression):
   - `ALTER TABLE tbl ADD COLUMN price INT GENERATED ALWAYS AS ((jsonb_col->>'price')::INT) STORED;`
   - `CREATE INDEX ON tbl (price);`
@@ -160,6 +162,14 @@ Enable with `ALTER TABLE tbl ENABLE ROW LEVEL SECURITY`. Create policies: `CREAT
 - Arrays inside JSONB: use GIN + `@>` for containment (e.g., tags). Consider `jsonb_path_ops` if only doing containment.
 - Keep core relations in tables; use JSONB for optional/variable attributes.
 - Use constraints to limit allowed JSONB values in a column e.g. `config JSONB NOT NULL CHECK(jsonb_typeof(config) = 'object')`
+
+## Verify
+
+- Identify the deployed PostgreSQL major before choosing syntax.
+- Execute consequential DDL and conflict-handling examples in a disposable database at that major.
+- Inspect representative plans and lock behavior.
+- Verify RLS under the application role, not the owner.
+- Use [[z-go-goose]] for migrations and [[z-go-database]] for transaction/query behavior.
 
 ## Examples
 

@@ -9,11 +9,13 @@ State is the single source of truth for what Terraform thinks exists — treat e
 
 ## Remote state and locking
 
-Local state (`terraform.tfstate` in the working directory) is a single-developer toy: no locking, no shared source of truth, and it's routinely committed by accident. Use a remote backend from day one — S3, GCS, Azure Blob, or Terraform Cloud/Enterprise — and enable locking:
+The local backend supports filesystem locking, but does not provide shared state for a team. Use a supported remote backend for shared environments and confirm that its locking is enabled:
 
 - **S3** — `use_lockfile = true` in the backend block (native S3 conditional-write locking); the older DynamoDB-table lock is deprecated but still works on existing setups.
 - **GCS** — locking is built into the backend via object generation, nothing extra to configure.
 - **Terraform Cloud/Enterprise** — locking is automatic per workspace.
+
+These details describe Terraform backends; check the installed Terraform/OpenTofu version before copying backend options.
 
 Locking exists to stop two `apply` runs from writing the same state concurrently and corrupting it — never disable it to "unblock" a run; find out why the lock is stuck (`terraform force-unlock` only after confirming no other run is actually in flight).
 
@@ -30,6 +32,8 @@ State is sensitive: it can contain plaintext secrets (DB passwords, API keys) pu
 Never `apply` without reading the plan that precedes it — review the *plan output*, not just the diff of `.tf` files. The code diff shows intent; the plan shows what Terraform will actually do, including changes triggered by provider defaults, data source drift, or a module bump that neither diff makes obvious. Treat an unreviewed `apply` the same as an unreviewed `rm -rf`.
 
 `-detailed-exitcode` on `plan` turns "no changes" into a distinguishable exit code (0 = no diff, 2 = diff present, 1 = error) — the seam CI uses to fail a PR that would silently apply drift.
+
+For a gated apply, save the plan with `plan -out`, review that file with `show`, and apply the same saved plan. Bind approval to the target workspace/backend, source revision, and plan artifact. Saved plans can contain secrets: restrict access and retention, and never publish them in logs or public artifacts. Replanning requires reviewing the replacement plan.
 
 ## Drift detection
 

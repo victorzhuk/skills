@@ -9,7 +9,7 @@ A deploy workflow earns trust the same way the artifact it ships does: it can't 
 
 ## Environments and protection rules
 
-A GitHub Actions `environment:` on the deploy job gates it behind required reviewers, a wait timer, and environment-scoped secrets — the job simply doesn't start until approved:
+A GitHub Actions `environment:` applies the protection rules actually configured for that environment. The field alone does not require approval:
 
 ```yaml
 jobs:
@@ -36,7 +36,7 @@ steps:
       aws-region: us-east-1
 ```
 
-GitHub issues a signed JWT for the run; the cloud provider (AWS IAM role trust policy, GCP Workload Identity Federation pool) validates it and exchanges it for temporary credentials. `id-token: write` is required at the job or workflow level or the token is never minted. Same idea applies to registry auth where the provider supports it — prefer OIDC over a static registry password wherever the option exists.
+GitHub issues a signed JWT for the run; the provider validates it and exchanges it for temporary credentials. Restrict the trust policy to the expected issuer, audience, repository, and subject/environment. `id-token: write` permits token issuance; it does not itself limit the cloud role. Replace example identifiers with verified deployment values.
 
 ## Image build and push
 
@@ -51,7 +51,7 @@ GitHub issues a signed JWT for the run; the cloud provider (AWS IAM role trust p
     cache-to: type=gha,mode=max
 ```
 
-`setup-buildx-action` is not optional — the `type=gha` cache backend needs a BuildKit builder, not the plain `docker` driver. `mode=max` caches every layer, not just the final image, which matters most on multi-stage Dockerfiles ([[z-k8s-deploy]] covers what goes in the image itself).
+Check the builder driver, containerd image-store setting, and BuildKit/Buildx versions for cache-backend support. The setup action is one way to provision a compatible builder. `mode=max` also exports intermediate-stage cache; verify actual cache hits in the build log.
 
 ## Deploy job patterns
 
@@ -75,11 +75,11 @@ Pull-then-up keeps the window between "new image available" and "container runni
 
 ```yaml
 concurrency:
-  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  group: deploy-production-app
   cancel-in-progress: false
 ```
 
-Serializes deploys to the same ref — a second push while a deploy is running queues instead of racing it. `cancel-in-progress: false` on a deploy job specifically: cancelling a deploy mid-flight can leave a Helm release or a Compose pull half-applied, worse than waiting for it to finish before starting the next one.
+Use a group identifying the actual deployment target, shared by every workflow/ref that can deploy there; the name above is illustrative. `cancel-in-progress: false` protects the running deployment. Under the default concurrency behavior, a newer pending job replaces an older pending job; it is not a durable FIFO queue. Check current GitHub queue options if every deployment must run.
 
 ## Rollback path
 
@@ -90,7 +90,7 @@ State the rollback per pattern before you need it, not while paging:
 
 ## Secrets hygiene
 
-Scope secrets to the environment that needs them (`production` secrets never visible to a `staging` job), rely on GitHub's automatic masking of secret values in logs, and grant the deploy job's token the minimum `permissions:` block it needs — default to `contents: read` and add only what the job actually calls.
+Scope secrets to the environment and grant minimal token permissions. Do not print secrets or transformed secret values; log masking is a backstop. Review the exact immutable image digest or saved plan that the approved job will deploy.
 
 ## Do not
 
@@ -98,7 +98,7 @@ Scope secrets to the environment that needs them (`production` secrets never vis
 - Store a long-lived cloud access key in a secret when the provider supports OIDC.
 - Set `cancel-in-progress: true` on a deploy concurrency group — a cancelled mid-deploy leaves state half-applied.
 - Skip the plan/dry-run job before an apply — the human approving the environment gate should see what's about to happen, not just that a workflow started.
-- Assume `docker/build-push-action` caches without `setup-buildx-action` — the `docker` driver silently ignores `cache-from`/`cache-to`.
+- Assume cache configuration works without checking the selected builder and build log.
 
 ## Verify
 

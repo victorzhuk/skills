@@ -7,7 +7,7 @@ description: Red-green loop discipline that produces tests worth keeping — tes
 
 TDD is the red → green loop. This is the reference that makes the loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop. Apply every section on every cycle, not after.
 
-Before starting, read the project's glossary (`CONTEXT.md` or equivalent) so test names match domain language, and respect ADRs in the touched area.
+Apply this loop when test-first is the chosen flow. Preserve an approved tests-after flow rather than changing it. Read the project's authoritative glossary/spec record so test names match domain language, and respect recorded decisions.
 
 ## What a good test is
 
@@ -17,9 +17,7 @@ Tests verify behaviour through public interfaces, not implementation details. Co
 
 A **seam** is the public boundary you test at: where behaviour is observable without reaching inside ([[z-deep-modules]]).
 
-**Test only at pre-agreed seams.** Before writing any test, write down the seams under test and confirm them with the user. You can't test everything — agreeing seams up front is how effort lands on critical paths and complex logic instead of every edge case. Under a zapply dispatch the plan's seams are that confirmation — report an unlisted seam as a gap in your yield rather than deciding, never as a question.
-
-Ask: "What's the public interface, and which seams should we test?"
+**Use the agreed seams.** Existing caller approval or a dispatch plan is sufficient. Choose the lowest interface that proves the behavior without hiding integration risk. Resolve genuinely missing seam decisions before expanding scope. Under zapply, report an unlisted seam to the driver rather than asking the user from the worker.
 
 ## Anti-patterns
 
@@ -35,7 +33,7 @@ Ask: "What's the public interface, and which seams should we test?"
 
 ## Do not
 
-- Write a test at a seam the user hasn't confirmed.
+- Expand beyond caller-approved seams without resolving the scope change.
 - Compute the expected value with the same logic as the code under test.
 - Write the implementation first and back-fill a passing test.
 - Bulk-write tests for behaviour that doesn't exist yet (outside a zapply red stage, where the sealed contract mandates it).

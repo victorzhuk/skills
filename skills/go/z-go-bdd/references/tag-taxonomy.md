@@ -26,9 +26,9 @@ Use the project tracker name when known: `@linear:ABC-123`, `@jira:PAY-241`, `@g
 ## Filters
 
 ```sh
-BDD_TAGS='@billing && ~@wip' go test -timeout 10m ./... -run '^TestBDD$'
-BDD_TAGS='@critical && @type:integration' go test -timeout 10m ./... -run '^TestBDD$'
-BDD_TAGS='@story:PAY-241' go test -timeout 10m ./... -run '^TestBDD$'
+BDD_TAGS='@billing && ~@wip' timeout 15m go test -parallel 4 -p 2 -timeout 10m ./... -run '^TestBDD$'
+BDD_TAGS='@critical && @type:integration' timeout 15m go test -parallel 4 -p 2 -timeout 10m ./... -run '^TestBDD$'
+BDD_TAGS='@story:PAY-241' timeout 15m go test -parallel 4 -p 2 -timeout 10m ./... -run '^TestBDD$'
 ```
 
 ## Rules

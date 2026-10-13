@@ -10,7 +10,7 @@ Read the routing table before touching anything else — most "network is broken
 ## Subnetting and CIDR — quick judgment
 
 - CIDR notation is prefix length, not a mask to memorize per case: /24 = 256 addresses (254 usable), /25 = 128 (126 usable), /29 = 8 (6 usable) — the host count halves each time the prefix grows by one bit
-- two addresses per subnet are never usable: the network address (all host bits zero) and the broadcast address (all host bits one)
+- Conventional IPv4 multi-access subnets reserve network and broadcast addresses. `/31` point-to-point links and `/32` host routes are exceptions; IPv6 has different addressing rules and no broadcast address.
 - size a subnet to the actual host count plus growth headroom, not a round number out of habit — a /24 for a 5-host VLAN wastes 250 addresses and widens the broadcast domain for no reason
 - overlapping subnets across a VPN/tunnel is the single most common "why can't I reach X" bug — check both sides' CIDR ranges before anything else when a tunnel is involved
 
@@ -23,7 +23,7 @@ Read the routing table before touching anything else — most "network is broken
 
 ## DNS resolution chain
 
-- resolution order on a client: `/etc/hosts` (or OS equivalent) → local resolver cache → configured DNS server(s) → recursive lookup if the local resolver doesn't cache-hit
+- Inspect the client's actual resolver configuration: NSS, local caches, split DNS, and application-level DNS can change the path. `dig` queries DNS and does not prove that an application used `/etc/hosts` or the same resolver.
 - a DNS leak is the resolver silently querying the ISP/default server while everything else routes through a tunnel — the most common "the VPN doesn't work right" bug that isn't actually a routing bug
 - `dig +short <host>` and `dig <host> @<specific-resolver>` isolate whether the problem is resolution itself or a stale/split-horizon answer
 
@@ -39,8 +39,8 @@ Read the routing table before touching anything else — most "network is broken
 1. `ss -tulnp` — is the service actually listening, on the expected interface and port
 2. routing table — is traffic leaving toward the right gateway
 3. `dig` — does the name resolve to the expected address
-4. `mtr <host>` — where in the path does latency or loss start
-5. `tcpdump -i <iface> host <ip>` — when the above don't explain it: SYN sent but no SYN-ACK means firewall/routing, SYN-ACK then a hang means MTU/fragmentation
+4. `mtr <host>` — compare intermediate results with destination loss; routers may rate-limit probe responses while forwarding normally
+5. `tcpdump -i <iface> host <ip>` — use packet evidence to test hypotheses. A missing SYN-ACK may involve routing, filtering, or the server; a later hang can involve TLS or application behavior as well as MTU.
 
 Escalate to device config only after this chain rules out the host: [references/routers.md](references/routers.md) for RouterOS/OpenWrt, [references/routing-protocols.md](references/routing-protocols.md) for switch/multi-router topologies.
 
@@ -52,7 +52,7 @@ Escalate to device config only after this chain rules out the host: [references/
 
 ## Verify
 
-- `mtr` shows a clean path with no loss at the hop matching the actual network boundary
+- Confirm end-to-end connectivity and application behavior; do not treat loss reported only by an intermediate `mtr` hop as forwarding loss.
 - `dig` returns the expected address from the resolver the network/tunnel is supposed to use
 - `ss -tulnp` confirms the service listens where the routing table expects it to be reachable
 

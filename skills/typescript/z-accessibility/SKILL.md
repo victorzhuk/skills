@@ -1,11 +1,13 @@
 ---
 name: z-accessibility
-description: Audit and improve web accessibility following WCAG 2.1 guidelines. Use when asked to "improve accessibility", "a11y audit", "WCAG compliance", "screen reader support", "keyboard navigation", or "make accessible".
+description: Audit and improve web accessibility following WCAG 2.2 guidelines. Use when asked to "improve accessibility", "a11y audit", "WCAG compliance", "screen reader support", "keyboard navigation", or "make accessible".
 ---
 
 # Accessibility (a11y)
 
-Comprehensive accessibility guidelines based on WCAG 2.1 and Lighthouse accessibility audits. Goal: make content usable by everyone, including people with disabilities.
+Target WCAG 2.2 AA unless the product contract specifies another version. Automated audits find a subset of issues; manual checks remain necessary.
+
+Include the 2.2 additions: focus not obscured (2.4.11), alternatives to dragging (2.5.7), 24 CSS px target size with exceptions (2.5.8), consistent help (3.2.6), redundant entry (3.3.7), and accessible authentication (3.3.8).
 
 ## WCAG Principles: POUR
 
@@ -87,8 +89,8 @@ Comprehensive accessibility guidelines based on WCAG 2.1 and Lighthouse accessib
 
 | Text Size | AA minimum | AAA enhanced |
 |-----------|------------|--------------|
-| Normal text (< 18px / < 14px bold) | 4.5:1 | 7:1 |
-| Large text (≥ 18px / ≥ 14px bold) | 3:1 | 4.5:1 |
+| Normal text (< 24 CSS px regular / < 18.67 CSS px bold) | 4.5:1 | 7:1 |
+| Large text (≥ 18pt regular / ≥ 14pt bold) | 3:1 | 4.5:1 |
 | UI components & graphics | 3:1 | 3:1 |
 
 ```css
@@ -153,50 +155,15 @@ Comprehensive accessibility guidelines based on WCAG 2.1 and Lighthouse accessib
 
 ### Keyboard accessible (2.1)
 
-**All functionality must be keyboard accessible:**
-```javascript
-// ❌ Only handles click
-element.addEventListener('click', handleAction);
+Use native controls first. A native button already translates Enter/Space into activation; adding another key handler can invoke the action twice.
 
-// ✅ Handles both click and keyboard
-element.addEventListener('click', handleAction);
-element.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    handleAction();
-  }
-});
+```html
+<button type="button" id="action">Run action</button>
 ```
 
-**No keyboard traps:**
-```javascript
-// Modal focus management
-function openModal(modal) {
-  const focusableElements = modal.querySelectorAll(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  );
-  const firstElement = focusableElements[0];
-  const lastElement = focusableElements[focusableElements.length - 1];
-  
-  // Trap focus within modal
-  modal.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab') {
-      if (e.shiftKey && document.activeElement === firstElement) {
-        e.preventDefault();
-        lastElement.focus();
-      } else if (!e.shiftKey && document.activeElement === lastElement) {
-        e.preventDefault();
-        firstElement.focus();
-      }
-    }
-    if (e.key === 'Escape') {
-      closeModal();
-    }
-  });
-  
-  firstElement.focus();
-}
-```
+Attach one click handler to the button. For custom widgets, implement the matching WAI-ARIA Authoring Practices keyboard pattern.
+
+For modal dialogs, prefer native `dialog.showModal()` or the project's maintained primitive. Verify initial focus, background isolation, Escape behavior, focus restoration, and the case with no focusable child. A Tab handler alone is not a complete dialog implementation.
 
 ### Focus visible (2.4.7)
 
@@ -374,7 +341,9 @@ form.addEventListener('submit', (e) => {
 
 ## Robust
 
-### Valid HTML (4.1.1)
+### Valid HTML
+
+WCAG 2.2 removed 4.1.1 Parsing. Validate markup because broken structure can still violate other criteria; do not report 4.1.1 as a 2.2 failure.
 
 ```html
 <!-- ❌ Duplicate IDs -->

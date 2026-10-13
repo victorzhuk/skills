@@ -5,13 +5,13 @@ description: De-slop pass for any text — detects and erases AI-writing fingerp
 
 # F*ck Slop
 
-Strip every mark of AI writing from a text and make it good in its genre. Not "make it pass a detector" — make it read like a specific person with a specific point wrote it for a specific audience.
+Remove distracting stock phrasing and fit the requested genre. Treat the catalog as house-style heuristics, not proof of a text’s origin.
 
 ## Why this is a loop, not a style guide
 
-The worst tells — above all the **"not X but Y"** family — are not vocabulary mistakes. They are emergent properties of how LLMs generate text: preference tuning rewards balanced, contrastive, comprehensive-sounding framing, so the contrast move is baked into the model's priors. Two consequences drive this skill's architecture:
+Use a repeatable scan followed by semantic review:
 
-1. **You cannot reliably see your own slop.** The same priors that produce the pattern make it invisible on re-read. Detection must be mechanical — regex against a fixed catalog — never "does this look AI to me?"
+1. **Scan for candidates.** Regex surfaces phrases to inspect; meaning and genre decide whether each is a defect.
 2. **Rewriting reintroduces slop.** Ask a model to remove "it's not just X, it's Y" and it produces "this is less about X than Y" — the same move in a wig. So every rewrite gets re-scanned, and the loop runs until the scan is clean.
 
 Workflow: **Scan → Diagnose → Rewrite by meaning → Re-scan → (repeat) → Register check.**
@@ -73,7 +73,7 @@ Banned escape hatches — these are the same move and count as new findings: "le
 
 ## Phase 3: Verify loop
 
-Re-run the full Phase 1 scan **on your rewritten text**. This step is not optional and not a formality — expect your own rewrite to contain new tells, because the model writing it has the same priors that created them. Fix and re-scan until a pass produces zero pattern hits and the cadence check passes. Cap at 4 passes; if a pattern survives 4 passes, rewrite that sentence from scratch starting from its bare claim ("what fact or opinion is this sentence for?").
+Re-run the full Phase 1 scan **on your rewritten text**. This step is not optional and not a formality — expect your own rewrite to contain new tells, because the model writing it has the same priors that created them. Stop when no untriaged findings remain and the genre check passes. Keep justified contrasts, real ranges, required terminology, quotations, and useful structure. Record why an accepted match stays. Cap at four passes; report unresolved issues rather than sacrificing meaning to clear a regex.
 
 ## Phase 4: Register check
 

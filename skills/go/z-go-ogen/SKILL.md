@@ -23,13 +23,13 @@ or the `ogen` invocation is wrong — fix those.
 
 ## Running ogen
 
-Three equivalent approaches — pick one per project, commit it, and use it consistently.
+Pin `github.com/ogen-go/ogen/cmd/ogen` to the project-selected version in go.mod/go.sum. The directive below identifies the command; it does not select a version by itself. On older Go, preserve a pinned tools.go or generator wrapper. Use one invocation consistently; [official setup](https://ogen.dev/docs/intro/).
 
-**`go.mod` tool directive** (Go 1.21+, preferred):
+**`go.mod` tool directive** (Go 1.24+, preferred):
 
 ```go
 // go.mod
-tool github.com/ogen-go/ogen
+tool github.com/ogen-go/ogen/cmd/ogen
 ```
 
 ```sh
@@ -55,7 +55,7 @@ generate:
 	go tool ogen --target internal/api/gen --package gen --clean openapi.yaml
 ```
 
-The `--clean` flag removes stale generated files on each run. Always pass it.
+The `--clean` flag removes stale generated files. Use it only with a verified output directory containing generated files exclusively.
 
 ## Generated code boundary
 
@@ -96,10 +96,7 @@ func (h *Handler) CreateUser(ctx context.Context, req *gen.CreateUserReq) (*gen.
 }
 ```
 
-Return the typed response struct on success, or an error on failure. For domain errors
-that map to specific HTTP status codes, return the corresponding generated error response
-type (e.g. `*gen.NotFoundResponse`, `*gen.ValidationErrorResponse`) — ogen dispatches on
-the concrete type.
+Return the types required by the generated Handler signature. Operations with multiple responses may use a response interface; return the generated status response in that response slot, not as a Go error unless it actually implements the required error contract. Names and shapes come from the project's generated code, not a universal `NotFoundResponse` type.
 
 ## Mapping generated ↔ domain types
 
@@ -137,48 +134,11 @@ compiles but silently passes unknown values to clients when the two sets drift.
 Implement the generated `SecurityHandler` interface in its own file. ogen invokes it
 before calling the operation handler, based on the security schemes declared in the spec.
 
-```go
-type SecurityHandler struct {
-    tokens TokenVerifier
-}
-
-func (s *SecurityHandler) HandleBearerAuth(
-    ctx context.Context,
-    operationName string,
-    t gen.BearerAuth,
-) (context.Context, error) {
-    claims, err := s.tokens.Verify(t.Token)
-    if err != nil {
-        return ctx, ogenerrors.ErrSecurityRequirementIsNotSatisfied
-    }
-    return WithClaims(ctx, claims), nil
-}
-```
-
-Return `ogenerrors.ErrSecurityRequirementIsNotSatisfied` on auth failure — ogen translates
-this to a `401` response automatically.
+Inspect the generated security interface and the pinned generator's error handler. Implement token verification with a safe error; verify that the configured handler maps authentication and authorization failures to the intended status without exposing credentials. Do not assume a named sentinel or automatic 401 mapping exists across versions.
 
 ## Validation and error responses
 
-ogen validates incoming requests against the spec schema before your handler is called,
-so you do not need to re-validate request shape. Handle domain-level errors explicitly:
-
-```go
-func (h *Handler) GetUser(ctx context.Context, params gen.GetUserParams) (*gen.User, error) {
-    u, err := h.users.ByID(ctx, params.ID)
-    if errors.Is(err, domain.ErrNotFound) {
-        return nil, &gen.NotFoundResponse{Message: "user not found"}
-    }
-    if err != nil {
-        return nil, fmt.Errorf("get user: %w", err)
-    }
-    return toGenUser(u), nil
-}
-```
-
-For structured validation errors (field-level codes), define the error response shape in
-the spec and return its generated type from the handler. Never invent error codes outside
-the spec — extend the enum in `openapi.yaml` first, then regenerate.
+Keep request-shape validation in the generated transport and business validation in the use case. Declare each expected error response in the OpenAPI spec, regenerate, then implement the actual generated response signature. Test a success, not-found, validation failure, and denied authorization against the real generated server. Unexpected internal errors must be logged once and translated to a safe transport response.
 
 ## Wiring the server
 

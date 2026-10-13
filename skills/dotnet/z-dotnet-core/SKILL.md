@@ -1,6 +1,6 @@
 ---
 name: z-dotnet-core
-description: C#/ASP.NET Core web APIs for inherited and green services — minimal APIs, nullable reference types as errors, constructor-injection DI, EF Core AsNoTracking reads, async all the way. Current LTS is .NET 10. Triggers on ASP.NET Core, minimal API, EF Core. Does not cover Go/Rust; see [[z-go-clean-arch-di]].
+description: C#/ASP.NET Core web APIs for inherited and green services — minimal APIs, nullable reference types as errors, dependency injection, EF Core AsNoTracking reads, async all the way. Triggers on ASP.NET Core, minimal API, EF Core. Does not cover Go/Rust; see [[z-go-clean-arch-di]].
 ---
 
 # .NET core
@@ -9,7 +9,7 @@ Default to minimal APIs for a new small service, controllers only where the code
 
 ## Target framework
 
-- current LTS is .NET 10 (released Nov 2025, supported through Nov 2028) — start new services there; .NET 8 (LTS through Nov 2026) is the fallback only for a codebase already pinned to it
+- Select a supported LTS from Microsoft's current support policy for new services. Preserve the target of an inherited application unless an upgrade is in scope.
 - verify against the actual `global.json`/`.csproj` `TargetFramework` before assuming a version — an inherited codebase may sit on an out-of-support release
 
 ## API style
@@ -20,7 +20,7 @@ Default to minimal APIs for a new small service, controllers only where the code
 
 ## Dependency injection
 
-- constructor injection only, through the built-in container (`IServiceCollection`) — no service locator pattern; `IServiceProvider.GetService` reached for deep inside business logic hides the real dependency graph
+- Use constructor injection for services and supported handler-parameter injection for minimal APIs. Do not hide dependencies behind `IServiceProvider.GetService` in business logic.
 - register lifetimes deliberately: `Scoped` for anything touching a `DbContext` or per-request state, `Singleton` only for genuinely stateless or thread-safe services, `Transient` for cheap short-lived instances
 
 ## EF Core discipline
@@ -32,7 +32,7 @@ Default to minimal APIs for a new small service, controllers only where the code
 
 ## Async
 
-- async all the way from the endpoint down to the I/O call — no `.Result` or `.Wait()` on a `Task`; both deadlock under ASP.NET Core's synchronization context in enough real scenarios to ban outright
+- Keep asynchronous I/O asynchronous through the endpoint. Blocking on `.Result` or `.Wait()` can cause thread-pool starvation; ASP.NET Core does not install the classic ASP.NET synchronization context.
 - thread a `CancellationToken` through to DB/HTTP calls that support it, sourced from the request's own token
 
 ## Testing
@@ -50,5 +50,5 @@ Default to minimal APIs for a new small service, controllers only where the code
 ## Verify
 
 - `dotnet build -warnaserror`
-- `dotnet test`
+- Use the existing test wrapper with a whole-process deadline and the selected runner's supported timeout and parallelism limits; see [[z-testing-strategy]]. Discover the runner before choosing flags.
 - `dotnet format --verify-no-changes`

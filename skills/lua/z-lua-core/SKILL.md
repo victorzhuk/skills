@@ -10,16 +10,16 @@ Treat every embedded Lua script as untrusted input until proven otherwise — sa
 ## Semantics that bite
 
 - 1-based indexing — every host-side index crossing the boundary needs a +1/-1; do that conversion in one place (the binding layer), not scattered across call sites
-- table length (`#t`) is undefined on a table with holes (a `nil` in the middle) — never rely on `#t` for anything but a dense array built without gaps; use an explicit counter or `table.pack`'s `n` field when holes are possible
+- Do not use `#t` as a count when a table has holes. Track the count explicitly, or use `table.pack`'s `n` where supported; Lua 5.1 does not provide `table.pack`.
 - everything is a table — arrays, objects, and modules all reuse the same structure. Naming and doc comments are the only thing keeping "array-like" and "map-like" tables from getting confused
 - metatables are the sanctioned extension point (`__index`, `__newindex`, `__call`, operator overloads) — don't stack them into a deep fake-inheritance chain; it stops being readable fast
 
 ## Embedding discipline
 
 - sandbox by allowlist: strip `io`, `os`, `debug`, `package`/`require`, `load`/`loadstring` from any environment running untrusted or semi-trusted script content — grant back only what's proven needed, not the reverse
-- instruction and memory budgets for untrusted scripts — an unbounded `while true do end` or a table grown without limit is a host-process DoS if nothing caps it (hook-based instruction counting, a memory-limit callback)
+- Enforce execution and memory budgets with the selected embedding library's supported controls. Hooks do not interrupt blocked host callbacks: propagate cancellation there too. If the runtime cannot enforce the required memory boundary, isolate untrusted work in a limited process.
 - host API surface small and typed — expose a curated set of host functions with validated argument types, not the whole host object graph
-- stack discipline at the C-API-style boundary (`lua_State*` in mlua, `LState` in gopher-lua) — every push needs a matching pop/return count; an unbalanced Lua stack across a host call corrupts the calls after it
+- At a raw Lua C API boundary, preserve stack balance and return counts. Use mlua's safe typed API where possible; callers do not ordinarily manipulate `lua_State*`. Follow gopher-lua's documented `LState` function return convention.
 
 ## Concurrency
 

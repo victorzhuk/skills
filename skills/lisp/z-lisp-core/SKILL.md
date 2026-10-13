@@ -22,8 +22,9 @@ Design the interpreter/compiler and its host boundary together — an embedded L
 
 ## GC
 
-- precise GC over conservative for an embedded VM — conservative GC scans host stack frames it doesn't understand, risking false retention or, worse, a missed root inside someone else's process
+- Prefer precise GC when the VM can describe its references. Conservative scanning can falsely retain pointer-like data; either design can miss roots if the host boundary does not register them correctly.
 - rooting discipline at the boundary: any Lisp value the host holds outside the VM's own stack (a callback closure stored in a host struct) must be explicitly rooted, or the collector reclaims it out from under the host
+- For untrusted programs, enforce execution and allocation budgets and propagate cancellation into host callbacks. Test infinite loops, allocation pressure, and blocked host calls.
 
 ## Workflow
 

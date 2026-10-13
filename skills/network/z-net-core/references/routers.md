@@ -2,14 +2,14 @@
 
 ## RouterOS and OpenWrt — which is which
 
-- RouterOS (MikroTik, current stable line 7.x) — CLI/Winbox-driven, with its own firewall/routing abstraction (chains, address-lists, mangle for policy routing)
-- OpenWrt (current stable line 25.x) — Linux-based, config lives in UCI (`/etc/config/*`) with `iptables` or `nftables` underneath depending on release — check which firewall backend the target OpenWrt release uses before writing raw rules
+- RouterOS (MikroTik; verify the installed release) — CLI/Winbox-driven, with its own firewall/routing abstraction (chains, address-lists, mangle for policy routing)
+- OpenWrt (verify the supported release from its official download/release pages) — Linux-based, config lives in UCI (`/etc/config/*`) with `iptables` or `nftables` underneath depending on release — check which firewall backend the target OpenWrt release uses before writing raw rules
 - both: never rely on memory for exact syntax — option names and defaults shift between major versions; check the installed version's own docs before writing rules
 
 ## First-boot and default-credential hardening
 
 - change the default admin username/password on first boot, before the device ever reaches a production network — a default-credential router facing the internet gets found and probed within hours, not weeks
-- disable unencrypted/legacy management services (Telnet, plain HTTP admin UI, unencrypted Winbox) in favor of their encrypted equivalents (SSH, HTTPS, Winbox over TLS) — legacy services usually stay enabled by default for compatibility, not because they're safe
+- Disable unused management services; restrict administration to trusted management networks or a VPN. Use supported secure SSH/HTTPS and vendor-documented Winbox transport for the installed release; do not invent a TLS mode.
 - restrict management access to a specific VLAN or source-address list rather than leaving the admin interface reachable from every network the device serves — the LAN-side admin panel doesn't need to be reachable from the guest VLAN
 
 ## VLAN segmentation
@@ -21,7 +21,7 @@
 
 ## Firewall rule ordering — chain concepts
 
-- rules evaluate top to bottom, first match wins (both RouterOS chains and iptables/nftables chains) — a broad accept above a narrow drop makes the drop dead code
+- Inspect the actual chain, jump, and verdict semantics. A terminal verdict ends that chain's evaluation, but nftables `accept` in one base chain does not prevent a later base chain from dropping the packet. Check hook priorities and the complete ruleset.
 - RouterOS ships three built-in chains: `input` (traffic destined for the router itself — management access, routing protocol sessions), `forward` (traffic passing through the router between networks — this is where most LAN/WAN policy lives), `output` (traffic the router itself originates) — writing a LAN-isolation rule into `input` instead of `forward` is a common miss that leaves the actual pass-through traffic unfiltered
 - default chain policy matters as much as the rules in it: an input chain with no explicit default and no final drop is an open chain, not a secured one
 - order by specificity and cost: cheap, high-traffic matches (established/related connection state) first, so most packets short-circuit before hitting expensive rules further down

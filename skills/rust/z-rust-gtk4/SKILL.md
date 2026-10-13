@@ -75,7 +75,7 @@ AdwApplicationWindow
         └── [primary content]
 ```
 
-`AdwHeaderBar` and `AdwToastOverlay` are plain siblings inside a vertical `gtk::Box`, not `add_top_bar`/content slots of a `ToolbarView` — libadwaita ships `AdwToolbarView` for the same shell, but it sees no real use here; the manual `gtk::Box` composition is what production code runs.
+The example uses a vertical `gtk::Box`; `AdwToolbarView` is another supported shell. Preserve the target application's composition unless a concrete layout need warrants changing it.
 
 ### Preferences Dialog Structure
 
@@ -193,11 +193,11 @@ let handle: Handle<AppTray> = AppTray { connected: false, on_action }.spawn().aw
 handle.update(|tray| tray.connected = true).await;
 ```
 
-`AppIndicator`/`libayatana-appindicator` plus a `gio::Menu` model is the older GTK-native alternative — no real use in this corpus; reach for it only if a target desktop lacks StatusNotifierItem support.
+Choose a tray implementation from the target desktop's supported protocols and the application's existing dependencies. Verify behavior on each supported desktop; no private anchor project establishes a universal choice here.
 
 ## Cargo.toml Dependencies
 
-relm4 re-exports `gtk4` and `libadwaita` — declare it once with the GNOME-runtime feature you target plus `libadwaita`, and don't add `gtk4`/`libadwaita`/`glib`/`gio` as separate deps:
+Prefer relm4's compatible re-exports where they cover the required APIs. Direct gtk/glib/gio dependencies can be legitimate; keep versions compatible and avoid duplicate incompatible crate types. The dependency block below is illustrative, not a current-version recommendation:
 
 ```toml
 [dependencies]
@@ -211,7 +211,7 @@ use relm4::gtk;
 use relm4::adw;
 ```
 
-Pick the `gnome_NN` feature matching the minimum GNOME runtime you support (e.g. `gnome_46`, `gnome_49`) — it pulls in the matching gtk4/libadwaita version pin so widget APIs line up with what's actually on the target system. `gnome_49`/`gnome_50` is the current feature-flag frontier; older `gnome_NN` values still work for apps pinned to an older runtime.
+Inspect the installed relm4 feature table and the minimum GTK/libadwaita runtime shipped on supported systems. Choose only available features that fit that runtime; do not infer a feature name from the calendar or GNOME release number.
 
 ## Edge Cases
 
@@ -221,7 +221,7 @@ If the view needs to reference a named widget outside the macro: use `#[name = "
 
 If GTK panics with "assertion failed: is_main_thread": ensure all GTK calls happen on the GLib main thread — never from `tokio::spawn`.
 
-If a widget or method needs a newer GNOME runtime than your current `gnome_NN` feature provides: bump the `gnome_NN` feature on the `relm4` dep, not a separate `gtk4`/`libadwaita` version pin.
+If an API needs a newer runtime, first decide whether raising the minimum supported platform is in scope. Then update compatible crate features and verify on that minimum runtime.
 
 For deep widget patterns, component composition, and real-world relm4 structure: see the reference files below.
 

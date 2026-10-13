@@ -16,7 +16,7 @@ Openers, by observed frequency: emoji + bold thesis line («🖥 **Виртуа�
 
 Body: `————` dividers fencing an aside off the main body; em-dash or emoji (▪️ 🔹) bullets; fenced code blocks for shell/Go/config and ASCII diagrams; bold sub-headers as section pivots; numbered steps for procedures.
 
-Length on Telegram: ~4096 chars for a text post, 1024 as a media caption. Longreads split into numbered parts («Часть 1/3») or move to Telegraph/Teletype/blog with a link post.
+Check the current client, account, and publishing API limits before sizing a Telegram post or media caption; those surfaces can differ. Split longreads only when the actual surface requires it.
 
 Closers: hashtag footer plus channel signature line; soft italic closing line. Bookmark/subscribe CTAs are common but read as marketing — omit.
 
@@ -38,12 +38,10 @@ Caveats: handles and subscriber counts drift — verify a channel is alive befor
 
 ## Legal caveats — circumvention and compliance content
 
-**Circumvention.** RF law has hardened:
+**Circumvention.** Verify the current law and publication context:
 
-- Advertising circumvention tools is banned by ч.10.8 ст.5 закона «О рекламе» and penalized under ч.18 ст.14.3 КоАП (introduced by № 281-ФЗ of 31.07.2025, in force 01.09.2025): fines 50–80 тыс. ₽ for individuals, 80–150 тыс. ₽ for officials, 200–500 тыс. ₽ for legal entities.
-- п.1 ч.5 ст.15.1 149-ФЗ bans instructions, guides, and service lists for circumvention; non-removal is penalized under ст.13.41 КоАП with fines up to 4 млн ₽.
-- First FAS enforcement: January 2026, Волгоградское УФАС (Решение № 035/05/5-1030/2025) — a blog owner fined as an individual, on the reading that any VPN advertising violates the ban.
+Before publishing legal claims, retrieve the current statute and applicable enforcement decision from primary sources. Record jurisdiction, effective date, exact provision, and the scope it addresses. Advertising rules, information-blocking rules, and administrative penalties are separate questions.
 
-Write circumvention content as neutral engineering analysis of mechanics only. Never recommend a service, never give acquisition or setup steps framed as «how to get access».
+Do not repeat an unverified “first enforcement” claim or infer the scope of a prohibition from a secondary summary. This style reference is not a legal authority.
 
 **Compliance.** Keep a «not legal advice» frame. Date every legal claim; RF internet regulation moves fast — re-verify statute text and enforcement state before publishing.

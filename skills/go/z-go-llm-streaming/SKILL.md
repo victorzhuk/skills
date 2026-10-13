@@ -116,22 +116,9 @@ the aggregate per-request view.
 
 ## Streaming vs non-streaming HTTP clients
 
-This split applies to hand-rolled clients that own their `http.Client`. Never set
-`Timeout` on the client used for streaming — the deadline fires mid-response and severs
-the connection:
+Choose streaming deadlines deliberately. A short `http.Client.Timeout` covers body reading and will cut off a healthy long stream. A zero client timeout is acceptable only with explicit connection/header, first-token, idle and maximum-stream budgets. Derive the request context from the caller so disconnect cancellation propagates; disconnect alone does not bound a stalled upstream.
 
-```go
-streamClient    := &http.Client{Transport: transport}                              // no Timeout
-nonStreamClient := &http.Client{Timeout: cfg.ChatTimeout, Transport: transport}
-```
-
-When an SDK owns the transport — the real case configures one `Timeout` on the SDK's
-client for both streaming and non-streaming calls — this split doesn't apply; the SDK is
-trusted to handle its own streaming deadlines.
-
-For non-streaming calls, apply `context.WithTimeout` at the use-case level. For streaming
-calls, rely on the HTTP handler's `r.Context()` — the server cancels it on client
-disconnect, which propagates through the call chain.
+Use separate clients/configurations when streaming and bounded calls need different limits. Inspect the pinned SDK's transport and cancellation behavior; do not assume it supplies idle deadlines. Test a server that sends headers then stalls, cancellation during reading, and a stream exceeding the maximum lifetime. Once output has been emitted, do not transparently retry the whole request unless the protocol supports resumable delivery without duplicate tokens.
 
 ## SSE handler: named events
 

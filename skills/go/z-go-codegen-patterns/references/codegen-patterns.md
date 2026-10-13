@@ -8,7 +8,7 @@ A safe pipeline prevents partial writes and inconsistent output:
 2. **Validate** that every injection target exists — fail before writing any files.
 3. **Sort** injections by priority (lower number = applied first).
 4. **Group** injections by target file.
-5. **Parse** each target file once using `dst.ParseFile` — `dst` here, not `go/parser`, because injection must preserve comments.
+5. **Parse** each target file once using `decorator.ParseFile` — `dst` here, not `go/parser`, because injection must preserve comments.
 6. **Apply** typed injectors (`import`, `field`, `code`, `struct`).
 7. **Print and write** formatted Go only when the file was modified.
 
@@ -37,7 +37,7 @@ dstutil.Apply(f, func(cursor *dstutil.Cursor) bool {
 }, nil)
 
 var buf bytes.Buffer
-if err := decorator.Fprint(&buf, fset, f); err != nil {
+if err := decorator.Fprint(&buf, f); err != nil {
     return fmt.Errorf("print %s: %w", path, err)
 }
 ```
@@ -92,7 +92,7 @@ Consistent field naming reduces bugs in template context assembly:
 
 ```
 1. Write test with golden comparison (fail on mismatch)
-2. Run: go test -timeout 2m -run TestGenerate -update ./...
+2. Run: timeout 5m go test -parallel 4 -p 2 -timeout 2m -run TestGenerate -update ./...
 3. Review generated diff: git diff testdata/
 4. Confirm output is correct Go that compiles
 5. Commit golden files alongside the generator change

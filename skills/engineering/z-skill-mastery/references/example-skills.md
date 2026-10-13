@@ -30,8 +30,8 @@ Handle an error exactly once: wrap with context and return, or log and stop — 
 
 ## Verify
 
-    rg -n 'log\.(Error|Printf).*return' ./...   # find log-and-return
-    go vet ./...
+- Inspect changed error paths and their callers for duplicate logging.
+- Run the project's existing vet or lint wrapper for the affected scope.
 
 see [[z-go-observability]], [[z-go-safety]]
 ```

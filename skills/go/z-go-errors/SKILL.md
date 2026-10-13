@@ -9,7 +9,7 @@ description: Idiomatic Go error handling, wrapping, inspection, and hygiene — 
 
 1. **Check every error** — never discard with `_`.
 2. **Wrap with context:** `fmt.Errorf("create user: %w", err)` — short prefix, lowercase, no period.
-3. **`%w` inside, `%v` at system boundaries** — controls chain exposure to external callers.
+3. **Translate errors at transport boundaries** — `%v` removes wrapping but does not sanitize the message. Return stable public errors; retain internal causes for one safe log.
 4. **Inspect via `errors.Is` / `errors.As`** — never `==` on wrapped errors or bare type assertions.
 5. **Handle exactly once** — log OR return, never both (see Single Handling below).
 6. **Panic only for truly unrecoverable states** — programmer errors, broken invariants; never for expected conditions.
@@ -128,7 +128,7 @@ func safeRun(f func()) (err error) {
 | Pattern | Rule |
 |---|---|
 | Wrap format | `"create user: %w"` — short, lowercase, no period |
-| Chain exposure | `%w` internal; `%v` at external API boundary |
+| Chain exposure | wrap internally; translate to a safe public error at transport boundaries |
 | Sentinel match | `errors.Is(err, ErrFoo)` |
 | Typed extraction | `errors.As(err, &target)` |
 | Join independent | `errors.Join(errA, errB)` |
@@ -148,6 +148,6 @@ func safeRun(f func()) (err error) {
 ## Verify
 
 ```sh
-go build ./... && go test -short -timeout 2m ./...
+go build ./... && timeout 5m go test -parallel 4 -p 2 -short -timeout 2m ./...
 golangci-lint run ./...
 ```

@@ -56,7 +56,7 @@ The `description` is the only thing the agent sees before deciding to load the s
 - Front-load a **Leading Word** — a pretrained concept the model already knows (`red-green-refactor`, `tracer bullet`, `ubiquitous language`, `goroutine leak`). One familiar token anchors behaviour more cheaply than a paragraph of description.
 - End with a boundary: `Does not cover X; see [[other-skill]].` This is how skills in this repo disambiguate overlapping scope — see the `z-go-*` family.
 - Every word is Context Load. If a phrase is already in the body, cut it from the description.
-- Budget is shared across the whole catalog: harnesses load every description into context and some skip skills once the total passes their budget (~50 KB). House caps enforced by `npm run check`: ≤600 chars per description, ≤40,000 aggregate. Aim 300–450; list at most 5–6 trigger phrases, keep at most 2 boundary clauses, no "See also" — that lives in the body.
+- Budget is shared across the whole catalog: harnesses load every description into context and some skip skills once the total passes their budget (~50 KB). House caps enforced by `npm run check`: ≤600 chars per description, ≤43,000 aggregate. Aim 300–450; list at most 5–6 trigger phrases, keep at most 2 boundary clauses, no "See also" — that lives in the body.
 
 ## Invocation: skill vs command
 
@@ -67,7 +67,7 @@ The `description` is the only thing the agent sees before deciding to load the s
 | Home | repository `skills/**/z-*` or installed `~/.agents/skills/z-*` | the command layer (`/zreview`, `/zspec`, …) |
 | Use for | knowledge the agent should reach for unprompted | multi-step flows a human deliberately starts |
 
-Knowledge (`z-go-errors`, `z-go-testing`) is model-invoked. Orchestrated flows (`zreview`, `zaudit`, `zapply`) are commands. Claude Code also supports `disable-model-invocation: true` to keep a skill file human-only — use it if a skill must never auto-fire, but prefer the command layer for flows.
+Knowledge (`z-go-errors`, `z-go-testing`) is model-invoked. Orchestrated flows (`zreview`, `zaudit`, `zapply`) are commands. Keep host-specific invocation settings in the installation layer. This catalog's frontmatter contract remains the three fields above; use the command layer for deliberately started flows.
 
 ## House style
 
@@ -94,7 +94,7 @@ Rules for the body:
 - **Instruct, don't roleplay.** No `## Role`, no "You are an expert…". A skill instructs; it does not act a character. A line that only sets a persona is a No-Op.
 - **Imperative + terse.** "Wrap with `%w`", not "You should consider wrapping". Match the caveman/concise house voice.
 - **Motivate rules that look arbitrary.** One clause of *why* raises adherence: "return early (keeps the happy path un-nested)".
-- **XML tags only for embedded verbatim blocks** the agent must reproduce (a template, a report shape) — e.g. `<prd-template>…</prd-template>`. Never as the section skeleton. See [[references/xml-patterns.md]] for the tag vocabulary when a skill genuinely orchestrates model reasoning.
+- **XML tags only for embedded verbatim blocks** the agent must reproduce (a template, a report shape) — e.g. `<prd-template>…</prd-template>`. Never as the section skeleton. See [[references/xml-patterns.md]] when a consumer requires a structured template.
 
 ## Information hierarchy
 
@@ -152,5 +152,5 @@ Detail and before/after fixes in [[references/anti-patterns.md]].
 
 - [[references/anti-patterns.md]] — failure modes with before/after fixes.
 - [[references/example-skills.md]] — house-style skills to copy from.
-- [[references/reasoning-patterns.md]] — CoT/verification techniques for skills that orchestrate model reasoning (review, QA). Optional.
-- [[references/xml-patterns.md]] — XML tag vocabulary for embedded templates. Optional.
+- [[references/reasoning-patterns.md]] — evidence and decision patterns for review and QA. Optional.
+- [[references/xml-patterns.md]] — delimiters and structured output templates. Optional.

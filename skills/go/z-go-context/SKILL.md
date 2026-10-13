@@ -155,5 +155,5 @@ Use `r.Context()` — never `context.Background()`. After a service call fails, 
 
 ```sh
 go vet ./...
-staticcheck ./...   # SA1012 (nil ctx), SA1006 (unused cancel), SA4006
+staticcheck ./...   # SA1012 (nil ctx), SA4006 (unused value); go vet checks lostcancel
 ```

@@ -19,7 +19,7 @@ description: >
 | Non-zero local | `x := val` |
 | Struct literal | Always field names; omit zero fields |
 | iota start | Plain `iota` from 0 with a real state at zero (default); `iota + 1` only when zero-as-invalid genuinely matters |
-| `any` | Default; `interface{}` only where an external signature or genuinely arbitrary JSON forces it |
+| `any` | Default spelling; `any` and `interface{}` are identical aliases |
 | if-init | Use when var is only needed for the check |
 | Guard clause | Handle error/edge first; happy path unindented |
 | Drop else | When if body ends with return/break/continue |
@@ -203,10 +203,7 @@ Unexport by default — exporting is a commitment. Dot imports never in library 
 
 ## Do not
 
-- Use `interface{}` without a reason — default to `any`. Keep `interface{}`
-  only where an external signature forces it (a callback like golang-jwt's
-  `func(*jwt.Token) (interface{}, error)`) or the field is genuinely
-  arbitrary JSON (e.g. a JSON-RPC param).
+- Claim an external signature or arbitrary JSON requires `interface{}` spelling: `any` is the same type. Preserve surrounding style when editing existing code.
 - Preallocate speculatively (`make([]T, 0, 1000)` when common case is 10 items).
 - Add `else` after a returning `if`.
 - Put 3+ boolean operands inline — extract to named vars.

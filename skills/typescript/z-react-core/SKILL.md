@@ -28,7 +28,7 @@ Route groups (`(marketing)/`) organize without adding a URL segment; parallel/in
 
 ## Server components by default
 
-Every file under `app/` is a Server Component unless it opts out. It can be `async`, await a database call or fetch directly, read server-only env vars, and never ships its JS to the client:
+App Router pages and layouts are Server Components by default. The module graph and directives determine other components' execution environment. A Server Component can be `async`, await a database call, and read server-only configuration:
 
 ```tsx
 // app/orders/page.tsx — Server Component, no directive needed
@@ -38,7 +38,7 @@ export default async function OrdersPage() {
 }
 ```
 
-`'use client'` marks the boundary where interactivity starts — that file and everything it imports below it renders on the client:
+`'use client'` defines a client module boundary: its imports enter the client bundle. Client Components can still be rendered on the server for the initial HTML; access browser-only globals in event handlers or after mount:
 
 ```tsx
 // components/order-row.tsx
@@ -88,7 +88,9 @@ A Server Action (`'use server'`) is a function the client can call directly with
 'use server';
 
 export async function createOrder(formData: FormData) {
+  const actor = await requireUser();
   const parsed = orderSchema.parse(Object.fromEntries(formData));
+  await authorizeOrderCreation(actor, parsed.customerId);
   await db.orders.create(parsed);
   revalidatePath('/orders');
 }
@@ -101,17 +103,17 @@ export async function createOrder(formData: FormData) {
 </form>
 ```
 
-This works before any client JS has hydrated — progressive enhancement is the default, not an opt-in. Validate the payload inside the action itself (server-side, on every call) even though the client form may also validate; the action is a public entry point, not just a wire from a trusted form.
+The authentication and authorization helpers above are illustrative project functions. Implement both checks on every action invocation; never trust a submitted customer or tenant ID. Validate the payload on the server even when the form validates it too. Forms rendered by Server Components support submission before hydration; verify the actual flow when a Client Component owns the form.
 
 ## Suspense and error boundaries
 
-`loading.tsx` in a route segment is an implicit `<Suspense>` boundary around that segment's data — the layout above it renders immediately, the segment streams in once its `await` resolves. `error.tsx` is the matching `<ErrorBoundary>` — it catches a throw from its segment and everything below, and must be a Client Component (it needs a `reset()` handler).
+`loading.tsx` wraps the segment's page and descendants in a Suspense boundary. `error.tsx` must be a Client Component and catches failures below its boundary, but not its own segment's layout. Use a parent boundary for that layout; root layout failures need `global-error.tsx`.
 
 Place both at the segment that can actually fail or actually takes time — a boundary around the whole app hides which part is slow or broken; one per meaningfully-independent section gives a useful partial-failure and partial-loading UI.
 
 ## Component file discipline
 
-Colocate a component with the route that owns it (`app/orders/_components/order-row.tsx`) until a second, unrelated route needs the same component — then promote it to a shared `components/` directory. No barrel `index.ts` re-exporting a directory's contents "for convenience": it defeats tree-shaking analysis and turns every import into a whole-directory dependency edge. Import directly from the file that defines the thing.
+Colocate a component with its owning route until another route needs it. Prefer direct imports to avoid accidental client/server boundary mixing and unnecessary module traversal. A barrel does not inherently defeat tree shaking; preserve deliberate public entry points.
 
 ## Testing
 
@@ -129,6 +131,7 @@ Playwright for a real end-to-end flow that crosses a Server Action or a route bo
 
 ## Boundary
 
+- Shared-link metadata and preview verification: [[z-open-graph]].
 - tsconfig, zod, Biome/vitest defaults, general error handling: [[z-ts-core]].
 - Telegram Mini App specifics (SDK, initData, viewport): [[z-ts-telegram-mini-app]] — a Mini App webview is a different rendering target than a Next.js server-rendered page.
 
@@ -146,7 +149,9 @@ Playwright for a real end-to-end flow that crosses a Server Action or a route bo
 ```sh
 rg -n "'use client'" app/ | grep -v '_components\|components/'   # client directive outside a leaf component dir
 rg -n 'useEffect.*fetch' app/                                     # client-side fetch waterfalls
-vitest run --maxWorkers=50%
+timeout 5m vitest run --maxWorkers=50% --testTimeout=5000
 ```
+
+Prefer the existing bounded test wrapper. Exercise an unauthorized action and a cross-tenant request as well as the successful form flow when changing authorization.
 
 see [[z-ts-core]], [[z-ts-telegram-mini-app]], [[z-testing-strategy]]

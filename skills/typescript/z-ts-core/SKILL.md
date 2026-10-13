@@ -9,6 +9,8 @@ House defaults for this catalog's TS side: Telegram Mini Apps, small CLI tools, 
 
 ## tsconfig baseline
 
+Choose the execution host first. This example is for bundled browser code. For JavaScript emitted by TypeScript and executed directly by Node, use `module` and `moduleResolution` set to `NodeNext`, match the runtime target, and use runtime-valid relative import extensions. Omit `DOM` from Node-only libraries. Direct TypeScript execution has separate restrictions; verify the actual launcher and installed versions.
+
 ```jsonc
 {
   "compilerOptions": {
@@ -31,10 +33,10 @@ House defaults for this catalog's TS side: Telegram Mini Apps, small CLI tools, 
 | `strict` | baseline: null checks, no implicit `any`, strict `bind`/`call`/`apply` — table stakes, not a bonus |
 | `noUncheckedIndexedAccess` | `arr[i]` and `record[key]` type as `T \| undefined` — `strict` alone doesn't catch this; it's the single highest-value flag `strict` omits |
 | `exactOptionalPropertyTypes` | `{ a?: string }` stops accepting an explicit `undefined` — separates "key absent" from "key set to undefined", which `?:` alone conflates |
-| `verbatimModuleSyntax` | forces `import type`/`export type` on type-only imports; the emitted JS mirrors the source 1:1, so a bundler never has to guess whether an import is a value or erasable |
+| `verbatimModuleSyntax` | preserve value imports/exports and erase those marked `type`; use explicit type-only imports where required |
 | `module: "preserve"` | (5.4+) keeps each import/export in the form you wrote it — stops TS emitting a module format your bundler doesn't produce |
 | `moduleResolution: "bundler"` | matches how Vite/esbuild actually resolve: package.json `exports`/`imports`, no forced file extensions on relative imports |
-| `isolatedModules` | every file must transpile standalone — required by esbuild/swc single-file transforms, catches `const enum` and other whole-program features early |
+| `isolatedModules` | catch constructs that cannot be safely transformed one file at a time, including references to ambient const enums |
 | `skipLibCheck` | skip type-checking vendored `.d.ts` — not laziness, a broken third-party type isn't your bug to fix |
 
 ## ESM only
@@ -79,7 +81,7 @@ type SubmitResult =
 ## Type discipline
 
 - `unknown` over `any` at every boundary — `catch (err: unknown)`, `JSON.parse` results, webhook payloads. Narrow before use; `any` silently opts the whole expression back out of checking.
-- Discriminated unions over enums or boolean flags. A `kind`/`type` literal field plus an exhaustive `switch` gives you a compiler error the moment a new case appears — an `enum` or two booleans don't.
+- Prefer discriminated unions for variants carrying different data. Enforce exhaustiveness with a `never` check; enums can also be checked exhaustively. Avoid unrelated booleans that permit invalid state combinations.
 
 ```ts
 function assertNever(x: never): never {
@@ -105,9 +107,9 @@ const config = {
 | Setup | one binary, one config file | two tools, two configs, plugin wiring |
 | Speed | Rust, single process | spins up the TS type-checking service separately for type-aware rules |
 | Type-aware lint | v2's opt-in "project domain" scanner — real but partial (e.g. `noFloatingPromises` catches most, not all, cases `typescript-eslint` catches) | full `typescript-eslint` parity |
-| Framework plugins | none | `eslint-plugin-react`, `eslint-config-next`, etc. |
+| Framework rules | built-in framework domains; check the installed version and enabled domains | framework plugins such as `eslint-plugin-react` and `eslint-config-next` |
 
-Default: Biome for new or small TypeScript — Mini Apps, scripts, tools. One fast tool covers formatting and the common lint rules with zero config. Reach for ESLint + `typescript-eslint` when a framework mandates its own plugin (Next.js) or a specific type-aware rule Biome's scanner doesn't cover yet is the one blocking a real bug class.
+Preserve the project's configured tools. Biome is the house default for a new small package; choose ESLint with `typescript-eslint` when required rules or framework integration need it. Next.js does not universally require ESLint. Compare required rules against the installed versions rather than assuming feature parity.
 
 Tests: vitest. Table-driven cases via `test.each`, not a copy-pasted `it` per row:
 
@@ -120,11 +122,11 @@ test.each([
 })
 ```
 
-Vitest defaults to one worker per core — cap it. Pin `maxWorkers` (and `testTimeout` past the 5s default where suites hit real IO) in `vitest.config.ts` so every invocation inherits the limits, or pass `--maxWorkers=50%` inline; [[z-testing-strategy]] has the per-runner floor.
+Use the existing bounded test wrapper. Set `maxWorkers` and `testTimeout` in the Vitest configuration and give the whole command a deadline; [[z-testing-strategy]] defines the floor.
 
 No dedicated TS testing skill yet in this catalog — [[z-testing-strategy]] covers depth and when a change needs a contract test, not vitest syntax.
 
-Scripts: `tsx` (esbuild-backed — watch mode, tsconfig path aliases, zero config). Node's built-in type stripping (default since Node 22.18, no flag) covers a throwaway script with only erasable syntax, but drops `enum`, parameter properties, namespaces with runtime code, and import aliases — reach for `tsx` the moment a script needs any of those, or wants watch mode.
+Scripts: preserve the existing launcher. Node's type stripping supports erasable syntax but rejects syntax requiring transformation, including enums and parameter properties, unless a supported transformation mode is explicitly enabled. It does not apply `tsconfig` path aliases. Check the installed Node version; use `tsx` when its transformation or resolution behavior is needed.
 
 Package manager: match whatever lockfile is already in the repo (`pnpm-lock.yaml` → pnpm, `package-lock.json` → npm, `yarn.lock` → yarn) — never switch an existing project. `pnpm` is the default for a brand-new package: strict dependency resolution catches phantom imports `npm`'s flat `node_modules` hides, and monorepo/workspace support is the best of the three.
 
@@ -142,7 +144,7 @@ Package manager: match whatever lockfile is already in the repo (`pnpm-lock.yaml
 ```sh
 tsc --noEmit                 # strict flags actually catch what they claim to
 npx biome check .            # or `eslint . && prettier --check .` if that's the project's choice
-vitest run --maxWorkers=50%  # or pin maxWorkers in vitest.config.ts
+timeout 5m vitest run --maxWorkers=50% --testTimeout=5000
 ```
 
 Confirm the boundary schema and its inferred type are the only source of truth for that shape — `grep -rn "interface Profile" src` next to a `profileSchema` should turn up nothing.

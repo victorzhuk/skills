@@ -19,8 +19,8 @@ Pick the data structure by what the code does with it — membership check, orde
 
 ## When it matters
 
-- below roughly n=1,000, the simplest structure wins — a linear scan over a slice beats a hash map's overhead at that scale and is trivially correct
-- measure before optimizing above that threshold — a profiler pointing at real time spent beats guessing which O(n²) is "the" bottleneck
+- for small bounded inputs, begin with the simplest correct structure; there is no portable size threshold where a scan beats hashing
+- measure representative key types, hit rates, mutation patterns, and repeated queries before optimizing; profile the actual hot path
 - an algorithm swap that isn't on a measured hot path is speculative work; [[z-no-over-engineering]] applies to data structures too
 
 ## Selection patterns

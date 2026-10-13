@@ -6,6 +6,7 @@ Deployment discipline across Kubernetes, Terraform/OpenTofu, self-hosted VPS tar
 
 Model- or user-reachable via skill name and trigger phrasing.
 
+- **[z-container-metadata](./z-container-metadata/SKILL.md)** — Container image metadata with OCI annotations and legacy Label Schema migration. Use for Dockerfile labels, org.label-schema keys, org.opencontainers.image keys, or missing registry metadata. Covers placement, provenance values, and compatibility. Build pipelines belong to [[z-deploy-pipeline]].
 - **[z-k8s-deploy](./z-k8s-deploy/SKILL.md)** — Production Kubernetes deploys with Helm — securityContext, resource limits, probe design with preStop/terminationGracePeriodSeconds shutdown, PDB/HPA/NetworkPolicy, chart/rollout/debug flow.
 - **[z-terraform](./z-terraform/SKILL.md)** — Infrastructure-as-code discipline for Terraform/OpenTofu — remote state locking, thin-env modules with pinned versions, plan-before-apply review, drift detection, workspaces-vs-directory trade-off.
 - **[z-selfhost-deploy](./z-selfhost-deploy/SKILL.md)** — Startup-cheap self-hosted deploys on a VPS — Docker Compose production patterns, systemd units, Caddy/Traefik reverse proxy with automatic TLS, backup-and-restore discipline, and base hardening (SSH keys, firewall…

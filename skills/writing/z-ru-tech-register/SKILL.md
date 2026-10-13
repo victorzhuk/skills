@@ -50,7 +50,7 @@ Erase on sight; each marks the text as generated or machine-translated:
 
 ## Sensitive topics — legal framing
 
-Circumvention/DPI content: neutral engineering analysis of mechanics only. Never recommend a service, never give acquisition or setup steps framed as getting access — RF law penalizes both advertising (ч.18 ст.14.3 КоАП) and how-to instructions (п.1 ч.5 ст.15.1 149-ФЗ). Compliance content: keep a «not legal advice» frame and date every legal claim. Statutes, fines, and enforcement state: `references/register.md`.
+This skill governs language, not legal conclusions. For circumvention, advertising, or compliance content, verify the current primary legal sources and the publication’s jurisdiction before stating obligations or penalties. Date legal claims and distinguish statutory text from interpretation. Do not infer an activity is permitted or prohibited from a style reference. See `references/register.md` for source discipline.
 
 ## Verify
 

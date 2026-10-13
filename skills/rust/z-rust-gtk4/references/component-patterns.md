@@ -2,11 +2,7 @@
 
 ## Full Component Template (sync, with oneshot_command)
 
-This is the real, exclusively-used pattern — a sync `Component` dispatching
-background work via `sender.oneshot_command`, not `AsyncComponent`. The
-window body composes a manual `gtk::Box` + `adw::HeaderBar` +
-`adw::ToastOverlay`, matching what real relm4 desktop apps actually build
-(`adw::ToolbarView` exists but isn't the pattern in use).
+This example uses a sync `Component` with `oneshot_command`. Preserve the target application's existing component style and check the installed relm4 API. The manual Box shell is one option; ToolbarView is another.
 
 ```rust
 use relm4::prelude::*;
@@ -21,7 +17,6 @@ pub struct MyModel {
 pub enum MyMsg {
     Load,
     SetItems(Vec<String>),
-    SetError(String),
     RemoveItem(usize),
 }
 
@@ -169,7 +164,10 @@ impl AsyncComponent for MyModel {
                     let _ = out.send(MyCmd::FetchItems(fetch_items().await.map_err(|e| e.to_string())));
                 });
             }
-            MyMsg::SetItems(items) => self.items = items,
+            MyMsg::SetItems(items) => {
+                self.loading = false;
+                self.items = items;
+            },
             MyMsg::RemoveItem(idx) => { self.items.remove(idx); }
         }
     }
@@ -177,7 +175,10 @@ impl AsyncComponent for MyModel {
     async fn update_cmd(&mut self, cmd: Self::CommandOutput, sender: AsyncComponentSender<Self>, _root: &Self::Root) {
         match cmd {
             MyCmd::FetchItems(Ok(items)) => sender.input(MyMsg::SetItems(items)),
-            MyCmd::FetchItems(Err(e)) => self.error = Some(e),
+            MyCmd::FetchItems(Err(e)) => {
+                self.loading = false;
+                self.error = Some(e);
+            },
         }
     }
 }

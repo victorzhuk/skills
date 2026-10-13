@@ -1,34 +1,34 @@
 ---
 name: z-merge-conflicts
-description: Resolve an in-progress git merge or rebase conflict by intent, not by picking sides blindly — read both sides' commits, PRs, and tickets, preserve both intents where possible, never abort, and run the project's checks before concluding. Use when a merge, rebase, or cherry-pick stops on conflicts, or when the user asks to resolve conflicts. Triggers on "merge conflict", "rebase conflict", "both modified", "conflict markers".
+description: "Resolve merge, rebase, or cherry-pick conflicts by intent. Use for \"merge conflict\", \"rebase conflict\", \"both modified\", or \"conflict markers\". Read both sides, preserve unrelated work, stage only intended resolutions, and verify before continuing the authorized operation."
 ---
 
 # Merge conflicts
 
-Resolve by understanding why each side changed, not by pattern-matching on which hunk looks newer.
+Resolve by intent and preserve unrelated work.
 
 ## Process
 
-1. **See the state.** Merge or rebase? Which commit is being applied? List the conflicting files (`git status`, `git log --merge`, the `<<<<<<<`/`>>>>>>>` markers).
-2. **Find the primary sources per conflict.** Why was each side's change made — commit messages, the PRs they came from, linked issues/tickets. Intent decides resolutions; the diff alone can't.
-3. **Resolve each hunk.** Preserve both intents where possible. Where they're incompatible, pick the side matching the merge's stated goal and note the trade-off. Never invent behavior that neither side had. Always resolve; never `--abort` — aborting discards the work, it doesn't resolve anything.
-4. **Run the project's checks** through its own wrappers — typically typecheck, then tests, then format. Fix what the merge broke.
-5. **Finish.** Stage everything and commit. If rebasing, `--continue` until every commit is applied — a half-done rebase is worse than a conflict.
+1. Identify the merge, rebase, or cherry-pick and its current commit. Record conflicting paths and pre-existing staged and unstaged changes.
+2. Read each side's commits and relevant PRs or tickets. Explain why each change exists.
+3. Preserve both intents where possible. Resolve incompatible behavior using the caller's stated goal; escalate a decision the evidence cannot settle.
+4. Run applicable project checks through its wrappers and resource limits. Fix what the resolution broke.
+5. Stage resolved paths explicitly. Inspect the entire staged diff against the initial state. Do not incorporate unrelated staged work into a commit.
+6. Continue the actual operation within the caller's authorization. Use the correct merge, rebase, or cherry-pick continuation and report remaining conflicts.
 
 ## Do not
 
-- Pick "ours"/"theirs" wholesale without reading both sides' intent.
-- Invent new behavior to make the hunks compose.
-- `--abort` to make the problem go away.
-- Conclude before the project's checks pass.
-- Leave conflict markers in any file (`rg '<<<<<<<'` must be empty).
+- Select ours/theirs wholesale without reading both intents.
+- Invent behavior neither side requested.
+- Stage every modified file.
+- Abort merely to avoid resolving a conflict. Explicit user cancellation can authorize aborting after preserving recoverable work.
+- Treat marker-like test fixtures as unresolved conflicts without inspection.
 
 ## Verify
 
-    rg -l '^(<{7}|={7}|>{7})' .    # no conflict markers survive
-    git status                     # no unmerged paths; rebase/merge finished
+- `git diff --name-only --diff-filter=U` has no unresolved paths.
+- Changed files contain no unintended conflict markers.
+- Staged changes include only intended resolutions and already-authorized work.
+- Project checks pass and `git status` confirms the intended operation completed.
 
-- Both sides' intents are represented or the trade-off is noted in the commit message.
-- Project checks pass after resolution.
-
-see [[z-verify-before-done]]
+see [[z-verify-before-done]], [[z-testing-strategy]]

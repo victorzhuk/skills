@@ -3,19 +3,19 @@
 ## WireGuard baseline
 
 - key pairs are Curve25519: each peer holds a private key and publishes its public key — the private key never leaves the device; config files holding one need locked-down permissions (`chmod 600`) and must never land in a public repo
-- generate with `wg genkey | tee privatekey | wg pubkey > publickey` — the private key is the file that stays secret; the public key is the one exchanged with peers
+- set `umask 077` before generating files with `wg genkey | tee privatekey | wg pubkey > publickey` — the private key is the file that stays secret; the public key is the one exchanged with peers
 - a config is `[Interface]` (this peer's own private key, address, listen port, DNS) plus one or more `[Peer]` blocks (that peer's public key, endpoint, `AllowedIPs`, optional `PersistentKeepalive`) — the shape is symmetric, each side configures the other as a peer
 - `AllowedIPs` does two jobs at once: it's both the routing-table entry for what goes into the tunnel and the cryptokey-routing filter for what's accepted as coming from a given peer. A peer's `AllowedIPs` must match its actual assigned address(es) — too broad and it can spoof traffic for ranges it shouldn't own, too narrow and legitimate traffic gets dropped as unrecognized
 - site-to-site: `AllowedIPs` = the peer's whole subnet. Full-tunnel client: `AllowedIPs = 0.0.0.0/0, ::/0`. Split-tunnel client: list only the specific subnets that should route through the tunnel
 - `PersistentKeepalive = 25` (seconds) is needed on any peer behind NAT that doesn't itself initiate outbound-only connections — without it, the NAT mapping times out (typically 30s+) and the far side can't reach back in until the near side sends traffic again
 - WireGuard is stateless about roaming: a peer's endpoint address updates automatically the moment a valid handshake arrives from a new source — that's what makes it survive a client's Wi-Fi-to-cellular switch without reconnecting, but it also means two peers behind separate NATs with neither holding a stable public endpoint can't establish a session without a relay or a rendezvous point
-- WireGuard's own default MTU is 1420, sized for a clean path with no extra encapsulation. Every additional layer (PPPoE, another VPN, a VLAN tag) eats into that — measure, don't assume. A too-high MTU produces the classic "small packets work, big ones hang" symptom (see the core skill's MTU section)
+- WireGuard has no universal protocol MTU of 1420. Configuration tools can derive an interface MTU from the route and overhead; inspect the actual interface and path. Test payload sizes before choosing an override.
 
 ## xray/v2ray-class proxies — concept level
 
 - these are TLS-camouflage proxies, not standard VPN tunnels: they wrap traffic to look like ordinary HTTPS to a censor doing deep packet inspection, rather than relying on a recognizable VPN protocol signature the way WireGuard or IPsec do
 - VLESS is the lightweight transport protocol — no encryption of its own, it defers entirely to the TLS layer carrying it. It runs on Xray-core, the actively maintained fork of the v2ray lineage; "v2ray" colloquially still refers to this proxy family even when the actual server is Xray-core
-- REALITY is the current-generation camouflage layer: instead of terminating TLS with a self-signed or Let's-Encrypt certificate a censor can fingerprint as proxy infrastructure, it borrows the TLS handshake of a real, innocuous target site so the connection is indistinguishable from a normal visit to that site
+- REALITY aims to make proxy traffic resemble permitted TLS traffic. Do not claim it is indistinguishable or immune to detection; verify the implementation, configuration, and threat model against current upstream documentation.
 - transport choice sits underneath the protocol: raw TCP+TLS is simplest; WebSocket+TLS behind a CDN adds a layer that survives some blocking of the origin IP directly; gRPC is another disguise option. Pick based on what's actually being blocked in the deployment's threat model, not by default
 - a fallback path (unrecognized or non-matching traffic gets proxied through to a real website instead of erroring) is what keeps casual probing from fingerprinting the server as proxy infrastructure — configuring one is part of the setup, not optional hardening
 - verify exact protocol/feature names (Vision flow control, REALITY parameters) against the Xray-core project's own docs before configuring anything — this space iterates fast and specifics age out quickly

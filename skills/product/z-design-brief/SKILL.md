@@ -5,11 +5,11 @@ description: Turns a grilled idea into a design brief by walking through each sc
 
 # Design brief
 
-Walk the idea's UI one screen at a time — what it shows, what the user can click or act on, what states each element has, how screens connect — then write the brief to `docs/design/<slug>-brief.md`. Same interview discipline as [[z-grill-with-docs]]: one question per turn, option cases with a marked recommended answer. For 2–4 option cases, call the native `ask` tool with the question and structured choices; do not emit the options as prose in the response.
+Walk the idea's UI one screen at a time — what it shows, what the user can click or act on, what states each element has, how screens connect — then write the brief to `docs/design/<slug>-brief.md`. Same interview discipline as [[z-grill-with-docs]]: one question per turn, option cases with a marked recommended answer. Use the host's available question tool for structured choices within its supported schema; fall back to concise prose when unavailable.
 
 ## Screen inventory
 
-List every screen the idea implies — including the auth, empty, error, and settings screens briefs usually forget. Confirm the inventory with the user before descending into any single screen — as a multi-select when the question tool supports it, so screens can be struck or added in one pass.
+List every screen the idea implies — including the auth, empty, error, and settings screens briefs usually forget. Reuse an already-approved inventory. Resolve missing or changed screens before descending into them; use multi-select only when the host question tool supports it.
 
 ## Per screen
 

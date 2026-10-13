@@ -37,7 +37,7 @@ key (`"control"`, `"treatment-a"`) or `""` when the flag is unset or
 boolean-only. Use `IsEnabled` for on/off gates, `Variant` once a flag has more
 than two states.
 
-No error return on either method: flag evaluation must never block the happy path. Log or record the failure inside the implementation, then fall back to the default. Callers must not branch on an error.
+This interface uses an explicit fallback contract: implementations record failures and return the selected flag default. Preserve a project interface that returns errors when callers need to distinguish failure from a valid value; either design still needs a deadline.
 
 ## Layered evaluation
 
@@ -51,7 +51,7 @@ Apply layers in priority order:
 type compositeEvaluator struct {
     env      envEvaluator
     provider Evaluator // nil when not configured
-    fallback bool
+    fallback map[Flag]bool
 }
 
 func (e *compositeEvaluator) IsEnabled(ctx context.Context, f Flag, userID uuid.UUID) bool {
@@ -61,10 +61,13 @@ func (e *compositeEvaluator) IsEnabled(ctx context.Context, f Flag, userID uuid.
     if e.provider != nil {
         return e.provider.IsEnabled(ctx, f, userID)
     }
-    return e.fallback
+    return e.fallback[f]
 }
 
 func (e *compositeEvaluator) Variant(ctx context.Context, f Flag, userID uuid.UUID) string {
+    if enabled, set := e.env.lookup(f); set && !enabled {
+        return ""
+    }
     if e.provider != nil {
         return e.provider.Variant(ctx, f, userID)
     }
@@ -72,7 +75,7 @@ func (e *compositeEvaluator) Variant(ctx context.Context, f Flag, userID uuid.UU
 }
 ```
 
-The env kill-switch only carries booleans, so `Variant` skips straight to the provider — a flag disabled at the env layer still needs its `IsEnabled` check in the caller; `Variant` alone won't see that override.
+`Variant` returns `""` when explicitly disabled. Callers must treat an empty variant as disabled, not substitute an enabled treatment. An env value of true permits provider selection; it does not invent a variant.
 
 `envEvaluator.lookup` returns `(false, false)` when the var is absent — so an unset env var passes control to the next layer.
 
@@ -91,13 +94,13 @@ Document every flag in `.env.example` as a commented-out line:
 # FLAG_NEW_CHECKOUT_ENABLED=false
 ```
 
-Default for env-absent is **enabled** (`true`) for ordinary feature flags — so an operator opt-out is explicit. For kill switches guarding risky paths, default to **disabled** so a misconfigured deploy is safe.
+Choose an explicit fallback per flag. New rollouts and safety gates normally default to disabled. Retain enabled behavior only when availability requirements justify it; do not share one implicit default across unrelated flags.
 
 ## Fail-open vs fail-closed
 
 | Flag class | Recommended default | Rationale |
 |---|---|---|
-| UX / product feature | **fail-open** (`true`) | Provider outage should not degrade the product |
+| UX / product feature | Explicit per-flag default | Preserve established behavior; keep unlaunched treatments disabled |
 | Safety gate / kill switch | **fail-closed** (`false`) | Unknown state must not permit the risky path |
 | Billing/payment **gate** (paywall UI visibility) | **fail-open** (`true`) | The flag only decides what the UI shows; a provider outage shouldn't lock out paying users |
 | Billing/payment **charge path** (the money-moving decision) | **fail-closed** (`false`) | Unknown state must never authorize a charge |
@@ -109,54 +112,14 @@ flag controls, not by the word "billing" in its name.
 
 ### Provider implementation
 
-The provider implementation must return quickly and never block the request
-on a slow eval. The real recipe:
+Keep provider evaluation bounded and preserve targeting:
 
-- **Per-key TTL cache** — cache the evaluated value (and variant) per flag for
-  a short window (seconds, not hours) so a hot path doesn't call the SDK on
-  every request.
-- **Goroutine-bounded timeout** — when the SDK's eval call takes no `ctx`
-  (many provider SDKs don't), race it against `time.After` in a `select`
-  rather than letting it block indefinitely.
-- **Prometheus counter for eval outcomes** — a `flag_eval_total{flag,outcome}`
-  counter (`hit`/`timeout`/`error`) turns a silent fallback into something
-  alertable instead of a mystery during an incident.
+- Cache evaluated results by flag plus every relevant identity/context field, including tenant and user. Prefer the SDK's local flag-definition cache when available; never share a targeted result under the flag name alone.
+- Use a context-aware SDK/transport with a deadline inherited from the caller. Do not wrap an uncancellable call in a new goroutine per request: timing out the caller leaves that work running. If unavoidable, use bounded admission and an owned worker lifecycle; see [[z-go-concurrency]].
+- Return the flag's explicit fallback on provider failure; do not cache a transient failure as a successful evaluation. Count outcomes with bounded flag/outcome labels and avoid user identifiers in metrics.
+- Test opposing users, env-disabled variants, caller cancellation, and a stalled provider. Verify in-flight work stays bounded.
 
-```go
-var evalOutcomes = prometheus.NewCounterVec(prometheus.CounterOpts{
-    Name: "flag_eval_total",
-    Help: "feature flag evaluation outcomes",
-}, []string{"flag", "outcome"})
-
-func (e *providerEvaluator) IsEnabled(ctx context.Context, f Flag, userID uuid.UUID) bool {
-    if v, ok := e.cache.get(f); ok {
-        return v
-    }
-
-    result := make(chan bool, 1)
-    go func() {
-        enabled, err := e.client.IsFeatureEnabled(string(f), userID.String())
-        if err != nil {
-            evalOutcomes.WithLabelValues(string(f), "error").Inc()
-            result <- e.fallback
-            return
-        }
-        result <- enabled
-    }()
-
-    select {
-    case v := <-result:
-        evalOutcomes.WithLabelValues(string(f), "hit").Inc()
-        e.cache.set(f, v)
-        return v
-    case <-time.After(200 * time.Millisecond):
-        evalOutcomes.WithLabelValues(string(f), "timeout").Inc()
-        return e.fallback
-    }
-}
-```
-
-Log provider errors at `Warn`; do not surface them to callers.
+[Evaluation context](https://openfeature.dev/specification/sections/evaluation-context/) is part of the evaluation input, not optional cache metadata.
 
 ## Global vs per-user flags
 
@@ -165,7 +128,7 @@ Log provider errors at `Warn`; do not surface them to callers.
 | Platform / global | All users share one value | Static config payload evaluated at startup or request time with no user context |
 | Per-user / targeted | Each user ID independently | Per-request identity payload (e.g. a `/me` response) evaluated with the real user ID |
 
-Global flags may pass `uuid.Nil` — the env adapter ignores the user ID, and most remote providers treat a zero ID as a non-targeted evaluation.
+The env adapter ignores user identity. Before passing `uuid.Nil` for a global flag, verify how the selected provider interprets it; a zero UUID does not inherently mean non-targeted evaluation.
 
 For the per-request identity payload, iterate the known per-user flags at handler time:
 
@@ -204,7 +167,7 @@ func (m mapEvaluator) IsEnabled(_ context.Context, f Flag, _ uuid.UUID) bool {
     if v, ok := m[f]; ok {
         return v
     }
-    return true // absent key → enabled (matches fail-open default)
+    return false // tests opt into enabled behavior explicitly
 }
 
 func (m mapEvaluator) Variant(_ context.Context, _ Flag, _ uuid.UUID) string {
@@ -222,7 +185,7 @@ flags := mapEvaluator{feature.FlagNewCheckoutEnabled: false}
 uc := NewCheckoutUseCase(flags)
 ```
 
-Pass `mapEvaluator(nil)` to enable all flags. To assert behavior under provider outage, either pass explicit values or implement a separate `errorEvaluator` that always returns `fallback`.
+Pass `mapEvaluator(nil)` to disable all flags. To assert behavior under provider outage, either pass explicit values or implement a separate `errorEvaluator` that always returns `fallback`.
 
 Do not use `os.Setenv` in tests to control flags — it is global state and introduces order-dependent failures.
 
@@ -232,7 +195,7 @@ Do not use `os.Setenv` in tests to control flags — it is global state and intr
 - [ ] Added to the all-flags registry (env-key docs, diagnostics)
 - [ ] Added to the per-user flags list if targeted
 - [ ] `Evaluator` interface injected; `IsEnabled` called with the correct user ID
-- [ ] Multivariate flags call `Variant`, not `IsEnabled`
+- [ ] Multivariate callers treat an empty `Variant` as disabled; env kill-switch tests cover this path
 - [ ] Fail-open/fail-closed default is intentional; fail-closed default has a WHY comment
 - [ ] Billing/payment flags: fail-open/fail-closed matches whether the flag controls a gate or a charge path
 - [ ] Tests use the fake evaluator, not `os.Setenv`
@@ -240,5 +203,5 @@ Do not use `os.Setenv` in tests to control flags — it is global state and intr
 ## Verify
 
 ```sh
-go build ./... && go test -short -timeout 2m ./...
+go build ./... && timeout 5m go test -parallel 4 -p 2 -short -timeout 2m ./...
 ```

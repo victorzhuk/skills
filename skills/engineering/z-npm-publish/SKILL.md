@@ -6,7 +6,7 @@ allowed-tools: Read Edit Write Bash(npm:*) Bash(gh:*) Bash(git:*)
 
 # Publish a Node package to npm with OIDC trusted publishing
 
-Tag-triggered GitHub Actions publish, authenticated by OIDC (no long-lived token), with signed provenance. Use your own scope, e.g. `@scope/*`, for scoped public packages.
+Tag-triggered GitHub Actions publish authenticated by OIDC. Verify npm CLI ≥11.5.1 and Node ≥22.14.0, supported cloud-hosted runners, and matching repository identity. Automatic provenance applies to public packages published from public repositories through supported providers. Use the verified package scope.
 
 ## Bootstrap order — the package must exist first
 
@@ -14,9 +14,9 @@ npm OIDC and `npm trust` **cannot create a brand-new package**. Until the name e
 
 1. `npm run build && npm publish --access public` — once, locally, with npm login (handles 2FA/OTP). Creates the package.
 2. `npm trust github <pkg> --allow-publish --repo <owner/repo> --file npm-publish.yml` — grants the workflow publish rights (npm v11+, 2FA required).
-3. Push a `vX.Y.Z` tag — CI publishes via OIDC from now on.
+3. Validate the new trusted publisher with a successful publish within its two-day activation window. Push the intended release tag only within the authorized release flow.
 
-Token alternative (skips 1–2, works for the first publish, but you manage a secret): create an npm automation token, add repo secret `NPM_TOKEN`, and set `env: NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` on the publish step.
+Prefer OIDC after bootstrap. If token authentication is required, use current granular token permissions and expiry, not removed classic automation tokens. Choose direct publishing or staged publishing explicitly. Current npm policy schedules removal of direct publishing with bypass-2FA tokens in January 2027; verify the current policy before setting up a pipeline.
 
 ## package.json
 
@@ -102,6 +102,12 @@ gh run list --workflow npm-publish.yml --limit 1     # CI status
 gh release view vX.Y.Z                               # release job output
 ```
 
-The `publish` job succeeding means `npm publish` exited 0 — a registry read 404 right after is CDN propagation lag, not a failed publish; trust the CI log (`+ @scope/pkg@X.Y.Z`).
+Verify the exact package, version, registry, CI log, and registry result. A temporary 404 can reflect propagation, but do not assume that cause; retry within a bounded window and report unresolved disagreement.
+
+## References
+
+- [Trusted publishing](https://docs.npmjs.com/trusted-publishers/).
+- [Granular access tokens and staged publishing](https://docs.npmjs.com/about-access-tokens/).
+- [npm trust](https://docs.npmjs.com/cli/v11/commands/npm-trust/).
 
 see [[z-changelog]] (release notes), [[z-go-ci]] (Go CI pipelines)

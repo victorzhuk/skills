@@ -28,15 +28,15 @@ pretty,junit:reports/bdd/junit.xml,cucumber:reports/bdd/cucumber.json
 
 ## Gates
 
-Use Cucumber JSON for scriptable gates. Example with `jq` or `jaq`:
+Use the test runner exit status as the primary gate. A missing report, empty selection, or undefined/pending/skipped required scenario must not pass merely because no step has status failed. For an all-required passing report, an additional `jq`/`jaq` check is:
 
 ```sh
-jq '[.[].elements[].steps[].result.status] | map(select(. == "failed")) | length' reports/bdd/cucumber.json
+jq -e '[.[].elements[].steps[].result.status] | length > 0 and all(. == "passed")' reports/bdd/cucumber.json
 ```
 
 Common scripts:
 
-- fail release if any `@critical` scenario failed
+- require all selected `@critical` scenarios to pass; fail on missing/empty evidence
 - build living documentation HTML
 - sync `@story:*` scenario status to a tracker
 - produce release evidence for auth, billing, permissions, and data-loss tags
@@ -49,7 +49,7 @@ Behavior changed:
 - `features/billing/payment.feature`: Scenario: Gateway timeout leaves order pending
 
 Validated:
-- `BDD_TAGS='@story:PAY-241' go test -timeout 10m ./internal/billing -run '^TestBDD$'`
+- `BDD_TAGS='@story:PAY-241' timeout 15m go test -parallel 4 -p 2 -timeout 10m ./internal/billing -run '^TestBDD$'`
 - report: `reports/bdd/cucumber.json`
 ```
 

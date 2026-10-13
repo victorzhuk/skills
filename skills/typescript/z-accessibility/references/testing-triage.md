@@ -2,20 +2,21 @@
 
 ## Automated testing
 
+Use installed project tools or wrappers first. These examples assume the executables already exist; do not install globally just to run an audit.
+
 ```bash
 # Lighthouse accessibility audit
-npx lighthouse https://example.com --only-categories=accessibility
+timeout 2m lighthouse https://example.com --only-categories=accessibility
 
 # axe-core
-npm install @axe-core/cli -g
-axe https://example.com
+timeout 2m axe https://example.com
 ```
 
 ## Manual testing
 
 - [ ] **Keyboard navigation:** Tab through entire page, use Enter/Space to activate
 - [ ] **Screen reader:** Test with VoiceOver (Mac), NVDA (Windows), or TalkBack (Android)
-- [ ] **Zoom:** Content usable at 200% zoom
+- [ ] **Resize/reflow:** Text usable at 200%; content reflows at 400% zoom where applicable
 - [ ] **High contrast:** Test with Windows High Contrast Mode
 - [ ] **Reduced motion:** Test with `prefers-reduced-motion: reduce`
 - [ ] **Focus order:** Logical and follows visual order
@@ -56,8 +57,8 @@ axe https://example.com
 
 ## References
 
-- [WCAG 2.1 Quick Reference](https://www.w3.org/WAI/WCAG21/quickref/)
+- [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/)
 - [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)
 - [Deque axe Rules](https://dequeuniversity.com/rules/axe/)
 - The `z-qa-browser` skill for automated accessibility and visual checks
-- [Core Web Vitals](../../core-web-vitals/SKILL.md) for page-experience performance
+- [Web Vitals](https://web.dev/articles/vitals) for page-experience performance

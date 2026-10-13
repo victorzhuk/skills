@@ -11,9 +11,9 @@ Every outbound `net/http` call to another service needs a bound on time, a bound
 
 | Concern | Default | Reach for more when |
 |---|---|---|
-| Timeout | per-call `context.WithTimeout`, `Client.Timeout` as a backstop | never skip either |
+| Timeout | per-call deadline, `Client.Timeout` as a bounded-call backstop | streaming needs first-byte, idle and maximum-lifetime budgets |
 | Transport | clone `http.DefaultTransport`, raise `MaxIdleConnsPerHost` | one dependency gets real QPS |
-| Response body | drain to `io.Discard` + `Close()`, always | never skip |
+| Response body | close on every path | optionally drain a bounded remainder for connection reuse |
 | Retry | idempotent methods, exponential backoff + jitter, bounded by ctx | POST needs a server-honored idempotency key first |
 | Circuit breaker | skip it | one dependency, called from many paths, fails often enough that retries pile up load on it |
 | Instrumentation | `otelhttp.NewTransport` wrapping the tuned transport | always, once the service ships to production |
@@ -56,17 +56,14 @@ client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
 
 Everything else on `Transport` — dial timeout, TLS handshake timeout, `ForceAttemptHTTP2` — is fine at the stdlib default; don't touch it without a measured reason.
 
-## Always drain and close the response body
+## Close the response body on every path
 
 ```go
 resp, err := client.Do(req)
 if err != nil {
     return fmt.Errorf("call provider: %w", err)
 }
-defer func() {
-    io.Copy(io.Discard, resp.Body)
-    resp.Body.Close()
-}()
+defer resp.Body.Close()
 
 var v Payload
 if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
@@ -74,7 +71,7 @@ if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
 }
 ```
 
-Closing without draining still leaks: the `Transport` can only put a connection back in its idle pool for reuse once the body has been read to EOF. `json.NewDecoder(resp.Body).Decode(&v)` reads only one JSON value, not necessarily to EOF — a trailing newline or extra bytes leave the body short. Deferring the drain-then-close together means it runs after the decode, on every return path, including an early return on a non-2xx status.
+Closing releases the body; not reading to EOF can sacrifice HTTP/1 connection reuse, not leak the connection. If reuse matters, drain only a small bounded remainder under a live deadline. Never unconditionally drain an untrusted or streaming body. Go 1.27 adds bounded automatic HTTP/1 draining on Close; check the selected Go version and protocol. See [net/http changes](https://go.dev/doc/go1.27).
 
 ## Retry discipline
 
@@ -95,7 +92,7 @@ func backoff(attempt int) time.Duration {
 ```
 
 - **Respect `Retry-After` on 429 and 503** — parse it as either delay-seconds or an HTTP-date and wait at least that long before the next attempt; don't let your own backoff schedule override a value the server explicitly asked for.
-- **Cap the total attempt budget with the context deadline as the outer bound**, not a fixed attempt count alone — check `ctx.Err()` before every attempt and stop the moment the deadline is gone, even mid-backoff-sleep. Drain and close every intermediate response before retrying, not just the final one — the leak in "always drain and close" applies to every attempt, not only the one you return.
+- **Cap the total attempt budget with the context deadline as the outer bound**, not a fixed attempt count alone — check `ctx.Err()` before every attempt and stop the moment the deadline is gone, even mid-backoff-sleep. Close every intermediate response before retrying; any optional draining must respect byte and time bounds.
 - **Rebuild the request on every attempt.** `req.Body` is a one-shot `io.ReadCloser`, consumed by the first `client.Do`; `GetBody` exists for the stdlib's own redirect handling, not for a hand-rolled retry loop. Reusing the same `*http.Request` across attempts sends an empty body from attempt 2 on, with no error, for exactly the bodied methods this skill tells you to retry — `PUT`, or `POST` with an idempotency key. Rebuild from a `newReq func() *http.Request` closure, or set `req.GetBody` and call it before each retry:
 
 ```go
@@ -124,10 +121,11 @@ Two real options save you from hand-rolling this: `hashicorp/go-retryablehttp` i
 | Response | Action |
 |---|---|
 | 2xx | success |
-| 400, 401, 403, 404, 405, 409, 422 | caller bug — fix the request; retrying an unchanged request gets the same 4xx forever |
+| 400, 401, 403, 404, 405, 422 | inspect the API contract; usually fix the request or credentials before retrying |
+| 409 | resolve the conflict/reload state when the API defines that recovery; do not blindly replay |
 | 429 | retryable — back off, honor `Retry-After` if present |
-| 5xx | retryable — the dependency's fault, not the request's |
-| network error, timeout, connection refused/reset | retryable — treat like 5xx |
+| 5xx | retry only transient failures when replay is safe and budget remains |
+| network error, timeout, connection refused/reset | outcome may be unknown; retry only with safe replay semantics |
 
 Don't collapse this into "retry on any non-2xx" — that turns a caller bug into a request storm against a service that will keep saying no.
 
@@ -191,9 +189,9 @@ Drive the handler with an atomic counter to fail N times then succeed, and asser
 ## Do not
 
 - Ship `http.Client{}` with no `Timeout` and no context deadline on the request.
-- Skip draining a non-2xx response body before `Close` — the connection can't be reused and every call opens a fresh one.
+- Leave a body open, or drain an unbounded body merely to preserve reuse.
 - Retry a `POST` without a server-honored idempotency key — that's a double-submit bug, not resilience.
-- Retry a 4xx (other than 429) — it's a caller bug that won't change on the next attempt.
+- Retry status codes without the API's recovery contract, safe replay semantics and a remaining budget.
 - Use a fixed-delay retry loop with no jitter — synchronized retries across callers cause a thundering herd on the dependency's recovery.
 - Let a retry loop run past the context deadline because it only counts attempts, not elapsed budget.
 - Reach for a circuit breaker before a timeout + bounded retry has actually proven insufficient.
@@ -204,7 +202,7 @@ Drive the handler with an atomic counter to fail N times then succeed, and asser
 ```sh
 grep -rn 'http.Client{}' --include='*.go' .          # bare client with no Timeout
 golangci-lint run --enable bodyclose ./...           # response bodies closed on every path
-go test -race -timeout 5m ./... -run TestProviderClient
+timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./... -run TestProviderClient
 ```
 
 Read the retry test output for attempt counts, not just pass/fail — a retry test that passes on the first attempt isn't exercising the retry path at all.

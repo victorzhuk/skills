@@ -116,7 +116,7 @@ func TestGenerate_HTTPServer(t *testing.T) {
 }
 ```
 
-Regenerate goldens on intentional changes with `-update` or `UPDATE_GOLDEN=1 go test ./...` — both are real, equally valid toggles; pick whichever fits how the project already invokes tests. Never commit goldens that fail to compile — run `go build ./...` on generated output in CI.
+Regenerate goldens on intentional changes with the project's verified update flag/environment variable — these are custom test conventions, not built-in Go flags. Run the existing bounded wrapper. Never commit goldens that fail to compile — run `go build ./...` on generated output in CI.
 
 ## Injection Pipeline
 

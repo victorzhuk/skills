@@ -1,139 +1,62 @@
 ---
 name: z-qa-browser
-description: "Autonomous browser testing with playwright-cli, a ref-based token-efficient CLI for agents — snapshot once, then click/fill by ref (e5), not by selector. Auto-activates for: E2E tests, browser automation, UI testing, visual regression, screenshot capture, web flows. Does not cover HTTP-only contract testing; see [[z-qa-api]]. Does not cover WCAG remediation; see the accessibility skill."
+description: "Browser QA through available host tools and the project’s Playwright runner. Use for E2E tests, browser exploration, visual regression, screenshots, or web flows. Verify current page state, meaningful assertions, and bounded execution. HTTP-only contracts belong to [[z-qa-api]]. WCAG remediation belongs to the accessibility skill."
 ---
 
-# Browser QA Skill
+# Browser QA
 
-`playwright-cli` is a project-local CLI, not a published npm package — the exact binary and full command surface live in the target repo. Run `playwright-cli --help` there before relying on any flag not listed below.
+Use the host's browser tools or the project's installed browser runner. Inspect the active tool contract before choosing commands.
 
-## Philosophy
+## Discover
 
-Snapshot-first, ref-based. Every command auto-prints a Snapshot (a ref-tagged element tree — `e1`, `e2`, …) after it runs. Read the refs, then target the next command by ref: `click e5`, `fill e5 "value"`.
+- Read the app's start/test wrappers, Playwright configuration, existing specs, and approved target.
+- Prefer native browser control when available. Use the installed CLI when the task needs it.
+- Microsoft's published package is `@playwright/cli`; verify the installed distribution and version with local help.
+- Do not assume a local command named `playwright-cli` has the same flags as another release.
 
-`--raw` suppresses the auto-printed Snapshot on that one call. That's the real token lever — not avoiding snapshots. You still need a Snapshot before you can act; you just don't need to reprint it on every follow-up call once you already have the refs you're going to use.
+## Explore with current state
 
-There are no `assert-*` commands. Assertions are hand-written `expect()` calls in the generated `.spec.ts` file, run through `npx playwright test`.
+Capture the page state before acting. Use observed refs or accessible locators. Refresh state after navigation or changes that invalidate the target.
 
-## Core Commands
+Current Playwright CLI accepts snapshot refs, CSS, and Playwright locators. Prefer refs for inspected interactive exploration and role/test-id locators for maintained specs. Do not invent refs or selectors.
 
-```bash
-# Navigation
-playwright-cli open https://app.example.com
-playwright-cli open https://app.example.com --raw          # suppress the snapshot dump
+Snapshot output may link to a saved file instead of printing the full tree. Read the returned artifact. Verify output-control flags in the installed help rather than relying on a remembered `--raw` flag.
 
-# Interaction — targets are refs from the last Snapshot, never CSS selectors
-playwright-cli click e5
-playwright-cli fill e5 "user@test.com"
+Use a named session for independent work. Close only sessions created for the task; global close/kill commands may disrupt unrelated work.
 
-# Sessions (persistent browser state across commands)
-playwright-cli -s=myapp open https://app.example.com
-playwright-cli -s=myapp fill e3 "value"
-playwright-cli list                                         # list open sessions
-playwright-cli close-all                                    # close all sessions
-playwright-cli kill-all                                     # kill all sessions/processes
+## Assert the journey
 
-# Network
-playwright-cli route "*/api/users" --body '{"users":[]}'
-playwright-cli unroute "*/api/users"
+Record expected outcomes in the repository's Playwright specs when a regression test is requested. Use web-first `expect` assertions against meaningful state, not arbitrary sleeps.
 
-# Storage (cookies + localStorage)
-playwright-cli state-save ./auth.json
-playwright-cli state-load ./auth.json
-```
+Keep exploratory observations distinct from executable regression proof. A snapshot showing a dashboard is evidence for that moment, not an assertion that will run in CI.
 
-## Selectors — a different layer
+Exercise success, rejection, loading, and relevant empty/error states. Mock only dependencies outside the behavior under test. Register a route before triggering the request.
 
-CLI targeting is by ref (`e5`), pulled straight from the Snapshot — no selector strategy needed there. Selectors matter one layer up: when hand-writing locators and `expect()` assertions into the generated `.spec.ts` file, prefer `text=`, `role=`, or `data-testid=` over brittle CSS (confirmed pattern in real projects).
+## Authentication and artifacts
 
-## Running Generated Tests
+Use existing test accounts and fixture conventions. Keep saved authentication state, screenshots, traces, and network payloads out of public commits when they contain secrets or private data.
 
-Local runs stay capped — `--workers=2` inline, or `workers` plus `globalTimeout` pinned in
-`playwright.config.ts` so every invocation inherits them ([[z-testing-strategy]] has the
-per-runner floor). Shards are a CI pattern; the runner there is bounded anyway.
+Discover the configured state path instead of inventing one. Verify reuse does not bypass the auth behavior being tested.
 
-```bash
-npx playwright test --workers=2 --reporter=line
-npx playwright test --workers=2 --reporter=html
-npx playwright test --shard=1/3      # parallel CI, run all three shards
-npx playwright test --shard=2/3
-npx playwright test --shard=3/3
-```
+## Visual and accessibility checks
 
-## Common Flows
+Use Playwright's `toHaveScreenshot()` when visual regression serves the requested surface. Follow existing browser, font, viewport, and tolerance settings. Review baseline changes rather than blindly accepting them.
 
-### Login -> action -> verify
-```bash
-playwright-cli -s=e2e open https://app.example.com/login
-# Snapshot printed: e3 = email input, e4 = password input, e5 = submit button
-playwright-cli -s=e2e fill e3 "qa@test.com"
-playwright-cli -s=e2e fill e4 "secret"
-playwright-cli -s=e2e click e5
-# Snapshot after the click shows the dashboard rendered — write that expectation
-# into the .spec.ts, the CLI itself won't assert it.
-```
+Do not infer that visual or accessibility testing is out of scope because a different project omitted it. Use the project's actual requirements and accessibility tooling.
 
-### Auth reuse across runs
-```bash
-playwright-cli -s=e2e open https://app.example.com/login
-playwright-cli -s=e2e fill e3 "qa@test.com"
-playwright-cli -s=e2e fill e4 "secret"
-playwright-cli -s=e2e click e5
-playwright-cli -s=e2e state-save ./test-output/auth.json
+## Run and verify
 
-# later runs
-playwright-cli -s=e2e state-load ./test-output/auth.json
-playwright-cli -s=e2e open https://app.example.com/protected-page
-```
+Use the project wrapper. Apply process deadlines, test/hook timeouts, and worker limits per [[z-testing-strategy]]. A CI shard still needs explicit effective bounds.
 
-### API mock + UI check
-```bash
-playwright-cli open https://app.example.com
-playwright-cli route "*/api/products" --body '{"products":[{"id":1,"name":"Test Product"}]}'
-playwright-cli open https://app.example.com/products        # reload under the mock
-# confirm "Test Product" in the Snapshot, then write the expect() in the .spec.ts
-```
+- Verify the target origin, session, and account.
+- Run a written flow before calling it a regression guard.
+- Report assertions, runner result, unavailable checks, and relevant artifacts.
+- Confirm intentional negative cases fail rather than only observing happy-path success.
 
-## Visual regression (rare)
+## References
 
-No project here does automated visual regression — nothing runs pixelmatch, shot-scraper, axe-core CLI, or ImageMagick diffing, and one API-only service explicitly ruled it out of scope already. Treat this as a deliberate gap, not something to backfill by default.
+- [Microsoft Playwright CLI](https://github.com/microsoft/playwright-cli).
+- [Playwright assertions](https://playwright.dev/docs/test-assertions).
+- [Authentication state](https://playwright.dev/docs/auth).
 
-If a project genuinely needs it, reach for Playwright's own `toHaveScreenshot()` — it's already the E2E tool above, no new dependency:
-
-```typescript
-// tests/visual.spec.ts
-import { test, expect } from '@playwright/test';
-
-test('home page visual regression', async ({ page }) => {
-  await page.goto('https://app.example.com');
-  await expect(page).toHaveScreenshot('home.png', {
-    maxDiffPixels: 100,
-    threshold: 0.2,
-  });
-});
-```
-
-```bash
-npx playwright test --workers=2 --update-snapshots   # capture/update baselines
-npx playwright test --workers=2 tests/visual.spec.ts
-```
-
-## Do not
-
-- Target the CLI with CSS selectors (`button[data-testid=...]`) — there's no selector engine here, only refs from the Snapshot.
-- Invoke `assert-*` — it doesn't exist. Put expectations in the `.spec.ts` file.
-- Treat `--raw` as "skip snapshotting" — it only suppresses the print on that call; you still snapshot to get refs before acting.
-- Run headed in CI — keep CI runs headless.
-- Share one global session across parallel test suites — give each suite its own `-s=` session.
-- Hardcode `sleep()` between navigation and interaction — resolve the flow through the Snapshot instead.
-- Introduce pixelmatch, shot-scraper, axe-core CLI, or ImageMagick for visual regression — `toHaveScreenshot()` covers the real need.
-- Add visual regression to an API-only service — it was explicitly scoped out once already; don't reopen that without asking.
-- Assume automated accessibility CI checks are existing convention — the real practice here is a manual DevTools spot-check.
-- Compare screenshots without tolerance — bare pixel-equality breaks on font antialiasing; use `maxDiffPixels`/`threshold`.
-
-## Verify
-
-- `playwright-cli --help` matches the commands you're about to script — this doc mirrors observed usage in real projects, not a published spec.
-- `npx playwright test --workers=2 --reporter=line` passes for a written flow before treating it as a regression guard.
-
-See [[z-go-bdd]] for turning a verified flow into a behavior contract and [[z-qa-api]] for HTTP-only contract checks that don't need a browser.
+See [[z-qa-api]], [[z-qa-debugger]], [[z-go-bdd]].

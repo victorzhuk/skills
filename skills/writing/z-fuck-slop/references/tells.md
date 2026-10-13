@@ -12,7 +12,7 @@ When the text only exists in conversation, apply each pattern by hand. A match i
 
 ## 1. Negative parallelism — the "not X but Y" family
 
-The highest-priority category. LLMs reach for the negation-then-assertion move roughly once a paragraph; humans use it occasionally and deliberately. It is an emergent generative habit, so expect it to reappear in paraphrased form after every rewrite pass — that is why the scan loops.
+A high-priority house-style check. Inspect whether the contrast carries a real distinction; retain it when it does. These patterns do not establish authorship.
 
 ```
 not (just|only|merely|simply|solely) [^.;]{2,80}(but|it'?s| — )
@@ -148,7 +148,7 @@ Other formatting tells (check by hand; most regexes here are layout-dependent):
 
 No regex; measure or eyeball.
 
-- **Uniform sentence length** (the single strongest current tell): a run of 3+ consecutive sentences within ±4 words of each other, paragraph after paragraph of 18–24-word sentences. Quick measurement on a file:
+- **Uniform sentence length** (a style heuristic, not an origin test): a run of 3+ consecutive sentences within ±4 words of each other, paragraph after paragraph of 18–24-word sentences. Quick measurement on a file:
 
   ```bash
   tr '\n' ' ' < draft.txt | sed 's/[.!?] /\n/g' | awk '{print NF}'

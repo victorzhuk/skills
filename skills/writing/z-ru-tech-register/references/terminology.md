@@ -59,7 +59,7 @@ Product/lib names always Latin: `ogen`, `sqlc`, `pgx`, `Kafka`, `NATS`, `gRPC`, 
 | fake / split / desync | `[LAT]` | zapret strategy names |
 | КВН | `[CYR]` | community euphemism for VPN |
 
-Framing note: analyze mechanics only. Do not name a service to buy or give acquisition steps (see `register.md`).
+For legal claims about this topic, follow the primary-source verification discipline in `register.md`. Terminology does not determine legal scope.
 
 ## Cluster 3 — Self-hosted infra / DevOps
 

@@ -9,27 +9,21 @@ Build MCP servers with the official SDK by default. Treat every tool as a workfl
 
 ## SDK choice
 
-| | `modelcontextprotocol/go-sdk` | `mark3labs/mcp-go` |
-|---|---|---|
-| Status | v1.0+ released with an explicit no-breaking-API-changes guarantee; maintained with Google | v0.55+, still pre-1.0 — API can still shift |
-| Adoption | ~4.8k stars, 63 open issues | ~8.9k stars, 23 open issues, longer track record |
-| Spec conformance | full conformance suite runs on every PR | good coverage, no formal conformance gate |
-| Batteries | leaner core; client-side OAuth landed recently (stable since v1.5.0) | richer out of the box — middleware chain, session helpers, in-process test client |
-| Go floor | 1.25 | 1.25 |
+Use `modelcontextprotocol/go-sdk` for new servers unless an existing SDK or a required capability determines the choice. Preserve working `mark3labs/mcp-go` integrations. Check each selected release's Go floor, protocol support and compatibility policy; SDK maturity does not establish support for every new protocol revision.
 
-Default to the official SDK for anything new and long-lived: the v1.0 release commits to backward compatibility, and it tracks the spec first. Reach for `mark3labs/mcp-go` when a team already runs servers on it, or needs one of its conveniences badly enough to accept a pre-1.0 API.
-
-The rest of this skill uses the official SDK's API. The concepts — transport choice, tool design, the error split — carry over 1:1 to `mark3labs/mcp-go`.
+Before changing a server, record the pinned SDK version, supported protocol revisions, client versions and transports. Verify that matrix with client/server tests. Examples below use the official SDK's session API and require a compatible pinned release; they are not proof of 2026-07-28 support.
 
 ## Transport choice
 
 | Transport | Use when | Avoid when |
 |---|---|---|
-| stdio (`mcp.StdioTransport`) | Local subprocess launched by one client — CLI tools, editor/agent integrations. The spec's default; clients SHOULD support it | Multiple concurrent clients, or the server runs remotely |
-| Streamable HTTP (`mcp.NewStreamableHTTPHandler`) | Remote server, multiple concurrent sessions, runs behind a load balancer or in Kubernetes | A single local subprocess covers the need — HTTP adds session-id and origin-validation plumbing for nothing |
+| stdio (`mcp.StdioTransport`) | Local subprocess launched by one client — CLI tools, editor/agent integrations. verify the client supports the selected revision | Multiple concurrent clients, or the server runs remotely |
+| Streamable HTTP (`mcp.NewStreamableHTTPHandler`) | Remote server, multiple concurrent sessions, runs behind a load balancer or in Kubernetes | A single local subprocess covers the need — HTTP adds authentication and origin-validation requirements |
 | SSE-only (the 2024-11-05 transport) | Never for a new server | Always — superseded by streamable HTTP in spec 2025-03-26; keep it only to serve clients stuck on the old transport |
 
-Streamable HTTP is a single endpoint accepting POST and GET; sessions are tracked via an `Mcp-Session-Id` header the server sets on `initialize` and the client echoes on every later request. The SDK already rejects mismatched-Host localhost requests by default (`DisableLocalhostProtection` is `false` unless you opt out); it does NOT validate `Origin` for you — `StreamableHTTPOptions.CrossOriginProtection` is deprecated, so wrap the handler yourself: `protection := http.NewCrossOriginProtection(); handler = protection.Handler(handler)` (stdlib, Go 1.25+). Current spec is 2025-11-25; a 2026-07-28 revision in release candidate drops session management entirely — including this `Mcp-Session-Id` mechanic — for a stateless core routed by `Mcp-Method`/`Mcp-Name` headers, so recheck this section once that ships.
+As checked on 2026-10-13, the [current protocol is 2026-07-28](https://modelcontextprotocol.io/docs/2026-07-28/learn/versioning). Its core is stateless: requests carry protocol-version metadata and servers support discovery. Earlier revisions use `initialize` and may use `Mcp-Session-Id`; preserve that lifecycle only for the revisions your SDK/client pair supports. Do not infer SDK support from the protocol publication date.
+
+For HTTP, validate Origin and Host according to the selected transport revision, authenticate callers, and authorize each tool. Check the pinned SDK's defaults rather than assuming it covers these controls. A generic browser cross-origin helper is not a substitute for the protocol's Origin policy.
 
 This server-side streamable-HTTP SSE is internal transport plumbing, not an app-level streaming feature — for hand-rolled SSE to a browser client, see [[z-go-llm-streaming]].
 
@@ -72,7 +66,7 @@ mcp.AddTool(server, &mcp.Tool{
 
 `json` tags name the fields; `jsonschema` tags supply the description the model reads — write that string by the same rule as the tool description above.
 
-Add every tool with `mcp.AddTool` before calling `Connect` or `Run` — the tools capability advertised in `initialize` is derived from what's registered at that point; a tool added afterward still works but was never advertised to that session.
+Register tools before serving requests. Verify discovery/listing for each supported revision; older session-based clients may derive capabilities during initialization.
 
 ## Errors the agent can act on
 
@@ -99,18 +93,21 @@ Skip subprocess plumbing — connect a client and server over an in-memory pipe 
 ct, st := mcp.NewInMemoryTransports()
 srv := mcp.NewServer(&mcp.Implementation{Name: "excursions", Version: "test"}, nil)
 mcp.AddTool(srv, &mcp.Tool{Name: "excursions_search"}, searchHandler)
-ss, _ := srv.Connect(ctx, st, nil)
+ss, err := srv.Connect(ctx, st, nil)
+require.NoError(t, err)
 defer ss.Close()
 
 cli := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0"}, nil)
-session, _ := cli.Connect(ctx, ct, nil)
+session, err := cli.Connect(ctx, ct, nil)
+require.NoError(t, err)
+defer session.Close()
 result, err := session.CallTool(ctx, &mcp.CallToolParams{
 	Name:      "excursions_search",
 	Arguments: map[string]any{"city": "LON"},
 })
 ```
 
-This exercises the real handshake, schema validation, and dispatch — no mocking the protocol layer. Assert on `result.IsError` and `result.Content`, the same shape the model receives. One test per tool's happy path, one per validation failure that should surface as a tool error.
+This exercises the pinned SDK's connection lifecycle, schema validation, and dispatch — no mocking the protocol layer. Assert on `result.IsError` and `result.Content`, the same shape the model receives. One test per tool's happy path, one per validation failure that should surface as a tool error.
 
 Reach for golden JSON-RPC frame fixtures only for cross-SDK wire-compatibility regression tests; the in-memory client above already exercises real serialization, so it stays the default for ordinary handler tests.
 
@@ -121,13 +118,13 @@ Reach for golden JSON-RPC frame fixtures only for cross-SDK wire-compatibility r
 - Return a bad-input failure through the raw `ToolHandler` protocol-error path — the model reads a protocol error as unfixable and gives up instead of retrying.
 - Write anything but JSON-RPC frames to stdout in a stdio server, including via a dependency's default logger.
 - Build a new server on the 2024-11-05 SSE-only transport.
-- Add OAuth or a multi-tenant session store before a concrete client needs them — start with stdio and API-key/env auth, grow from there.
+- Expose a remote server before implementing the selected protocol/client authentication contract and per-tool authorization. Keep local stdio setup scoped to its launching user.
 
 ## Verify
 
 ```sh
 go build ./...
-go test -timeout 2m ./... -run TestMCP -v
+timeout 5m go test -parallel 4 -p 2 -timeout 2m ./... -run TestMCP -v
 ```
 
-Confirm `initialize` negotiates the expected `protocolVersion` and advertises the `tools` capability, and that `tools/list` returns the schema you expect, before wiring a real client to the server.
+Verify the pinned SDK/client protocol matrix: current-revision discovery and per-request version handling where supported, legacy initialization only for legacy revisions, expected tool schemas, cancellation, malformed input, and HTTP authorization/origin rejection. Record any unsupported revision instead of claiming conformance.

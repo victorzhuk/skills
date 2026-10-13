@@ -48,7 +48,7 @@ $label = match ($status) {
 };
 ```
 
-- First-class callable syntax instead of string/array callables — `strlen(...)`, `$this->method(...)` — they resolve at parse time and get full IDE/static-analysis support, unlike `'strlen'` or `[$this, 'method']`.
+- First-class callable syntax instead of string/array callables — `strlen(...)`, `$this->method(...)` — they create a `Closure` and validate callable scope when evaluated, while preserving useful static-analysis information.
 - Verify the exact current stable PHP release and your minimum target with find-docs before pinning `composer.json`'s `"php"` constraint — don't guess a version number here.
 
 ## Composer discipline
@@ -95,15 +95,11 @@ vendor/bin/phpstan analyse --generate-baseline
 
 - Pest is the default for new projects — expressive syntax, an active plugin ecosystem (architecture, browser testing), and it runs on top of PHPUnit so both can coexist:
 
-```php
-it('rejects a negative amount', function () {
-    expect(fn () => new Money(-100, 'USD'))
-        ->toThrow(InvalidArgumentException::class);
-});
-```
+Test the actual domain invariant. Do not assume the illustrative `Money` value object rejects negatives unless its constructor explicitly enforces that rule.
 
 - An existing PHPUnit suite stays PHPUnit — don't force a framework migration to land a handful of new tests. A deliberate, dedicated migration is a different task from "add a test."
 - Unit tests exercise domain logic in isolation; integration tests exercise framework-wired behavior (the harness differs per framework — see the references below).
+- Run the existing test wrapper with a whole-process deadline and supported per-test/worker limits.
 - Test depth follows the project's own testing discipline; see [[z-testing-strategy]] for MVP vs existing-service classification.
 
 ## Error model

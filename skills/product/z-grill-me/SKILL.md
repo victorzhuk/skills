@@ -55,12 +55,11 @@ the brief against them:
 
 - a term the glossary already defines is used the glossary's way, or the conflict is raised
   ("the glossary defines *cancellation* as X, this asks for Y — which?");
-- a decision an ADR already took is presented for confirmation, never re-asked;
+- a settled decision is reused, not presented for approval again;
 - a record the code has since outgrown is reported as **stale**, with the evidence;
 - two records that disagree with each other are reported as a contradiction to resolve.
 
-Findings from stages 1 and 2 enter the interview as confirmations — one line, already
-answered, awaiting a yes — not as questions.
+Present supported findings from stages 1 and 2 as facts with evidence. Ask only about unresolved contradictions or decisions that change the requested scope.
 
 ## Stage 3 — Grill me
 
@@ -70,10 +69,7 @@ decisions:
 - One question per turn. Bundled questions get shallow answers.
 - Every question ships a recommended answer and a one-line rationale — never a bare
   "what do you think?".
-- When the answer folds into 2–4 concrete cases, call the native `ask` tool with them as
-  structured options: recommended first, marked "(Recommended)", each with a one-line
-  trade-off. Do not spell the options out as prose instead. Prose questions are for
-  genuinely open ends.
+- For concrete choices, use the host's available question tool and its supported option count. Put the recommended choice first with a one-line trade-off. If no question tool is available, ask in concise prose. Use prose for genuinely open questions.
 - An option question is never reduced to bare yes/no — options are cases with trade-offs.
 - Finish a branch before opening the next; ask A before B when B depends on A.
 - Track resolved decisions. When a later answer contradicts an earlier one, surface the
@@ -94,7 +90,7 @@ the user says so; never start designing or implementing off the back of the inte
 
 - Ask what the code, the records, or current docs can answer.
 - Bundle questions, or omit the recommended answer.
-- Emit an option question as prose instead of calling the native `ask` tool.
+- Assume a host question tool exists or supports a particular schema.
 - Carry an unverified path, symbol or capability from the dump into the brief.
 - Invent a requirement the user never stated to fill a gap — an unknown stays an unknown.
 - Keep grilling once answers stop changing decisions.

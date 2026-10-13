@@ -58,14 +58,6 @@ class ChatClient:
         return response.choices[0].message.content or ""
 ```
 
-One call site for retries and timeouts — an SDK's own defaults are rarely the right ones for a production call path, and a shared wrapper is where a retry-with-backoff policy actually gets enforced instead of copy-pasted per call site:
-
-```python
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
-async def complete(self, prompt: str) -> str:
-    ...
-```
-
-Retry on the transient failures the SDK actually raises (rate limit, timeout, transient 5xx) — not on every exception; a validation error or a bad-request response won't succeed on a second try and shouldn't burn the retry budget.
+Choose one retry owner. Check the installed SDK's default retry behavior before adding an outer policy, so nested retries do not multiply attempts. Set a total request deadline and retry only documented transient failures with bounded backoff; account for cancellation and duplicate side effects. A broad retry decorator would also retry validation and bad-request errors.
 
 Never string-concatenate a prompt with untrusted input (user-submitted text, scraped content, a webhook payload) without treating it as an injection surface — state explicitly in the code or its caller that the input is untrusted, and don't let it carry instructions the model would follow as if they came from the system or developer. See [[z-security-hardening]] for the general untrusted-input discipline this is a specific case of.

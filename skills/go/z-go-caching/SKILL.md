@@ -45,7 +45,12 @@ func (s *Store) GetPlan(ctx context.Context, id string) (*Plan, error) {
     }
 
     if data, err := json.Marshal(p); err == nil {
-        s.redis.Set(ctx, key, data, ttlWithJitter(5*time.Minute))
+        cctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+        err := s.redis.Set(cctx, key, data, ttlWithJitter(5*time.Minute)).Err()
+        cancel()
+        if err != nil {
+            s.log.WarnContext(ctx, "cache populate failed", "err", err)
+        }
     }
     return p, nil
 }
@@ -60,24 +65,33 @@ func (s *Store) UpdatePlan(ctx context.Context, p *Plan) error {
     if err := s.repo.UpdatePlan(ctx, p); err != nil {
         return fmt.Errorf("update plan: %w", err)
     }
-    if err := s.redis.Del(ctx, planKey(p.ID)).Err(); err != nil {
+    cctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+    defer cancel()
+    if err := s.redis.Del(cctx, planKey(p.ID)).Err(); err != nil {
         s.log.WarnContext(ctx, "cache invalidate failed", "key", p.ID, "err", err)
     }
     return nil
 }
 ```
 
-`DEL` after the write commits, not `SET` with the new value. Writing the new value into the cache duplicates the serialization logic in a second place and — if the DB write later rolls back or a concurrent writer wins — can leave a cache entry that never actually existed in the source of truth. A missing key is always safe; a wrong value isn't. Worst case with delete-on-write is one extra read-through; that's the cost of correctness.
+Delete after the DB commit, but treat cache-aside as eventual consistency. A reader can fetch an old DB value, race a commit/invalidation, and populate that old value afterward; a failed invalidation also leaves stale data until expiry. Define the permitted staleness window. Where stronger guarantees are required, use version checks/fencing or bypass this cache; test the race explicitly.
 
 ### TTL always, jittered
 
 ```go
 func ttlWithJitter(base time.Duration) time.Duration {
-    return base + time.Duration(rand.IntN(int(base/10)))
+    if base <= 0 {
+        panic("cache ttl must be positive")
+    }
+    jitter := base / 10
+    if jitter == 0 {
+        return base
+    }
+    return base + time.Duration(rand.Int64N(int64(jitter)))
 }
 ```
 
-`rand.IntN` is from `math/rand/v2` (Go 1.22+) — the old `math/rand` package has a same-arity `Intn` (lowercase n) that's easy to reach for by habit instead.
+`rand.Int64N` is from `math/rand/v2` (Go 1.22+). Validate configured TTLs before serving requests.
 
 No immortal keys, including "static" reference data — schema changes and forgotten invalidation paths both need a key to eventually die on its own. A flat TTL across every key of the same type means they all expire in the same second under steady traffic, and that second becomes a stampede; jitter spreads the expiry.
 
@@ -164,7 +178,7 @@ allowed := n <= limit
 
 Fail-open here is the default: it favors availability and matches the fail-open discipline the rest of this skill applies to the cache path. Reach for fail-closed, or a local in-process fallback limiter, when the limit itself is the security control — auth attempts, signup, password reset, any abuse/DDoS-facing limit where letting a flood through during a Redis blip is worse than the added latency or false rejections of failing closed.
 
-The `EXPIRE` only fires on the first increment of the window, so it can't be reset by every subsequent hit. A lighter, race-tolerant variant skips the script and pipelines `Incr` with `ExpireNX` (Redis 7+, only sets a TTL if the key has none) in one round trip — accept that as good enough when the window boundary being off by a request or two doesn't matter.
+The expiry is set on the first increment, so later hits do not extend the window. Keep increment and expiry in the script or an appropriate transaction. A plain pipeline batches commands but is not atomic; partial failure can leave an immortal counter.
 
 ### Token bucket: Lua for the read-modify-write
 
@@ -172,16 +186,21 @@ Fixed windows allow bursts at the window edge; a token bucket smooths that at th
 
 ```lua
 local capacity, rate, now, cost = tonumber(ARGV[1]), tonumber(ARGV[2]), tonumber(ARGV[3]), tonumber(ARGV[4])
+if capacity <= 0 or rate <= 0 or cost <= 0 or cost > capacity then
+  return redis.error_reply("invalid bucket parameters")
+end
+local ttl = math.max(1, math.ceil(capacity / rate * 1000))
 local b = redis.call("HMGET", KEYS[1], "tokens", "ts")
 local tokens = tonumber(b[1]) or capacity
 local ts = tonumber(b[2]) or now
 tokens = math.min(capacity, tokens + math.max(0, now - ts) * rate / 1000)
-redis.call("PEXPIRE", KEYS[1], 3600000)
 if tokens < cost then
   redis.call("HSET", KEYS[1], "tokens", tokens, "ts", now)
+  redis.call("PEXPIRE", KEYS[1], ttl)
   return 0
 end
 redis.call("HSET", KEYS[1], "tokens", tokens - cost, "ts", now)
+redis.call("PEXPIRE", KEYS[1], ttl)
 return 1
 ```
 
@@ -208,7 +227,7 @@ Bake a schema version into the prefix: `excursions:plan:v2:8f21`. Bump the versi
 - Give every key of one type the same flat TTL with no jitter — that's a synchronized-expiry stampede waiting for steady traffic to trigger it.
 - Reach for a distributed lock as the default stampede guard — try singleflight first; the lock adds failure modes (stuck locks, clock skew) that only pay for themselves against a load pattern singleflight has actually failed on.
 - Cache authorization decisions or money balances/order totals.
-- Check-then-act (`GET` then `SET`/`INCR`) for a rate limiter — do the increment and the limit decision atomically, in Lua or via a single pipelined round trip.
+- Check-then-act (`GET` then `SET`/`INCR`) for a rate limiter — do the increment and the limit decision atomically, in Lua or a suitable transaction; a pipeline alone is not atomic.
 - Let a Redis timeout or connection error propagate into a request failure — every cache read/write path needs a fallback to the source of truth.
 - Run `KEYS *` against a production instance, or store a value large enough to make `redis-cli --bigkeys` complain.
 - Reach for msgpack/protobuf before a profiler has pointed at JSON serialization as the cost.
@@ -221,5 +240,7 @@ redis-cli --hotkeys                 # requires an LFU maxmemory-policy
 rg -n '\.Set\(ctx' --type go        # every cache Set carries an expiration argument
 rg -n '\.Del\(ctx' --type go        # every write path that updates cached data also invalidates it
 ```
+
+Check a newly created token bucket has a positive TTL on both accepted and rejected paths. Test refill, invalid parameters, and clock behavior.
 
 Kill the Redis connection in a local/staging environment and re-run the read path: requests should still succeed (elevated latency is fine, errors are not) — that's the fail-open contract proven, not assumed.

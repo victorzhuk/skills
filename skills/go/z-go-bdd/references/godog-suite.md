@@ -70,9 +70,9 @@ BDD_TAGS='@billing && ~@wip' make bdd
 Fallback commands:
 
 ```sh
-go test -timeout 10m ./... -run '^TestBDD$'
-go test -timeout 10m ./internal/billing -run '^TestBDD$/^Gateway_timeout_leaves_order_pending$'
-BDD_TAGS='@critical && ~@wip' go test -timeout 10m ./... -run '^TestBDD$'
+timeout 15m go test -parallel 4 -p 2 -timeout 10m ./... -run '^TestBDD$'
+timeout 15m go test -parallel 4 -p 2 -timeout 10m ./internal/billing -run '^TestBDD$/^Gateway_timeout_leaves_order_pending$'
+BDD_TAGS='@critical && ~@wip' timeout 15m go test -parallel 4 -p 2 -timeout 10m ./... -run '^TestBDD$'
 ```
 
 ## Step definitions

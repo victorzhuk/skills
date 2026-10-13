@@ -12,7 +12,7 @@ Delete a comment that restates what the next line does. Keep only comments that 
 - If a comment explains WHAT code does, the fix is a better name, not a better comment.
 - Allowed: why a decision was made, an invariant the reader can't derive from the code, a counterintuitive edge case, a migration hazard, a hazard around removing something.
 - Allowed regardless of the rule above: required doc comments for exported symbols and packages, `// Output:` / `// Unordered output:` markers, generated-file markers required by tooling, and comments in `.env.example`/config/migration files that document an operator-facing contract.
-- Ask before rewriting an existing comment that isn't yours — it may encode context you don't have.
+- Preserve context in existing comments. An explicit comment-cleanup request or approved edit scope is sufficient authorization; ask only when a comment’s purpose requires a new decision.
 
 ## Examples
 

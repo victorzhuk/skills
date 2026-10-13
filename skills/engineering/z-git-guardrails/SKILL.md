@@ -1,32 +1,34 @@
 ---
 name: z-git-guardrails
-description: Install a Claude Code PreToolUse hook that blocks destructive git commands — push, reset --hard, clean -f, checkout ./restore ., branch -D of unmerged branches — before they execute, while letting worktree cleanup through. Use when the user wants git safety hooks, to prevent force pushes or hard resets, or to block destructive git operations. Claude Code specific — other harnesses need their own hook mechanism.
+description: Install a Claude Code PreToolUse filter for literal Git push, hard reset, forced clean, path restore, and unmerged branch deletion commands. Use when adding or repairing a Git safety hook. Best-effort detection, not a shell sandbox or runtime authorization; other hosts need their own permission controls.
 ---
 
 # Git guardrails
 
-Install a `PreToolUse` hook that intercepts Bash tool calls and blocks destructive git commands before they run. The bundled script lives at [scripts/block-dangerous-git.sh](scripts/block-dangerous-git.sh).
+Install a best-effort `PreToolUse` filter for literal Git invocations in Bash tool calls. It requires Bash, Python 3, and Git. Keep [block-dangerous-git.sh](scripts/block-dangerous-git.sh) beside [check-git.py](scripts/check-git.py).
+
+The filter parses direct commands and command separators. It understands Git's `-C`, `--git-dir`, and `--work-tree` options. It does not interpret aliases, shell functions, wrapper programs, scripts, substitutions, or the full shell grammar. Use host permission controls for those forms. Passing this filter never grants authorization.
 
 ## What gets blocked
 
-- `git push` (all variants, including `--force`)
+- Literal `git push`, including global options before `push`
 - `git reset --hard`
-- `git clean -f` / `git clean -fd`
-- `git checkout .` / `git restore .`
-- `git branch -D <branch>` — only when the branch is **not** merged into `HEAD`
+- `git clean` with force, including combined short flags
+- `git checkout` with a path separator, `.`, or force; worktree `git restore`
+- Forced branch deletion unless ancestry can be checked for an isolated literal command
 
 ## What stays allowed
 
 Worktree-based flows delete branches and worktrees as routine cleanup, so the hook deliberately lets through:
 
-- `git worktree` operations (`add`, `remove`, `prune`) — never intercepted;
-- `git branch -D` of a branch whose tip is already an ancestor of `HEAD` (checked with `git merge-base --is-ancestor`) — deleting merged work loses nothing;
+- Literal `git worktree` commands pass this filter. Destructive cleanup still needs the host's checks and existing user authorization.
+- An isolated `git branch -D` passes when every named branch tip is an ancestor of `HEAD` in the command's effective repository. This snapshot check does not protect against concurrent ref changes or preserve the branch name for the user.
 - `git branch -d` — git itself refuses unmerged branches on lowercase `-d`.
 
 ## Steps
 
-1. **Ask scope.** This project only (`.claude/settings.json` + `.claude/hooks/`) or all projects (the user-level `settings.json` and `hooks/` under the Claude config directory)?
-2. **Copy the script** to the chosen `hooks/` directory and `chmod +x` it.
+1. **Resolve scope.** Use the requested project or user installation. Ask only if that choice remains unspecified.
+2. **Copy both scripts** to the chosen `hooks/` directory and make the `.sh` entry point executable. Verify Python 3 and Git are available.
 3. **Wire the hook** into the chosen settings file — merge into any existing `hooks.PreToolUse` array, don't overwrite:
 
    ```json
@@ -48,7 +50,7 @@ Worktree-based flows delete branches and worktrees as routine cleanup, so the ho
    ```
 
    For the global install, point `command` at the script's path under the user-level Claude config directory instead.
-4. **Ask about customization** — patterns to add or drop; edit the copied script's `DANGEROUS_PATTERNS` array.
+4. **Preserve policy.** Apply only requested customizations. Add cases to the guard tests for any changed command policy.
 5. **Verify** with piped test input:
 
    ```bash
@@ -60,10 +62,11 @@ Worktree-based flows delete branches and worktrees as routine cleanup, so the ho
 
 - Overwrite an existing `hooks.PreToolUse` array — merge into it.
 - Add `git worktree` to the blocklist — that breaks worktree-based apply flows.
-- Rely on the hook as the only safety net; it filters the Bash tool, not the user's own terminal.
+- Rely on the hook as a security boundary or as proof that a shell program is safe. It filters a literal subset of Bash tool input, not arbitrary programs or the user's terminal.
 
 ## Verify
 
 - Blocked command test exits `2` with `BLOCKED:` on stderr; allowed commands exit `0`.
 - `git branch -D` of a merged branch passes; of an unmerged branch is blocked.
 - The hook script is executable and referenced from settings by the correct path.
+- Run `timeout 60s python3 -m unittest discover -s scripts -p 'test_*.py'` from this skill directory. The tests submit command text; they do not run destructive Git operations.

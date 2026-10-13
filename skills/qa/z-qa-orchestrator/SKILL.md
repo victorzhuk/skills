@@ -13,7 +13,7 @@ Before picking commands: find the project's runner (Makefile, Taskfile, `package
 
 ## Phases
 
-Run in order. Stop at the first failure unless the caller passes `--continue-on-failure`.
+Run the requested phases in order. Stop between phases after the first failed phase unless the caller requests continuation. Within a phase, collect the intended failure census without fail-fast; see [[z-qa-debugger]].
 
 ### Phase 1: Smoke (~3-5 min)
 Fast signal before deeper work.
@@ -23,7 +23,7 @@ Fast signal before deeper work.
 
 ### Phase 2: Regression (~15-30 min) -- default depth
 Full behavioral suite across every real boundary the project already exercises. Run this when the caller just says "run QA" or "test the app" without naming a phase.
-- Go: `go test -race -cover -timeout 10m ./...` via the repo's Makefile/Taskfile target, not a raw invocation; integration tests spin up real dependencies through testcontainers-go (e.g. Postgres) -- no docker-compose or kubectl step needed
+- Go: run the repository's regression target with its race/coverage settings and actual integration setup. Discover testcontainers, compose, external fixtures, or build tags instead of assuming a dependency mechanism.
 - JS/TS: full `vitest` run; `playwright test` for first-party E2E specs (see [[z-qa-browser]] for CLI-driven exploratory work, [[z-go-bdd]] for Ginkgo/Gomega or Gherkin behavior contracts)
 - `govulncheck ./...` when it's already wired into CI
 
@@ -38,7 +38,7 @@ Regression plus everything expensive or manual.
 
 Always go through the project's own runner -- `make test`, `task test`, `npm test` -- never a raw `go test`/`vitest` call unless no wrapper exists. A wrapper carries build tags, env setup (e.g. `TESTCONTAINERS_RYUK_DISABLED=true`), and coverage flags a raw invocation misses.
 
-Every run is resource-limited -- wall-clock timeout plus a worker cap where the runner parallelizes by default ([[z-testing-strategy]] has the per-runner floor). If the project's runner carries no limits at all, stop before Phase 1: ask the user, land the limits in the runner config (Makefile `GOTESTFLAGS`, vitest/playwright config, pytest `addopts`), then run.
+Inspect process deadlines, test timeouts, and parallel limits per [[z-testing-strategy]]. Use existing settings or temporary invocation bounds for ordinary runs; do not require a persistent tooling edit merely to run QA. Execute kernel-emitted commands literally through the driver's lifecycle, without added flags or deadlines.
 
 ## Reporting
 
@@ -62,7 +62,7 @@ The phases above cover running the suite. Reach for a narrower skill when the ta
 ## Do not
 
 - Do not invent a multi-agent delegation flow -- run the phases yourself, in order.
-- Do not parallelize phases by default -- sequential with stop-on-first-failure is the real-world pattern; skip ahead only when the caller explicitly passes `--continue-on-failure`.
+- Do not start later phases after a failed phase unless the caller requested continuation.
 - Do not mandate hurl, oha, vegeta, axe, or Lighthouse -- reach for them only if the project already uses them.
 - Do not write a fixed `results/` + `SUMMARY.md` file structure -- report inline, or append to the project's own QA doc convention.
 - Do not swap in a raw test command where the project has its own wrapper -- the wrapper carries flags and env setup a raw call misses.
@@ -70,4 +70,4 @@ The phases above cover running the suite. Reach for a narrower skill when the ta
 ## Verify
 
 - Each phase reports name, pass/fail, duration; the run ends with a SUMMARY table or a doc-tree entry covering every phase attempted.
-- A failed phase halts the run (unless `--continue-on-failure`) and that failure is reported before anything else.
+- A failed phase stops subsequent phases unless continuation was requested; report its failures and incomplete work.

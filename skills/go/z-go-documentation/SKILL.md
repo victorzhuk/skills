@@ -58,7 +58,7 @@ func Create(o *Order) (string, error)
 | Comment content | Why/when/constraints/errors — never restate the signature |
 | Deprecated | `// Deprecated: Use X instead.` on its own line |
 | Interface docs | Document the contract, not the implementation |
-| Example tests | Nice-to-have, rarely used here; `ExampleXxx()` in `*_test.go` when you do write one |
+| Example tests | Useful for executable usage contracts; `ExampleXxx()` in `*_test.go` when you do write one |
 | Internal funcs | Comment complex ones; skip trivial ones |
 | Test functions | Do not comment |
 
@@ -154,6 +154,7 @@ it factual — no marketing.
 ## Verify
 
 ```sh
-go doc ./...                  # check all exported symbol comments render
-go test -run Example -timeout 2m ./...    # verify all Example functions pass
+go list ./...                 # select the affected package
+go doc -all ./path/to/package # render that package's exported API
+timeout 5m go test -parallel 4 -p 2 -run Example -timeout 2m ./...    # verify all Example functions pass
 ```

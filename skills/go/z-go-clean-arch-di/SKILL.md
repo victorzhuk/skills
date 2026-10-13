@@ -19,7 +19,7 @@ internal/
   usecase/        — use-case structs + narrow local contracts
   service/        — domain services
   infra/          — DB, cache, external APIs — implements domain interfaces
-  transport/      — HTTP/gRPC handlers — depends on use-case interfaces only
+  transport/      — HTTP/gRPC handlers — depends on use-case contracts
 ```
 
 Transport never imports `internal/app`. It receives its deps through provider interfaces.
@@ -104,15 +104,18 @@ Never use aliases to hide cross-layer imports that violate direction rules.
 
 ## Lifecycle
 
-One blocking `Run(ctx) error` — no separate `Start`/`Shutdown` pair. `bootstrap` wires the app and returns an internal shutdown closure that `Run` owns; nothing outside `app.go` calls shutdown directly.
+Expose one owned blocking `Run(ctx) error` when that fits the existing lifecycle; preserve an approved Start/Shutdown seam. `bootstrap` wires the app and returns an internal shutdown closure that `Run` owns; nothing outside `app.go` calls shutdown directly.
 
 ```go
 func (a *App) Run(ctx context.Context) error {
     srv, shutdown := bootstrap(ctx, a.cfg)
 
-    g, gCtx := errgroup.WithContext(ctx)
+    runCtx, stop := context.WithCancel(ctx)
+    defer stop()
+    g, gCtx := errgroup.WithContext(runCtx)
     g.Go(func() error {
-        if err := srv.Start(); err != nil {
+        defer stop()
+        if err := srv.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
             return fmt.Errorf("http server: %w", err)
         }
         return nil
@@ -143,17 +146,14 @@ Enforce with `go-arch-lint`, `depguard`, or a custom CI check — violations acc
 
 ## DI Library Decision
 
-Manual constructor injection is the default regardless of scale — even a
-service with 60+ constructors is wired by hand this way, no `wire`/`fx`/`do`
-involved. Scale alone is not a trigger to reach for a library.
+Prefer manual constructor injection for new wiring. Preserve an established DI framework; constructor count alone does not justify a migration.
 
 Reach for a DI library only once you hit a concrete need manual wiring can't
 satisfy on its own — dynamic plugin loading, or a lifecycle graph so tangled
 that phased build funcs stop being readable. Until that need is real, adding
 one is speculative complexity for a problem manual wiring already solves.
 
-Library trade-offs in brief, if you do need one: `google/wire` is compile-time
-codegen, low magic; `uber-go/fx` is reflect-based with rich lifecycle hooks but
+`google/wire` is archived and no longer maintained: keep it as a legacy maintenance branch, not a new dependency recommendation ([repository status](https://github.com/google/wire)). For a justified library choice, `uber-go/fx` is reflect-based with rich lifecycle hooks but
 steeper learning curve; `samber/do` is generic-based with built-in health
 checks and graceful shutdown.
 
@@ -178,5 +178,5 @@ checks and graceful shutdown.
 ```sh
 go build ./...
 go-arch-lint check    # or: golangci-lint run --enable depguard
-go test -short -timeout 2m ./...
+timeout 5m go test -parallel 4 -p 2 -short -timeout 2m ./...
 ```

@@ -5,14 +5,12 @@ description: Author a clean Makefile for a Go project's inner loop — DRY build
 
 # Go Makefile (the inner loop)
 
-The Makefile owns the **Go inner loop**: build, run, test, lint, fmt, generate, migrate.
-Push docker, pipelines, and shell orchestration into a Taskfile (see `z-go-taskfile`); the
-Taskfile delegates back to `make` so each command has one definition.
+Preserve the project's existing build tool and approved commands. When both Make and Task are already used, keep build/test/codegen recipes in Make and let [[z-go-taskfile]] delegate orchestration to them. Do not introduce a second tool solely to enforce this split.
 
 ## Self-documenting help
 
 Two conventions exist. **Inline `target: ## desc`** puts the comment on the target line
-itself — the more common real pattern (go-ent, gdebenz-buddy-bot, homyak all use it):
+itself:
 
 ```make
 .PHONY: help
@@ -60,9 +58,7 @@ build-cli: ## build-cli: compile the admin CLI
 	$(GO_BUILD) -o $(BUILD_DIR)/cli ./cmd/cli
 ```
 
-- Inline `@mkdir -p $(BUILD_DIR)` in the recipe body is the house pattern — every real
-  Makefile here does it this way. `mkdir -p` is a no-op once the directory exists, so
-  repeating it across recipes costs nothing at build time.
+- Inline `@mkdir -p $(BUILD_DIR)` is simple and idempotent; use an order-only prerequisite when it improves the existing file.
 - Stamp the version through `-ldflags -X`; `-trimpath` + `CGO_ENABLED=0` for reproducible,
   static binaries.
 
@@ -108,35 +104,30 @@ generate: ## generate: regenerate code from schemas
 	go tool ogen --target internal/gen --clean api/v1/openapi.yaml
 ```
 
-Real Makefiles are mixed, not fully migrated: codegen tools that emit source into the repo
-(ogen) tend to be pinned via `go tool`; standalone dev-CLI tools (goose, sqlc,
-golangci-lint) are commonly still `go install`ed at `@latest`. Both conventions coexist —
-prefer `go tool` for anything new, but an `@latest` install elsewhere isn't a bug to fix.
+Pin source generators, including ogen and sqlc, to the project's selected versions. Preserve an existing installation convention when it is reproducible; do not silently move tools to `@latest`. The go.mod tool directive requires Go 1.24+.
 
 ## Test and lint layering
 
 ```make
-GOTESTFLAGS ?= -timeout 2m
+GOTESTFLAGS ?=
 test:            ## test: all tests
-	go test $(GOTESTFLAGS) ./...
+	timeout 5m go test $(GOTESTFLAGS) -timeout 2m -p 2 -parallel 4 ./...
 test-unit:       ## test-unit: fast tests, no external deps
-	go test -timeout 2m -short ./...
+	timeout 5m go test -timeout 2m -p 2 -parallel 4 -short ./...
 test-integration: ## test-integration: needs docker
-	go test -timeout 10m -run Integration ./...
+	timeout 15m go test -timeout 10m -p 2 -parallel 4 -count=1 -run Integration ./...
 lint:            ## lint: full lint
 	golangci-lint run
 lint-new:        ## lint-new: only changed code
-	golangci-lint run --new-from-rev=master ./...
+	@test -n "$(BASE_REF)" || { echo "BASE_REF is required" >&2; exit 1; }
+	golangci-lint run --new-from-rev=$(BASE_REF) ./...
 fmt:             ## fmt: format
 	go fmt ./... && golangci-lint fmt
 vet:             ## vet: go vet
 	go vet ./...
 ```
 
-Keep a `GOTESTFLAGS ?=` passthrough so a Taskfile (or a human) can inject `-run Foo`.
-Default it to `-timeout 2m`, not empty — every target then carries a wall-clock
-cap and a deadlocked test can't stall the loop ([[z-testing-strategy]] has the
-per-runner floor).
+Keep `GOTESTFLAGS` for optional selectors such as `-run Foo`; do not accept `-args`, package operands, shell metacharacters, or timeout/concurrency overrides through this seam. Fixed bounds follow the selectors so ordinary selection cannot replace them. `timeout` bounds the whole command, `-timeout` each test binary, `-p` package concurrency, and `-parallel` parallel tests/fuzz workers. Select bounds for the project and use an equivalent process deadline where GNU timeout is unavailable. Discover `BASE_REF` from the actual review target before `lint-new`; never assume master. Preserve caller-emitted commands rather than rewriting them.
 
 ## dotenv and DSN handling
 
@@ -168,6 +159,6 @@ optional order-only dir-prereq pattern, keep the dir target (e.g. `$(BUILD_DIR)`
 
 ```sh
 make help          # renders, lists every target
-make -n build-all  # dry-run: recipes expand with full flags, no tab errors
+make -n build  # dry-run: recipes expand with full flags, no tab errors
 make vet test-unit lint
 ```

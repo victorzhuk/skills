@@ -35,7 +35,7 @@
 ## Environment and secrets
 
 - `.env` in the repo holds non-sensitive defaults, committed. `.env.local` (gitignored) overrides per-machine values and never gets committed.
-- Real secrets (API keys, DB credentials in prod) go through the Symfony secrets vault (`secrets:set`, encrypted `.env.<env>.encrypted`) or the deployment platform's secret store — never as plaintext in `.env.local.php` or a committed `.env.prod`.
+- Real secrets (API keys, DB credentials in prod) go through the Symfony secrets vault (`secrets:set`, encrypted files under `config/secrets/<env>/`; keep production decryption keys outside version control) or the deployment platform's secret store — never as plaintext in `.env.local.php` or a committed `.env.prod`.
 - `APP_SECRET` and any credential must differ between environments; a shared secret across dev/staging/prod defeats the vault's purpose.
 
 ## Testing
