@@ -153,6 +153,15 @@ if err != nil {
 mux.Handle("/api/v1/", http.StripPrefix("/api/v1", srv))
 ```
 
+`/healthz`, `/readyz`, and `/version` NEVER enter `openapi.yaml` — they are not business API. Register them by hand on the same business `mux`, next to the `gen.NewServer` mount, calling the handlers defined per [[z-go-observability]]:
+
+```go
+mux.HandleFunc("/healthz", healthzHandler)
+mux.HandleFunc("/readyz", readyzHandler)
+```
+
+Spec drift stays compiler-caught: anything that IS in the spec regenerates signatures and `go build` flags mismatches (see Verify below).
+
 See [[z-go-clean-arch-di]] for how the handler's use-case dependencies get wired.
 
 ## Verify

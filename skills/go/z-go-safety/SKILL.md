@@ -185,6 +185,26 @@ See [[z-go-security]] for the token-generation and encryption snippets.
 
 ---
 
+## Inbound server hardening
+
+An unbounded inbound `http.Server` can be held open by a slow client
+(slowloris). The gosec G112 fix is setting all four timeouts plus a header cap
+at construction:
+
+```go
+srv := &http.Server{
+    ReadHeaderTimeout: 5 * time.Second,
+    ReadTimeout:       10 * time.Second,
+    WriteTimeout:      15 * time.Second,
+    IdleTimeout:       60 * time.Second,
+    MaxHeaderBytes:    1 << 20,
+}
+```
+
+The values are defaults; tune per route (long uploads or SSE need larger
+`WriteTimeout` or per-route overrides). Drain-on-shutdown wiring lives in
+[[z-go-entrypoint]].
+
 ## Verify
 
 ```sh

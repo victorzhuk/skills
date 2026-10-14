@@ -46,7 +46,9 @@ Define the build incantation once and reuse it for every binary — flags can't 
 ```make
 BUILD_DIR ?= bin
 VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-LDFLAGS   := -ldflags "-w -s -X main.Version=$(VERSION)"
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
+BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS   := -ldflags "-w -s -X main.Version=$(VERSION) -X main.CommitHash=$(GIT_COMMIT) -X main.BuildDate=$(BUILD_DATE)"
 GO_BUILD  := CGO_ENABLED=0 go build $(LDFLAGS) -trimpath
 
 build: ## build: compile the main binary
@@ -59,8 +61,11 @@ build-cli: ## build-cli: compile the admin CLI
 ```
 
 - Inline `@mkdir -p $(BUILD_DIR)` is simple and idempotent; use an order-only prerequisite when it improves the existing file.
-- Stamp the version through `-ldflags -X`; `-trimpath` + `CGO_ENABLED=0` for reproducible,
-  static binaries.
+- Stamp the version through `-ldflags -X` with all three symbols; `-trimpath` + `CGO_ENABLED=0`
+  for reproducible, static binaries.
+- Stub contract: package `main` declares three `string` vars — `Version`, `CommitHash`,
+  `BuildDate` — printed by a `--version` flag or a `/version` log line. `[[z-go-dockerfile]]`
+  build args `ARG VERSION` / `ARG GIT_COMMIT` / `ARG BUILD_DATE` MUST mirror these three names.
 
 ### Optional: order-only dir prereq
 
@@ -144,6 +149,30 @@ strip = $(patsubst "%",%,$(patsubst '%',%,$(1)))
 List every target that is not a real file (`build test lint fmt …`). If you use the
 optional order-only dir-prereq pattern, keep the dir target (e.g. `$(BUILD_DIR)`) **off**
 `.PHONY` — that's what makes the order-only prereq work.
+
+## .gitignore for a Go service
+
+```gitignore
+bin/
+coverage.out
+coverage.html
+.env
+*.test
+dist/
+```
+
+`.air.toml` is ignored only for the working-copy variant; a committed `.air.toml` stays tracked.
+
+## dev target
+
+```make
+dev: ## dev: watch-reload via air
+	go tool air
+```
+
+Pin air in the `go.mod` tool block (`go get -tool github.com/air-verse/air@latest`). A minimal
+`.air.toml` builds to `bin/app` and excludes `vendor/`. A Task `dev` task delegates to
+`make dev` — see [[z-go-taskfile]].
 
 ## Do not
 

@@ -88,6 +88,45 @@ Order is fixed: parse → cancel on signal → construct → run. Parsing before
 signal context keeps a bad flag from installing a handler; `defer stop()`
 releases the channel registration so the binary can exit promptly.
 
+### HTTP server: timeouts + drain
+
+Inside `run`, build the server with inbound timeouts and drain it on cancel:
+
+```go
+srv := &http.Server{
+    Addr:              cfg.addr,
+    Handler:           handler,
+    ReadHeaderTimeout: 5 * time.Second,
+    ReadTimeout:       10 * time.Second,
+    WriteTimeout:      15 * time.Second,
+    IdleTimeout:       60 * time.Second,
+    MaxHeaderBytes:    1 << 20,
+}
+
+errCh := make(chan error, 1)
+go func() {
+    if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+        errCh <- err
+    }
+}()
+
+select {
+case <-ctx.Done():
+case err := <-errCh:
+    return fmt.Errorf("serve: %w", err)
+}
+
+shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+if err := srv.Shutdown(shutdownCtx); err != nil {
+    return fmt.Errorf("shutdown: %w", err)
+}
+```
+
+Shutdown order is fixed: stop accepting → drain in-flight requests → close
+dependencies. The signal context from `signal.NotifyContext` above is the only
+trigger; no new dependencies.
+
 ## Flags
 
 `flag.NewFlagSet` with `ContinueOnError` and output bound to the injected stderr —
@@ -141,6 +180,8 @@ keeps `app --json | jq` clean.
 | Construction | `newApp(cfg, stdout, stderr) (app, error)` inside `run` |
 | Streams | injected `io.Writer`, never `os.Stdout`/`os.Stderr` below `main` |
 | Errors | wrap with `%w`; return up; `main` prints and exits |
+| Server timeouts | `ReadHeaderTimeout`/`ReadTimeout`/`WriteTimeout`/`IdleTimeout` + `MaxHeaderBytes` at construction |
+| Shutdown | `srv.Shutdown` with a bounded context; stop accepting → drain → close deps |
 | Testing | call `run` with `[]string` and `bytes.Buffer` |
 
 ## Do not

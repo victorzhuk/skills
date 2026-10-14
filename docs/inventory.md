@@ -294,6 +294,17 @@ and context replace process globals.
 |---|---|---|---|
 | `z-go-entrypoint` | `go` | authored directly in this repo | [`skills/go/z-go-entrypoint/SKILL.md`](../skills/go/z-go-entrypoint/SKILL.md) |
 
+## Phase 13 — Go service bootstrap checklist
+
+One skill authored directly in this repo: `z-go-service-bootstrap`, the
+day-0 checklist entry point for standing up a new Go web service. It owns
+only the artifact ordering and routing; every artifact's content stays with
+its owner skill.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-go-service-bootstrap` | `go` | authored directly in this repo | [`skills/go/z-go-service-bootstrap/SKILL.md`](../skills/go/z-go-service-bootstrap/SKILL.md) |
+
 ## Public cleanup applied
 
 - Updated security guidance from OWASP and MCP primary sources reviewed on 2026-10-13. Added a shared agent-security reference and aligned Go, memory, and skill-authoring boundaries. Sources remain linked beside the guidance.

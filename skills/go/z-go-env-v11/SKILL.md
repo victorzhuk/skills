@@ -96,6 +96,35 @@ Parse constrained values as a string alias (`type AuthMode string`) and check me
 `Validate()` pass that runs after `Parse`. Thread `getenv` into `Validate` if it needs to read
 flags not represented as struct fields.
 
+Call `cfg.Validate()` before binding any listener: on error, `run` returns it and `main` exits
+non-zero without opening ports.
+
+## .env.example mirror
+
+Every `env:"NAME"` key in the config struct MUST appear in a committed `.env.example` as
+`NAME=<safe-default-or-empty>`, each with a `# required` or `# optional` comment. Secrets
+(`DATABASE_URL` and friends) get an empty value plus `# required` — never a real secret.
+`.env` itself stays gitignored; `.env.example` is the committed template.
+
+Verify seam (the extracted key set must be a subset of the example keys):
+
+```sh
+grep -o 'env:"[A-Z_]*"' internal/config/*.go | cut -d'"' -f2 | sort -u
+grep -o '^[A-Z_]*=' .env.example | cut -d= -f1 | sort -u
+```
+
+## direnv auto-inject
+
+Commit a `.envrc` containing exactly one line:
+
+```sh
+dotenv
+```
+
+No `layout go`, no secrets. Local runs pick up `.env` automatically; CI ignores `.envrc` and
+uses real env. The `[[z-go-makefile]]` `-include .env` seam is the non-direnv fallback, not
+the default.
+
 ## Do not
 
 - Call `os.Getenv` outside the config package — route everything through the `getenv` seam.

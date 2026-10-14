@@ -143,11 +143,23 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+      # third-party action: pinned to a version tag; full commit SHA only where supply-chain policy requires an immutable reference
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: 0
 ```
 
 The snippets above are job ingredients, not independent publication gates: merge them under one workflow and name the vulnerability job `security`, or adjust `needs` to its actual ID. If an existing design requires `workflow_run`, restrict its triggering event/branch, bind checkout to the verified head SHA, and require every release check before publishing. Never execute an arbitrary PR head with registry credentials.
 
 One `docker/build-push-action` call, one platform. Multi-platform builds, provenance/sbom attestations, and image scanning are real options — see Optional hardening — not part of the baseline.
+
+The Trivy step scans the just-pushed image ref at `HIGH,CRITICAL` severity and
+is additive hardening — `exit-code: 0` reports findings without failing the
+publish. Pin the action to its version tag (`aquasecurity/trivy-action@v0.36.0`); use a full commit SHA only where supply-chain policy requires an immutable reference, and bump deliberately. Keep `.dockerignore`
+correct: `.git` must be excluded, or every commit changes the build context and
+invalidates the Docker layer cache.
 
 Repository settings: protect the actual default/release branch (required status checks, PR approval, no force push); `contents: read` as the default workflow permission; grant write only per-job where needed; credentials in repository secrets, never inline.
 

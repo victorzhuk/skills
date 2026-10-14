@@ -45,6 +45,7 @@ Model- or user-reachable via skill name and trigger phrasing.
 - **[z-go-pkg](./z-go-pkg/SKILL.md)** — Query the official pkg.go.dev API (v1beta) for Go module and package metadata — package info, module versions, symbols, imported-by, search, and vulnerabilities.
 - **[z-go-safety](./z-go-safety/SKILL.md)** — Defensive Go against panics and silent data corruption — nil panics, append aliasing, map concurrent-write panics, float comparison, numeric overflow, defer-in-loop leaks. Also hardens exported API…
 - **[z-go-security](./z-go-security/SKILL.md)** — Go security hardening — injection prevention, crypto, path traversal, secrets, timing safety, and race-free concurrency.
+- **[z-go-service-bootstrap](./z-go-service-bootstrap/SKILL.md)** — Day-0 checklist for a new Go web service — ordered artifact list mapping lint config, env mirror, Makefile stamping, entrypoint, Dockerfile+compose, metrics port, healthz/readyz, timeouts/drain, and CI scan to their owner skills.
 - **[z-go-sqlc](./z-go-sqlc/SKILL.md)** — Use when writing or reviewing Go database access that should be type-safe — generating Go from SQL with sqlc, authoring sqlc.yaml, structuring queries/schema, and wiring sqlc output…
 - **[z-go-stdlib](./z-go-stdlib/SKILL.md)** — Stdlib-first discovery — verify the Go standard library or golang.org/x already has it (`go doc`, task→package map) before writing any helper or adding a dependency.
 - **[z-go-style](./z-go-style/SKILL.md)** — Go code style — declarations, control flow, function design, and file organization.

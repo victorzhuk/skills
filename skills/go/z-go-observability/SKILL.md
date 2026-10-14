@@ -162,17 +162,46 @@ if eo, ok := obs.(prometheus.ExemplarObserver); ok {
 
 ## Profiling
 
-Enable pprof conditionally; gate in production behind auth or a management port.
+Enable pprof conditionally; register the handlers ONLY on `mgmtMux` (see below) and only behind `ENABLE_PPROF=true` or a loopback bind. Never on the public mux.
 
 ```go
 if os.Getenv("ENABLE_PPROF") == "true" {
-    go func() {
-        log.Println(http.ListenAndServe("localhost:6060", nil))
-    }()
+    mgmtMux.Handle("/debug/pprof/", http.DefaultServeMux) // pprof import side-effect registers on DefaultServeMux
 }
 ```
 
 For continuous profiling, wire Pyroscope at startup — it runs always-on without redeployment toggles. Neither continuous profiling nor Pyroscope is running anywhere in the current fleet — that's not evidence against them, just that `net/http/pprof` snapshots have covered every incident so far; reach for continuous profiling once that stops being true.
+
+## Management listener (metrics/pprof isolated)
+
+The business `mux` serves the API only. `/metrics` and pprof live on a second mux bound to the management port (`managementAddr` env, default `:9090`), with its own `http.Server`:
+
+```go
+mgmtMux := http.NewServeMux()
+mgmtMux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+
+mgmtSrv := &http.Server{
+    Addr:              mgmtAddr, // default ":9090"
+    Handler:           mgmtMux,
+    ReadHeaderTimeout: 5 * time.Second,
+}
+go mgmtSrv.ListenAndServe()
+```
+
+The public mux MUST NOT register `/metrics` — scraping and profiling traffic never touches the API listener. Verify probe:
+
+```sh
+curl -s localhost:9090/metrics | grep http_request_duration
+```
+
+## /healthz + /readyz producer contract
+
+Two endpoints, two meanings — never merge them:
+
+- `GET /healthz` — liveness: process alive, no dependency checks, always 200 unless the process is deadlocked.
+- `GET /readyz` — readiness: bounded `PingContext` per dependency (2s timeout each), 200 only when all pass; otherwise 503 with `{"dep":"db","err":"..."}`.
+
+Register them by hand in the composition root — these handlers live outside generated code (see [[z-go-ogen]]). Consumers hit these paths: Kubernetes probes in [[z-k8s-deploy]] and compose healthchecks in [[z-go-dockerfile]].
 
 ## Do not
 
@@ -181,6 +210,7 @@ For continuous profiling, wire Pyroscope at startup — it runs always-on withou
 - Omit `ctx` from DB or RPC calls — breaks trace propagation.
 - Use `Summary` for latency — can't aggregate across instances.
 - Expose pprof on a public port without authentication.
+- Register `/metrics` or pprof on the public mux — they belong on the management listener only.
 - Call `irate()` in SLO alerting rules — use `rate()`.
 - Log PII, credentials, or full request bodies.
 

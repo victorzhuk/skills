@@ -30,11 +30,13 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM deps AS build
 ARG VERSION=dev
+ARG GIT_COMMIT=none
+ARG BUILD_DATE=
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux go build -trimpath \
-    -ldflags="-s -w -X main.Version=${VERSION}" \
+    -ldflags="-s -w -X main.Version=${VERSION} -X main.CommitHash=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" \
     -o /out/app ./cmd/app
 
 FROM gcr.io/distroless/static-debian13:nonroot
@@ -58,7 +60,7 @@ These caches persist across builds on the same daemon/builder — a cold CI runn
 
 ## Version stamping
 
-`-X main.Version=${VERSION}` mirrors the `-ldflags "-w -s -X main.Version=$(VERSION)"` convention in [[z-go-makefile]] — same variable name, same flags, so a local `make build` and the image produced by this Dockerfile report identical version strings. Pass `VERSION` at build time: `docker build --build-arg VERSION=$(git describe --tags --always --dirty) .`; the pipeline step that computes and passes it belongs in [[z-go-ci]].
+`-X main.Version / main.CommitHash / main.BuildDate` mirror the `-ldflags` convention in [[z-go-makefile]] — same three variable names in package `main`, so a local `make build` and the image produced by this Dockerfile report identical version strings. Pass all three at build time: `docker build --build-arg VERSION=$(git describe --tags --always --dirty) --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) .`; the pipeline step that computes and passes them belongs in [[z-go-ci]].
 
 `-s -w` strips the symbol table and DWARF debug info — smaller binary, but `dlv` can't symbolicate it. If a container image genuinely needs live `delve` debugging, build a second, unstripped target for that image; don't drop `-s -w` from the production build to accommodate a debugging session that happens rarely.
 
@@ -88,7 +90,7 @@ dist/
 .env.*
 .github/
 testdata/
-docker-compose*.yml
+compose.override.yml
 ```
 
 Don't ignore `vendor/` if the module actually vendors dependencies — the build stage needs it. Ignoring `.git` matters most: without it, every commit invalidates Docker's build-context cache even when no tracked file changed.
@@ -105,6 +107,62 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/app ./c
 ```
 
 `--platform=$BUILDPLATFORM` pins the builder stage to the host's own architecture — Go then cross-compiles natively via `GOOS`/`GOARCH` with no QEMU emulation of the build step. Drop that pin and `buildx --platform linux/arm64` on an amd64 host emulates the entire builder under QEMU instead. The `docker buildx build --platform linux/amd64,linux/arm64` invocation and the CI job that runs it belong in [[z-go-ci]]; this Dockerfile only needs the platform pin and the two `ARG`s to be cross-compile-ready.
+
+
+## Local Compose stack
+
+Commit a `compose.yml` for local dev — one file, `docker compose up` gives the service a real database and cache:
+
+```yaml
+services:
+  app:
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-dev}
+        GIT_COMMIT: ${GIT_COMMIT:-none}
+        BUILD_DATE: ${BUILD_DATE:-}
+    env_file: [.env]
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+```
+
+Expose the `9090` management port only on explicit opt-in, in a companion file named `compose.mgmt.yml` — do NOT call it `compose.override.yml`, that exact name auto-loads and would publish `9090` on every plain `up`:
+
+```yaml
+services:
+  app:
+    ports: ["9090:9090"]
+```
+
+A plain `docker compose up` keeps `9090` private — no host access; `docker compose -f compose.yml -f compose.mgmt.yml up` adds it. An optional `otel` profile adds an `otel-collector` service for local trace inspection. The `build.args` names (`VERSION`/`GIT_COMMIT`/`BUILD_DATE`) mirror the stamping vars in [[z-go-makefile]].
+
+Production Compose is not this file: it uses the [[z-selfhost-deploy]] patterns — pinned image tag, no `build:`, `restart: unless-stopped`. This compose is local dev only.
+
+Container healthcheck: prefer the app's own subcommand — `test: ["CMD", "/app", "healthcheck"]` — or fall back to `wget -qO- http://localhost:8080/healthz` (see [[z-go-observability]]). Minimal images (`scratch`, `distroless:nonroot`) ship no `curl` and usually no `wget`; a shell-form `HEALTHCHECK` fails outright there.
 
 ## Do not
 
