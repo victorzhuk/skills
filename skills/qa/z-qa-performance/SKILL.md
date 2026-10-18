@@ -1,6 +1,6 @@
 ---
 name: z-qa-performance
-description: "Load and throughput testing with the project’s runner. Use for load tests, latency thresholds, API throughput, or SLA validation. Choose user-count or arrival-rate workloads, gate business checks, and bound generated traffic. Single-request contracts belong to [[z-qa-api]]; page rendering performance belongs to the web-performance skill."
+description: "Load and throughput testing with the project’s runner. Use for load tests, latency thresholds, API throughput, or SLA validation. Choose user-count or arrival-rate workloads, gate business checks, and bound generated traffic. Single-request contracts belong to [[z-qa-api]]; page rendering performance belongs to [[z-web-performance]]."
 ---
 
 # Load and throughput testing

@@ -36,7 +36,8 @@ Build Flutter clients as thin, typed consumers of an API — one Dart codebase p
 
 ## Testing
 
-- widget tests for user-visible flows (tap, assert the resulting state) — the default tier
+- running-app acceptance (integration test on a device or emulator) proves required user journeys — the default tier; state native-UI limitations of the runner when choosing it
+- widget tests only for named residual risks acceptance cannot prove economically
 - golden tests only for visually sensitive screens (design system, brand surfaces) — expensive to maintain, a per-screen judgment call, not blanket policy
 
 ## Platform channels

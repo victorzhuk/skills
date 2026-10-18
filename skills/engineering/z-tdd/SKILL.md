@@ -42,7 +42,7 @@ A **seam** is the public boundary you test at: where behaviour is observable wit
 ## Verify
 
 - Every new test failed once before its implementation existed.
-- Tests reference only the public interface — no private symbols, no side-channel assertions.
+- Tests reference the approved seam. Use the public interface by default; an internal test is acceptable for a named invariant that is not externally distinguishable. Never couple assertions to incidental call order or private layout.
 - The seams under test were named and confirmed before the first test.
 
 see [[z-testing-strategy]], [[z-deep-modules]], [[z-go-testing]], [[z-verify-before-done]]

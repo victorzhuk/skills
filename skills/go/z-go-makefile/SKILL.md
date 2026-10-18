@@ -181,7 +181,10 @@ Pin air in the `go.mod` tool block (`go get -tool github.com/air-verse/air@lates
 - Mix the two help-comment conventions (inline and standalone) in the same Makefile.
 - Add a new codegen tool via `go install @latest` without considering `go tool` first —
   pin new generators there; an existing `@latest` install for a dev-CLI tool elsewhere
-  is an accepted coexisting convention, not something to migrate unprompted.
+  is an accepted coexisting convention, not something to migrate unprompted. The
+  `@latest` convention applies only to tools that hold no credentials and have no
+  production access; anything that receives credentials or touches production installs
+  at a pinned version.
 - Comments restating WHAT a recipe does — the help annotation is the doc.
 
 ## Verify

@@ -47,10 +47,8 @@ linked skill before writing the artifact — the detail lives there, not here.
 ```bash
 test -f .golangci.yml && test -f .env.example && test -f .dockerignore \
   && test -f Dockerfile && test -f compose.yml && test -f Makefile
-comm -23 \
-  <(grep -o 'env:"[A-Z_]*"' internal/config/*.go | cut -d'"' -f2 | sort -u) \
-  <(grep -o '^[A-Z_]*=' .env.example | cut -d= -f1 | sort -u)
-# empty output = env-mirror PASS
+# env-mirror: run the [[z-go-env-v11]] verify helper.
+# Empty difference = PASS; the command must exit nonzero on a difference.
 grep -E 'Version|CommitHash|BuildDate' Makefile
 curl -sf localhost:8080/healthz && curl -sf localhost:9090/metrics
 ```

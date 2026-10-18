@@ -40,14 +40,18 @@ Use a non-nil map for hermetic tests, including an empty one. At the composition
 env decides "set" by map comma-ok (`value, ok := environment[key]`), so a key present
 with value `""` is **SET**, not unset:
 
-| Environment state    | `,required` | `,notEmpty` | `envDefault` applied |
-|----------------------|-------------|-------------|----------------------|
-| key absent           | error       | error       | yes                  |
-| key present, `""`    | **passes**  | error       | yes (if default set) |
-| key present, value   | passes      | passes      | no (value wins)      |
+| Environment state    | `,required` (no `envDefault`) | `,required` + nonempty `envDefault` | `,notEmpty` |
+|----------------------|-------------------------------|--------------------------------------|--------------|
+| key absent           | error                         | passes (default applied)             | error        |
+| key present, `""`    | **passes**                    | passes (default applied)             | error        |
+| key present, value   | passes                        | passes                               | passes       |
 
-Consequence: `,required` alone does **not** reject an empty secret. To require non-empty,
-use `,notEmpty`. Keep explicit empty values in injected maps so tests exercise the same semantics as production.
+`envDefault` is applied before the `required` and `notEmpty` checks, so `required` with a
+nonempty `envDefault` does not fail when the key is absent; `notEmpty` then inspects the
+defaulted value. Consequence: `,required` alone does **not** reject an empty secret. To
+require non-empty, use `,notEmpty`. Do not put a secret in `envDefault` when explicit
+operator input is required. Keep explicit empty values in injected maps so tests exercise
+the same semantics as production.
 
 ## Struct tags
 
@@ -106,12 +110,30 @@ Every `env:"NAME"` key in the config struct MUST appear in a committed `.env.exa
 (`DATABASE_URL` and friends) get an empty value plus `# required` — never a real secret.
 `.env` itself stays gitignored; `.env.example` is the committed template.
 
-Verify seam (the extracted key set must be a subset of the example keys):
+Verify seam — one Go helper owns it:
 
-```sh
-grep -o 'env:"[A-Z_]*"' internal/config/*.go | cut -d'"' -f2 | sort -u
-grep -o '^[A-Z_]*=' .env.example | cut -d= -f1 | sort -u
+```go
+params, err := env.GetFieldParamsWithOptions(&Config{}, env.Options{ /* production Options */ })
+if err != nil {
+    os.Exit(1) // extraction error fails the check
+}
+var keys []string
+for _, p := range params {
+    if p.Ignored {
+        continue // `env:"-"` fields are still returned; skip them
+    }
+    keys = append(keys, p.Key)
+}
+sort.Strings(keys)
+// diff keys against the `^[A-Z0-9_]*=` keys of .env.example,
+// print every missing key, exit nonzero on any
 ```
+
+The helper must exit nonzero on an extraction error and on any missing key; `comm`-style
+empty output alone is not the gate. Caveats: `env:"-"` fields come back with
+`Ignored == true` and must be skipped; slice-of-struct element keys are discovered only
+when the production `Options.Environment` is supplied — without it they are out of scope
+for this check.
 
 ## direnv auto-inject
 

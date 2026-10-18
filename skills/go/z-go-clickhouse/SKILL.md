@@ -129,13 +129,13 @@ Avoid `Nullable(T)` when a sentinel works — `Nullable` adds a hidden null-map 
 -- correct, but re-merges every touched part at query time — avoid on hot paths
 SELECT booking_id, status FROM bookings FINAL WHERE booking_id = ?
 
--- same correctness, no merge cost
+-- equivalent only under the invariants below, no merge cost
 SELECT booking_id, argMax(status, version) AS status
 FROM bookings
 GROUP BY booking_id
 ```
 
-`FINAL` is fine for small dimension tables or ad hoc debugging. On a hot aggregation path over a large `ReplacingMergeTree`, use `argMax(value, version_column)` with `GROUP BY` instead — same correctness, without forcing a merge per query.
+`FINAL` is fine for small dimension tables or ad hoc debugging. On a hot aggregation path over a large `ReplacingMergeTree`, use `argMax(value, version_column)` with `GROUP BY` instead — same result only when the full replacement key is in `GROUP BY`, the version is unique per key, and NULL and deletion semantics are preserved. Keep `FINAL` when any invariant is unproven.
 
 ## Query patterns: PREWHERE and materialized views
 
@@ -149,7 +149,7 @@ Events landing in ClickHouse from Kafka/RabbitMQ/NATS go through an ordinary con
 
 - Issue one synchronous `INSERT` per row from a request handler — batch, or use `async_insert` for genuinely unbatchable writers.
 - Use `ALTER TABLE ... UPDATE/DELETE` as a request-path operation — it's an async part rewrite; model the change as a new versioned row.
-- Run `FINAL` on a hot aggregation query — use `argMax`/`GROUP BY`.
+- Run `FINAL` on a hot aggregation query — use `argMax`/`GROUP BY` only under those invariants.
 - Set `PARTITION BY` on a high-cardinality or multi-column key (day × tenant) — partition explosion kills merge throughput. Put that cardinality in `ORDER BY`.
 - Reach for `Nullable(String)` where a sentinel default already disambiguates "empty" from "unset".
 - Assume `insert_deduplicate` protects a retry that reorders or re-batches rows — it hashes the exact block.

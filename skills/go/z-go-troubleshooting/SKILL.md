@@ -168,7 +168,7 @@ go build -gcflags="-m=2" ./... 2>&1 | grep "escapes to heap"
 
 ## Test-driven debugging
 
-Write the failing test first — minimal reproducer, prevents regression.
+Default to a regression test before the fix at the agreed seam. Preserve an approved tests-after flow. Either way, prove the test fails against the unfixed code and passes after the fix.
 Flaky test? `-count=100 -race` amplifies; `goleak.VerifyNone(t)` for leaks.
 
 ## Production & hygiene

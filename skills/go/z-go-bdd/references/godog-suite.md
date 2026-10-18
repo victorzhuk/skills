@@ -29,6 +29,7 @@ func TestBDD(t *testing.T) {
         Options: &godog.Options{
             Format:   bddFormat(),
             Paths:    []string{"features/billing"},
+            Strict:   true,
             Tags:     os.Getenv("BDD_TAGS"),
             TestingT: t,
         },
@@ -90,9 +91,10 @@ Step functions are adapters between Gherkin and test helpers.
 Use gherkingen to generate boilerplate from `.feature` files when the project accepts generated BDD stubs.
 
 ```sh
-go install github.com/hedhyw/gherkingen/v4/cmd/gherkingen@latest
+go install github.com/hedhyw/gherkingen/v4/cmd/gherkingen@v4.1.1
 gherkingen features/billing/payment.feature > internal/billing/payment_feature_test.go
 ```
+`@latest` is the alternative when the pin is not required.
 
 If the project already pins another major version, use that version. gherkingen v4 enables `t.Parallel()` by default; disable it for shared fixtures:
 

@@ -23,8 +23,8 @@ Include the 2.2 additions: focus not obscured (2.4.11), alternatives to dragging
 | Level | Requirement | Target |
 |-------|-------------|--------|
 | **A** | Minimum accessibility | Must pass |
-| **AA** | Standard compliance | Should pass (legal requirement in many jurisdictions) |
-| **AAA** | Enhanced accessibility | Nice to have |
+| **AA** | Standard compliance | Must pass (legal requirement in many jurisdictions) |
+| **AAA** | Enhanced accessibility | Optional — only when the product contract requires it |
 
 ---
 

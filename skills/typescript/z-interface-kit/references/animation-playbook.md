@@ -125,10 +125,12 @@ The values are `inset(top right bottom left)` — how far each edge clips inward
 
 ### Pattern: Tabs with perfect color transitions
 
-Duplicate the entire tab list. Place one copy on top of the other. The bottom copy has
-inactive styles; the top copy has active styles. Animate `clip-path: inset(...)` on the
-top copy to reveal only the active tab region. The color transition is instantaneous and
-pixel-perfect — no fade needed.
+Keep one semantic tab list in the DOM — it stays the single keyboard- and AT-reachable
+list. Animate a decorative layer on top: an overlay copy that carries `inert` (or
+`aria-hidden="true"`) and no IDs, links, or other duplicated identifiable nodes. The
+overlay holds the active styles while the real list below holds inactive styles. Animate
+`clip-path: inset(...)` on the overlay to reveal only the active tab region. The color
+transition is instantaneous and pixel-perfect — no fade needed.
 
 ```css
 .tabs-active-overlay {

@@ -48,10 +48,7 @@ Any number or policy you picked is a decision the user owns: a limit, a TTL, a f
 
 Per [[z-verify-before-done]], with the project wrappers and resource limits:
 
-- It builds, and the unit tests of the touched packages pass.
-- Add one focused test for each behavioral fix that had no coverage: the smallest one that fails without the fix.
-- Run the integration tests for touched data paths when they exist.
-- Lint only new code (`--new-from-rev=<target branch>`).
+- Use the approved commands and scope from [[z-testing-strategy]] and [[z-verify-before-done]]. Preserve existing required checks. Add a lower-layer test only for a named residual risk E2E cannot prove; prove it fails without the fix and passes with it. Runner-specific lint flags belong to the language tooling skill.
 
 ## Report
 

@@ -41,7 +41,10 @@ Load into staging or keep the batch unpublished. Run these checks before making 
 
 - **Row count** — expected vs actual, alarm past an N% deviation from the trailing average.
 - **Null threshold** — a required column's null rate crossing a set bound.
-- **Freshness** — `max(event_time)` within the SLA window.
+- **Freshness** — split by load kind. Historical backfill: validate against the batch's
+  declared interval and source completeness (every source partition present), not the live
+  SLA window. Live load: `max(event_time)` within the SLA window, measured against the
+  live stream or the published dataset.
 
 Fail the load on a gate breach. A silent partial load that passes downstream is worse than a late one — it looks correct until someone reconciles against the source.
 

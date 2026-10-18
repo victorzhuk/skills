@@ -22,6 +22,7 @@ func TestBDD(t *testing.T) {
 		Options: &godog.Options{
 			Format:   bddFormat(),
 			Paths:    []string{"features"},
+			Strict:   true,
 			Tags:     os.Getenv("BDD_TAGS"),
 			TestingT: t,
 		},

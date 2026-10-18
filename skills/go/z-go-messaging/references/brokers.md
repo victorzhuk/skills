@@ -97,6 +97,17 @@ if err != nil {
     return fmt.Errorf("consume: %w", err)
 }
 
+// Consume takes no context, so a bare range blocks forever while idle.
+// Own the channel: close it on cancel to unblock the range.
+closed := ch.NotifyClose(make(chan *amqp.Error, 1))
+go func() {
+    select {
+    case <-ctx.Done():
+        _ = ch.Close()
+    case <-closed:
+    }
+}()
+
 for d := range deliveries {
     if err := handle(ctx, d); err != nil {
         _ = d.Nack(false, requeueOnFailure) // false = single message, not multi
@@ -107,6 +118,12 @@ for d := range deliveries {
     }
 }
 ```
+
+On cancel the channel close ends the range; prefetch already bounds in-flight
+deliveries. Drain handlers still running under the existing bounded timeout,
+then close the channel and the connection, in that order. `NotifyClose` keeps
+the goroutine from leaking when the broker closes the channel first.
+
 
 `Qos(prefetchCount, 0, false)` bounds in-flight unacked messages per consumer — without it RabbitMQ pushes as fast as the network allows, and a slow handler backs up unbounded. Dead-lettering is declared on the queue at setup time (`x-dead-letter-exchange` argument), not in the consume loop.
 

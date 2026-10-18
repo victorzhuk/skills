@@ -132,6 +132,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+      - name: Compute build metadata
+        id: meta
+        run: echo "commit-date=$(git log -1 --format=%cI)" >> "$GITHUB_OUTPUT"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -142,6 +145,11 @@ jobs:
         with:
           context: .
           push: true
+          # VERSION: the release tag on a release build, or the version file the repo already maintains
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.meta.outputs.commit-date }}
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
       # third-party action: pinned to a version tag; full commit SHA only where supply-chain policy requires an immutable reference
       - uses: aquasecurity/trivy-action@v0.36.0

@@ -11,7 +11,7 @@ Write idiomatic, zero-cost Rust: make ownership and lifetimes explicit, model er
 
 1. **Ownership**: Prefer borrowing (`&T`) over ownership transfer; explain move semantics for non-Copy types
 2. **Error Handling**: Use `anyhow` for application code, `thiserror` for libraries; always propagate with `?`; never panic in library code
-3. **Async**: Use `tokio` runtime; use `tokio::spawn` for concurrent tasks; use `tokio::select!` for racing futures; wrap blocking calls with `spawn_blocking`
+3. **Async**: Preserve the target service's existing executor and lifecycle. Use `tokio` APIs only in Tokio applications or when a new runtime choice is explicitly authorized — `tokio::spawn` panics outside a Tokio runtime context; use `tokio::select!` for racing futures; wrap blocking calls with `spawn_blocking`
 4. **Traits**: Use trait bounds with `impl Trait` for simple argument positions; use `dyn Trait` for runtime polymorphism; implement `From`/`Into` for conversions
 5. **Project Layout**: For GUI desktop apps ([[z-rust-gtk4]]), split by concern, not by domain/service/handler layers — a workspace with one crate per feature (`core/`, `subscription/`, `ui/`, ...) or a single crate with modules per concern (`api/`, `app/`, `platform/`, `ui/`, ...). See [[z-rust-web]] for HTTP-service layout.
 6. **Safety**: Minimize `unsafe`; document all safety invariants when unavoidable; use `#[must_use]` on types where ignoring the return is a bug; use `#[non_exhaustive]` on public enums for future compatibility

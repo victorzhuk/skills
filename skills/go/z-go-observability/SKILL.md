@@ -145,9 +145,11 @@ slog.SetDefault(slog.New(enricher{Handler: slog.NewJSONHandler(os.Stdout, nil)})
 slog.InfoContext(ctx, "order created", "order_id", orderID) // trace_id/span_id now attached
 ```
 
-`go.opentelemetry.io/contrib/bridges/otelslog` does the same job as a ready-made
-handler — a fine alternative if the hand-rolled pair is more than you need, but it
-isn't the house default.
+`go.opentelemetry.io/contrib/bridges/otelslog` is a different tool, not a substitute
+for the pair above: it exports log records through an OpenTelemetry `LoggerProvider`
+and does not enrich a JSON stdout handler. Keep the JSON enricher for stdout; use
+`otelslog` only as a separate export route with a configured `LoggerProvider`,
+processor, exporter, and shutdown, and state explicitly whether stdout stays enabled.
 
 ### Metrics + Traces: Exemplars
 
@@ -185,7 +187,28 @@ mgmtSrv := &http.Server{
     Handler:           mgmtMux,
     ReadHeaderTimeout: 5 * time.Second,
 }
-go mgmtSrv.ListenAndServe()
+
+g, ctx := errgroup.WithContext(appCtx)
+serve := func(srv *http.Server) func() error {
+    return func() error {
+        if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+            return fmt.Errorf("serve %s: %w", srv.Addr, err)
+        }
+        return nil
+    }
+}
+g.Go(serve(apiSrv))
+g.Go(serve(mgmtSrv))
+g.Go(func() error {
+    <-ctx.Done()
+    shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+    defer cancel()
+    _ = apiSrv.Shutdown(shutdownCtx)
+    return mgmtSrv.Shutdown(shutdownCtx)
+})
+if err := g.Wait(); err != nil {
+    return err
+}
 ```
 
 The public mux MUST NOT register `/metrics` — scraping and profiling traffic never touches the API listener. Verify probe:

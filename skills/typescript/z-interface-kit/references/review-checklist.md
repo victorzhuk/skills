@@ -73,9 +73,9 @@ Extended 30-item checklist for UI implementation quality. Run through this befor
 | Parent `rounded-lg` (12px), child `rounded-lg` (12px), padding 8px | Parent `rounded-xl` (16px), child `rounded-md` (8px), padding 8px | 8 + 8 = 16 — radii now concentric |
 
 ### 13. Spacing Follows Scale
-- **Check**: All padding, margin, and gap values are multiples of 4px
-- **How**: Inspect spacing values — no 5px, 7px, 13px, 19px etc.
-- **Failing looks like**: Inconsistent spacing that makes the layout feel uneven
+- **Check**: Spacing follows the project's design-system scale (conditional — apply only when the project defines one)
+- **How**: Inspect spacing values against the project scale; ad-hoc values fail review only when the project adopts a scale
+- **Failing looks like**: Values off the project's declared scale, making the layout feel uneven
 
 ### 14. Hit Areas Meet Minimum
 - **Check**: Check WCAG 2.2 AA target size (24 CSS px or a defined exception); prefer 44px for touch when practical
@@ -83,9 +83,9 @@ Extended 30-item checklist for UI implementation quality. Run through this befor
 - **Failing looks like**: Tiny icon buttons, close buttons, or links that are hard to tap on mobile
 
 ### 15. Shadows Over Borders
-- **Check**: Depth is created with layered box-shadows, not solid borders between sections
+- **Check**: Depth uses the project's convention — layered box-shadows instead of solid borders between sections (conditional on the design system)
 - **How**: Look for `border: 1px solid` between content sections
-- **Failing looks like**: Hard dividing lines instead of natural depth transitions
+- **Failing looks like**: Hard dividing lines where the project's design system calls for layered depth
 
 ### 16. Optical Alignment Verified
 - **Check**: Icons in buttons, play triangles, and asymmetric elements are optically centered
@@ -105,19 +105,18 @@ Extended 30-item checklist for UI implementation quality. Run through this befor
 - **Failing looks like**: Unintended properties animating (color, padding, border) causing jank
 
 ### 19. Custom Easing Curves Used
-- **Check**: UI animations use custom bezier curves, not built-in `ease`, `ease-in`, `ease-out`
+- **Check**: UI animations use the project's easing tokens, not built-in `ease`, `ease-in`, `ease-out` (conditional on the design system)
 - **How**: Inspect transition/animation easing values
-- **Failing looks like**: Animations feel generic and lack punch
+- **Failing looks like**: Animations bypassing the project's easing tokens and feeling generic
 
-### 20. Enter Animations Split and Staggered
-- **Check**: Multi-element entrances use 30-80ms stagger between items
-- **How**: Watch page load or section reveal — elements should cascade, not appear all at once
-- **Failing looks like**: An entire section popping in as one block
+- **Check**: Multi-element entrances use a stagger when the project's motion spec calls for a cascade (conditional on the requested interaction)
+- **How**: Watch page load or section reveal — a spec'd stagger (e.g. 30-80ms) should cascade, not appear all at once
+- **Failing looks like**: A spec'd cascade appearing as one block, or an unrequested stagger added without a spec
 
 ### 21. Press Feedback on Buttons
-- **Check**: All pressable elements have subtle `scale(0.96-0.97)` on `:active`
-- **How**: Click and hold buttons — they should compress slightly
-- **Failing looks like**: Clicking a button with zero visual feedback
+- **Check**: Pressable elements give feedback on `:active` — `scale(0.96-0.97)` or the project's press treatment (conditional on the requested interaction)
+- **How**: Click and hold buttons — they should respond per the project's interaction spec
+- **Failing looks like**: Clicking a button with zero visual feedback when the interaction spec requires one
 
 ### 22. prefers-reduced-motion Respected
 - **Check**: Animations reduce/simplify when the user has reduced motion enabled

@@ -72,7 +72,7 @@ when a migration creates several functions.
 ## CLI usage
 
 ```sh
-go install github.com/pressly/goose/v3/cmd/goose@latest
+go install github.com/pressly/goose/v3/cmd/goose@v3.29.0
 
 goose -dir ./migrations postgres "$DATABASE_URL" create add_jobs sql
 goose -dir ./migrations postgres "$DATABASE_URL" status
@@ -80,8 +80,10 @@ goose -dir ./migrations postgres "$DATABASE_URL" up
 goose -dir ./migrations postgres "$DATABASE_URL" down
 ```
 
-`go install @latest` into the dev machine's `$GOBIN` is the house practice for the goose
-CLI — unlike codegen tools (e.g. ogen), it is not pinned via a `go.mod` `tool` directive.
+`go install` at a pinned, reviewed release into the dev machine's `$GOBIN` is the house
+practice for the goose CLI — unlike codegen tools (e.g. ogen), it is not pinned via a
+`go.mod` `tool` directive. `@latest` is the fallback only when deliberately tracking
+upstream between reviews.
 
 Apply during local dev setup and in CI. Never call `goose.Up` from an HTTP handler or
 gRPC method — DDL under traffic causes lock contention and partial rollouts.
@@ -115,10 +117,11 @@ func applyMigrations(ctx context.Context, db *sql.DB) error {
 }
 ```
 
-`goose.SetBaseFS` + `goose.SetDialect` + `goose.UpContext` is the house pattern — call it
-once in `main()` or the application startup path, before binding any handlers. The
-package-level state is set once at startup and never touched again, so the shared globals
-aren't a real problem in practice.
+`goose.SetBaseFS` + `goose.SetDialect` + `goose.UpContext` is the house pattern. Apply
+migrations in CI and dev setup by default; run them at service startup only behind an
+explicitly documented opt-in gate, before any listener binds — see [[z-go-database]] for
+the gate rationale. The package-level state is set once at startup and never touched
+again, so the shared globals aren't a real problem in practice.
 
 ### Upgrade path: `goose.NewProvider`
 
@@ -221,7 +224,8 @@ Update the corresponding Go enum (`Parse*` / `IsValid*`) in the same commit.
   in an unknown state after rollback.
 - **Put heavy data migrations inside schema migrations.** Bulk backfills belong in a separate
   admin command or a documented operator runbook with explicit rollback steps.
-- **Trigger migrations from request-handling code.** Apply in CI/CD and dev setup only.
+- **Trigger migrations from request-handling code.** Apply in CI/CD and dev setup only, or
+  behind the documented startup gate — never from a handler path.
 
 ## Verify
 

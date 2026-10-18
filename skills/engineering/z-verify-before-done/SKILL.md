@@ -46,7 +46,7 @@ Every rationalization has the same answer: run the command.
 
 ## Do not
 
-- Claim success in any wording — direct, paraphrased, or implied — without fresh evidence in the same turn.
+- Claim success in any wording — direct, paraphrased, or implied — without fresh evidence for the current state of the code: same reviewed state, inputs, environment, and scope.
 - Substitute a weaker check for the real one (lint for build, one test for the suite, compile for behavior). Under a zapply dispatch the chunk's targeted command *is* the real check — the suite is the caller's floor, not a stronger substitute you owe.
 - Report a subagent's claim as verified fact.
 - Let tiredness or a long session lower the bar.

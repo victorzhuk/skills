@@ -185,9 +185,10 @@ The linter name tells you the rule. Add `--verbose` for timing and context.
 | v1 config errors after upgrade | `golangci-lint migrate` |
 | Slow on large repo | Reduce `run.concurrency` or exclude paths under `linters.exclusions.paths` |
 
-## Legacy codebase adoption
+## Authorized repair pass
 
-Fix by category in parallel:
+Legacy codebase adoption and other repair migrations run only when the caller explicitly
+authorizes them. Auto-fixable first, then by category:
 
 1. Auto-fixable: `golangci-lint run --fix ./...`
 2. Security: `bodyclose`, `sqlclosecheck`, `gosec`
@@ -203,7 +204,7 @@ Run before reviewing a diff:
 gofmt -l . && go vet ./... && golangci-lint run ./...
 ```
 
-Fix any findings before proceeding to manual review. Mechanical issues distract from logical ones.
+Report findings during review. Apply repairs only within caller-authorized scope, per [[z-lint]]. Mechanical issues distract from logical ones — surface them in the report.
 
 Under a zapply chunk, scope the sweep to the touched packages — repo-wide runs, `--fix`, and full lint belong to the caller's merge-gate floor, and never run `--fix` over `_test.go` files the caller has sealed as contract tests.
 

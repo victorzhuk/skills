@@ -98,6 +98,11 @@ impl Component for MyModel {
     fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
         match msg {
             MyMsg::Load => {
+                if self.loading {
+                    // ignore Load while one is in flight; replacing an in-flight
+                    // request requires correlating completions and dropping stale results
+                    return;
+                }
                 self.loading = true;
                 self.error = None;
                 sender.oneshot_command(async move {
@@ -132,9 +137,9 @@ impl Component for MyModel {
 
 Reach for this only when the component's own lifecycle methods need to be
 `async` (rare — `oneshot_command` above covers the common "do async work,
-report the result" case without it). Note the command closure must call
-`.send()` — it cannot return the command value directly, unlike the pattern
-above:
+report the result" case without it). Use `oneshot_command` here too: the
+component owns the future and drops it on shutdown instead of leaving a
+pending fetch alive after the component is gone.
 
 ```rust
 #[relm4::component(async, pub)]
@@ -159,9 +164,15 @@ impl AsyncComponent for MyModel {
     async fn update(&mut self, msg: Self::Input, sender: AsyncComponentSender<Self>, _root: &Self::Root) {
         match msg {
             MyMsg::Load => {
+                if self.loading {
+                    // ignore Load while one is in flight; replacing an in-flight
+                    // request requires correlating completions and dropping stale results
+                    return;
+                }
                 self.loading = true;
-                sender.command(|out, _shutdown| async move {
-                    let _ = out.send(MyCmd::FetchItems(fetch_items().await.map_err(|e| e.to_string())));
+                self.error = None;
+                sender.oneshot_command(async move {
+                    MyCmd::FetchItems(fetch_items().await.map_err(|e| e.to_string()))
                 });
             }
             MyMsg::SetItems(items) => {

@@ -30,6 +30,7 @@ pretty,junit:reports/bdd/junit.xml,cucumber:reports/bdd/cucumber.json
 
 Require a successful runner exit and complete results for the preselected required scenarios.
 Missing, empty, undefined, pending, skipped, blocked, or flaky required results prevent PASS.
+Strict does not prove selection completeness. Require a nonzero scenario count in `reports/bdd/cucumber.json` and compare it with the preselected required scenario list before PASS.
 The following supplemental check only inspects reported steps. It does not prove selection completeness or absence of retry-pass flakes:
 
 ```sh
