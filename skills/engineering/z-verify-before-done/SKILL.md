@@ -12,7 +12,7 @@ No completion claims without fresh verification evidence. A claim made from memo
 Before claiming any status:
 
 1. **Identify** the command that proves the claim.
-2. **Run** it — fresh, complete, not a skipped or partial run.
+2. **Run** it — fresh, complete, not a skipped or partial run. Complete relative to the dispatched scope; a subset scope is satisfied by the full subset, not the full suite.
 3. **Read** the full output: exit code, failure counts, warnings.
 4. **Compare** output to claim. Output contradicts it → state the actual status with the evidence. Output confirms it → state the claim *with* the evidence.
 

@@ -24,7 +24,7 @@ Run the requested phases in order. Stop between phases after the first failed ph
 
 ### Phase 2: Merge gate -- default depth
 
-Run this scope when the caller says "run QA" or "test the app" without naming a phase.
+Run this scope when the caller says "run QA" or "test the app" without naming a phase. A brief naming a `-run` filter or single package is a named phase; run only it and do not escalate to the merge gate.
 
 - Run the broader required acceptance suite before merge, not only the changed scenarios.
 - Preserve existing required regression, lint, type, race, and security checks.
