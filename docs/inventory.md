@@ -305,6 +305,17 @@ its owner skill.
 |---|---|---|---|
 | `z-go-service-bootstrap` | `go` | authored directly in this repo | [`skills/go/z-go-service-bootstrap/SKILL.md`](../skills/go/z-go-service-bootstrap/SKILL.md) |
 
+## Phase 14 — web performance measurement
+
+One skill authored directly in this repo: `z-web-performance`, closing the
+Core Web Vitals gap — the catalog routed page-rendering performance away from
+`z-qa-performance` (which owns load and throughput only) with no owner for
+LCP/INP/CLS, the field/lab evidence split, or regression attribution.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-web-performance` | `typescript` | authored directly in this repo | [`skills/typescript/z-web-performance/SKILL.md`](../skills/typescript/z-web-performance/SKILL.md) |
+
 ## Public cleanup applied
 
 - Updated security guidance from OWASP and MCP primary sources reviewed on 2026-10-13. Added a shared agent-security reference and aligned Go, memory, and skill-authoring boundaries. Sources remain linked beside the guidance.

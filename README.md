@@ -11,7 +11,7 @@ The layout is inspired by [mattpocock/skills](https://github.com/mattpocock/skil
 Install from the repository:
 
 ```bash
-npx skills@latest add victorzhuk/skills
+npx skills@1.7.2 add victorzhuk/skills
 ```
 
 For Pi or any harness that scans skill directories, you can also point it at this repo's `skills/` directory or copy selected skill directories into your installed skills folder.
@@ -153,6 +153,7 @@ Go engineering discipline: architecture, testing, database, observability, secur
 - **[z-go-dockerfile](./skills/go/z-go-dockerfile/SKILL.md)** — Multi-stage Dockerfile authoring for Go services — a deps layer cached separately from source, BuildKit cache mounts, CGO_ENABLED=0 static builds, and the scratch vs distroless vs alpine call.
 - **[z-go-documentation](./skills/go/z-go-documentation/SKILL.md)** — Go documentation conventions — godoc comments, package comments, README structure, Example tests, API docs, and llms.txt.
 - **[z-go-env-v11](./skills/go/z-go-env-v11/SKILL.md)** — Parse environment configuration in Go with caarlos0/env v11 — generics, env.Options, struct tags, custom parsers, and injecting a custom env source for hermetic tests.
+- **[z-go-entrypoint](./skills/go/z-go-entrypoint/SKILL.md)** — Thin `main` plus testable `run` — injected args and streams, `flag.ContinueOnError` bound to stderr, `signal.NotifyContext`, explicit construction, no `os.Exit` below `main`.
 - **[z-go-errors](./skills/go/z-go-errors/SKILL.md)** — Idiomatic Go error handling, wrapping, inspection, and hygiene — the single handling rule, sentinel vs typed errors, panic discipline.
 - **[z-go-feature-flags](./skills/go/z-go-feature-flags/SKILL.md)** — Feature flag lifecycle in a Go service — typed flag constants, a layered Evaluator (env kill-switch → remote provider → default), fail-open/fail-closed semantics, a fake evaluator for tests.
 - **[z-go-goose](./skills/go/z-go-goose/SKILL.md)** — Schema migrations for Go using goose (github.com/pressly/goose) — numbered SQL files, up/down blocks, PL/pgSQL wrapping with StatementBegin/End, embed.FS embedding, bare-text enum pattern…
@@ -268,6 +269,7 @@ TypeScript house conventions, React/Next.js App Router patterns, and Telegram Mi
 - **[z-react-core](./skills/typescript/z-react-core/SKILL.md)** — React and Next.js conventions beyond TypeScript tooling — App Router, server components by default ('use client' only at interaction leaves), server data fetching, URL/server state before client stores, server actions…
 - **[z-ts-core](./skills/typescript/z-ts-core/SKILL.md)** — Strict-mode TypeScript house conventions for a Go-first engineer — tsconfig baseline, zod boundary validation, Error-subclass handling, and Biome/vitest/pnpm defaults.
 - **[z-ts-telegram-mini-app](./skills/typescript/z-ts-telegram-mini-app/SKILL.md)** — Telegram Mini App client development in TypeScript — SDK choice (@tma.js/sdk vs raw WebApp), lifecycle/viewport/theme handling, BackButton/MainButton wiring, and Stars payments. initData is untrusted…
+- **[z-web-performance](./skills/typescript/z-web-performance/SKILL.md)** — Page-rendering performance and Core Web Vitals — LCP/INP/CLS thresholds, the field/RUM/lab evidence hierarchy, and deployment-boundary regression attribution.
 
 ### Writing
 

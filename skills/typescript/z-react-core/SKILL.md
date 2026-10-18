@@ -1,11 +1,21 @@
 ---
 name: z-react-core
-description: React and Next.js conventions beyond TypeScript tooling — App Router, server components by default ('use client' only at interaction leaves), server data fetching, URL/server state before client stores, server actions, suspense/error boundaries. Does not cover tsconfig/zod; see [[z-ts-core]].
+description: React and Next.js conventions beyond TypeScript tooling — detect framework, router, rendering mode first; App Router, server components, server fetching, server actions are Next.js-scoped ('use client' at leaves), SPA branch included. Not tsconfig/zod; see [[z-ts-core]].
 ---
 
 # React / Next.js core
 
 Server-first by default: render on the server, fetch on the server, ship a client component only where the page needs interactivity. [[z-ts-core]] covers tsconfig, zod, and general TS conventions this skill assumes.
+
+## Detect the project first
+
+Before applying any rule below, identify what the project actually is: the framework (Next.js or plain React), the router (App Router `app/`, Pages Router `pages/`, or a client router such as React Router), and the rendering mode (server-rendered, static, or client-only SPA). Read `package.json` dependencies and the route directory shape — do not assume.
+
+The App Router structure, Server components, Data fetching, Forms and server actions, and Suspense/error boundary sections apply to Next.js App Router projects only. A Pages Router project takes the same server-first intent through `getServerSideProps` and API routes. A plain React SPA follows the branch below.
+
+## Plain React SPA branch
+
+No server directives, no `'use client'`, no Server Actions exist here. Route with the project's client router and keep routes lazy so the initial bundle stays small. Fetch on the client but not in a bare mount effect: use the project's data layer (TanStack Query, SWR) for caching and deduplication, or a `useEffect` that aborts its fetch on cleanup and guards `setState` after unmount. Everything else in this skill — state judgment, component discipline, testing, render performance — still applies.
 
 ## App Router structure
 
@@ -115,6 +125,17 @@ Place both at the segment that can actually fail or actually takes time — a bo
 
 Colocate a component with its owning route until another route needs it. Prefer direct imports to avoid accidental client/server boundary mixing and unnecessary module traversal. A barrel does not inherently defeat tree shaking; preserve deliberate public entry points.
 
+## Render performance
+
+Optimize renders on evidence, not reflex:
+
+- Memoize (`memo`, `useMemo`, `useCallback`) only where a profile or re-render trace shows a measured cost. Wrapping everything adds code, memory, and stale-closure bugs for no gain.
+- Derive state during render instead of syncing it with `useEffect`. If `y` is a function of `x`, compute it in the component body from `x`; a `useEffect` that copies `x` into `y` costs an extra render and can show stale values for a frame.
+- Keep the input responsive during expensive updates: mark the non-urgent update with `useTransition`, or defer the expensive render of a value with `useDeferredValue`. Both keep typing on the urgent path.
+- Hoist stable JSX out of the component (module-level constants) when it never depends on props or state, and hoist default non-primitive prop values out of the component too — a fresh object literal in render changes identity every pass.
+- Never call hooks inside conditions, loops, or after early returns — hook order is the contract. If one branch uses a hook, every branch must run it; branch inside the hook or its arguments.
+- For long or far-off-screen content, set `content-visibility: auto` (with `contain-intrinsic-size`) so the browser skips rendering what the user cannot see yet.
+
 ## Testing
 
 `vitest` + `@testing-library/react`, querying by role/label/text the way a user would (`getByRole('button', { name: /submit/i } )`), not by test id or implementation detail:
@@ -131,6 +152,9 @@ Playwright for a real end-to-end flow that crosses a Server Action or a route bo
 
 ## Boundary
 
+- Visual design, layout, and component-kit conventions: [[z-interface-kit]].
+- Accessibility requirements and audits: [[z-accessibility]].
+- Page-rendering performance measurement (Core Web Vitals, RUM, lab traces): [[z-web-performance]].
 - Shared-link metadata and preview verification: [[z-open-graph]].
 - tsconfig, zod, Biome/vitest defaults, general error handling: [[z-ts-core]].
 - Telegram Mini App specifics (SDK, initData, viewport): [[z-ts-telegram-mini-app]] — a Mini App webview is a different rendering target than a Next.js server-rendered page.
