@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.14.0
+
+### Minor Changes
+
+- [`ba0688d`](https://github.com/victorzhuk/skills/commit/ba0688d3d1072aa650a424dcf823c6374130a422) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add `z-web-performance` for page-rendering performance - Core Web Vitals thresholds, the
+  field/lab/RUM evidence split, and regression attribution by deploy boundary.
+
+  Correct acceptance and data defects the audit found: the godog harness template now sets
+  `Strict` so undefined and pending scenarios fail CI, `argMax` is documented with the
+  invariants that make it equivalent to `FINAL`, the env mirror uses the library's field
+  params instead of a `grep`/`comm` pair, the RabbitMQ consumer owns its cancellation, and
+  the image build passes `VERSION`, `GIT_COMMIT`, and `BUILD_DATE`.
+
+  Resolve contradictory cross-skill rules for lean fixes, verification, TDD, lint repair,
+  and troubleshooting, and correct the Rust, Flutter, and frontend guidance.
+
+  Harden the shipped tooling: the Git guard blocks backslash-escaped commands, the baseline
+  matcher escapes regex metacharacters, the sanitization check catches prefixed paths, and
+  every workflow action is pinned to a commit SHA.
+
+- [`b45e4b4`](https://github.com/victorzhuk/skills/commit/b45e4b48c6c004e812d3043f159cdd254f3b9e17) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add a reuse ladder and explicit safety boundaries to `z-no-over-engineering`. The skill now
+  prefers existing repository code, standard-library and native platform features, and installed
+  dependencies before writing new code, and names the validation, data-loss handling, security,
+  accessibility and test surface that a smaller diff may not shorten. Reuse guidance is adapted
+  from Ponytail (MIT), whose notice ships as the skill-local `LICENSE.ponytail`.
+
+- [`6fdaf0a`](https://github.com/victorzhuk/skills/commit/6fdaf0a19197d8949f09f24b6ef3655307f94afd) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add z-worktrunk: manage git worktrees with the worktrunk `wt` CLI, aimed at parallel agent workflows.
+
 ## 0.13.0
 
 ### Minor Changes
