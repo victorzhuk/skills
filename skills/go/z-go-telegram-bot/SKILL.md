@@ -1,6 +1,6 @@
 ---
 name: z-go-telegram-bot
-description: Hand-rolled Telegram Bot API client in Go for MarkdownV2/Mini-App/Stars-level control — the minimal Bot struct over net/http, common methods (sendMessage, sendPhoto), MarkdownV2 escaping, webhook/initData HMAC validation, and Stars payment calls. For simple polling bots, github.com/go-telegram/bot is a fine alternative. Triggers on "telegram bot api", "sendMessage", "MarkdownV2", "initData", "X-Telegram-Bot-Api-Secret-Token". Does not cover request hardening; see [[z-go-security]].
+description: Hand-rolled Go Telegram Bot API clients for MarkdownV2, Mini-App, Stars. Triggers on "telegram bot api", "sendMessage", "MarkdownV2", "initData", "X-Telegram-Bot-Api-Secret-Token". Excludes request hardening [[z-go-security]].
 ---
 
 # Telegram Bot API Client

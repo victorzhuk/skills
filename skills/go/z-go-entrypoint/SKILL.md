@@ -1,6 +1,6 @@
 ---
 name: z-go-entrypoint
-description: Split Go entrypoints into a thin `main` driver and a testable `run` harness. Pass `os.Args[1:]`, stdout/stderr, and context explicitly; return errors instead of `os.Exit`; use `flag.NewFlagSet` with `flag.ContinueOnError`; wire `signal.NotifyContext`; construct dependencies explicitly. Use when writing or reviewing `func main`, `cmd/` packages, CLI startup, or service bootstrap. Does not cover cobra command trees ([[z-go-cobra-patterns]]), wiring layers ([[z-go-clean-arch-di]]), or test mechanics ([[z-go-testing]]).
+description: Thin Go `main` and testable `run` for `func main`, `cmd/` packages, CLI startup, or service bootstrap. Excludes cobra trees [[z-go-cobra-patterns]], wiring [[z-go-clean-arch-di]], and tests [[z-go-testing]].
 ---
 
 # Go Entrypoint
