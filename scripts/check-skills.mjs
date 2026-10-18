@@ -5,9 +5,9 @@ import { basename, dirname, join, relative } from "node:path";
 const root = new URL("..", import.meta.url).pathname;
 const skillsRoot = join(root, "skills");
 const forbidden = [
-  /(^|[\s`'"])\/home\/[^\s`'"]+/,
-  /(^|[\s`'"])\/Users\/[^\s`'"]+/,
-  /~\/\.agents\/references/,
+  /(^|[\s`'"=(,\[{])\/home\/[^\s`'"]+/,
+  /(^|[\s`'"=(,\[{])\/Users\/[^\s`'"]+/,
+  /(~|\$HOME|\$\{HOME\})\/\.agents\/references/,
   /rules\/commits\.md/,
 ];
 
