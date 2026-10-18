@@ -45,10 +45,9 @@ for (const name of names) {
 
 const tmp = mkdtempSync(join(tmpdir(), "skillspector-"));
 
-async function scan(name, baseline) {
+async function scan(name) {
   const out = join(tmp, `${name}.json`);
   const flags = ["scan", skills.get(name), "--no-llm", "-f", "json", "-o", out];
-  if (baseline && existsSync(baseline)) flags.push("--baseline", baseline);
   try {
     await run("skillspector", flags, { timeout: 300_000, maxBuffer: 64 << 20 });
   } catch (err) {
@@ -76,6 +75,43 @@ const escapeGlob = (s) => s.replace(/[[*?]/g, (c) => `[${c}]`);
 // per occurrence, and occurrences differ in whitespace.
 const textGlob = (s) => `*${escapeGlob(s.trim()).replace(/\s+/g, "*")}*`;
 
+// A bare `*` in a stored message stands for a whitespace run, not arbitrary
+// text: the generator collapses every whitespace run into `*`. Reading it as
+// `.*` would suppress any finding containing the reviewed tokens in order, so
+// match it as `\s+`; only the wrapping anchors stay wild.
+const globToRegExp = (glob) => {
+  let re = "";
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === "[" && (glob[i + 1] === "*" || glob[i + 1] === "?") && glob[i + 2] === "]") {
+      re += glob[i + 1] === "*" ? "\\*" : "\\?";
+      i += 2;
+    } else if (c === "*") {
+      re += i === 0 || i === glob.length - 1 ? "[\\s\\S]*" : "\\s+";
+    } else if (/[.*+?^${}()|[\]\\]/.test(c)) {
+      re += `\\${c}`;
+    } else {
+      re += c;
+    }
+  }
+  return new RegExp(re, "i");
+};
+
+// Stored paths are literals; wildcards in the rule path mean the original file
+// name contained one, so fall back to a glob comparison for those.
+const pathMatches = (rulePath, filePath) => {
+  if (!/[*?]/.test(rulePath.replace(/\[[*?]\]/g, ""))) return rulePath === filePath;
+  const re = globToRegExp(rulePath).source.replace(/\\\*/g, "[^/]*").replace(/\\\?/g, "[^/]");
+  return new RegExp(`^${re}$`).test(filePath);
+};
+
+const suppressed = (issue, rules) =>
+  rules.some((rule) => {
+    if (rule.id !== issue.id || !pathMatches(rule.path, issue.location.file)) return false;
+    if (!rule.message) return true;
+    return globToRegExp(rule.message).test(issue.finding ?? "");
+  });
+
 try {
   if (accept) {
     mkdirSync(baselines, { recursive: true });
@@ -93,7 +129,7 @@ try {
       console.log(`baselined ${name} (${rules.size} rules)`);
     }
   } else {
-    const reports = await pool(names, (name) => scan(name, join(baselines, `${name}.json`)));
+    const reports = await pool(names, (name) => scan(name));
     let failed = false;
     names.forEach((name, i) => {
       const report = reports[i];
@@ -102,7 +138,10 @@ try {
         failed = true;
         return;
       }
+      const file = join(baselines, `${name}.json`);
+      const rules = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")).rules ?? [] : [];
       for (const issue of report.issues) {
+        if (suppressed(issue, rules)) continue;
         console.log(`${issue.severity}\t${name}\t${issue.id} ${issue.pattern ?? ""}\t${issue.location.file}:${issue.location.start_line}`);
         if (blocking.has(issue.severity)) failed = true;
       }
