@@ -316,6 +316,15 @@ LCP/INP/CLS, the field/lab evidence split, or regression attribution.
 |---|---|---|---|
 | `z-web-performance` | `typescript` | authored directly in this repo | [`skills/typescript/z-web-performance/SKILL.md`](../skills/typescript/z-web-performance/SKILL.md) |
 
+## Phase 15 — Git worktree management
+
+One skill authored directly in this repo: `z-worktrunk`, covering Git
+worktree management with the Worktrunk CLI.
+
+| Skill | Category | Origin | Destination |
+|---|---|---|---|
+| `z-worktrunk` | `engineering` | authored directly in this repo | [`skills/engineering/z-worktrunk/SKILL.md`](../skills/engineering/z-worktrunk/SKILL.md) |
+
 ## Public cleanup applied
 
 - Updated security guidance from OWASP and MCP primary sources reviewed on 2026-10-13. Added a shared agent-security reference and aligned Go, memory, and skill-authoring boundaries. Sources remain linked beside the guidance.

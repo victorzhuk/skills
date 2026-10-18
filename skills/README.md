@@ -5,7 +5,7 @@ Reusable z-prefixed agent skills, grouped by domain. Directory names and frontma
 - **[C++](./cpp/README.md)** — 1 skill. Modern C++ for native/perf modules and codegen targets.
 - **[Data](./data/README.md)** — 2 skills. Analytics data pipeline discipline — batch ingestion, append-only modeling, and scheduling judgment.
 - **[.NET](./dotnet/README.md)** — 1 skill. C#/ASP.NET Core web API conventions for inherited and green services.
-- **[Engineering](./engineering/README.md)** — 28 skills. General engineering process, changelog, architecture, repository tooling, skill authoring, and cross-language code-quality doctrine.
+- **[Engineering](./engineering/README.md)** — 29 skills. General engineering process, changelog, architecture, repository tooling, skill authoring, and cross-language code-quality doctrine.
 - **[Flutter](./flutter/README.md)** — 1 skill. Flutter mobile client development — Dart 3 essentials, state management, and project structure.
 - **[Go](./go/README.md)** — 47 skills. Go engineering discipline: architecture, testing, database, observability, security, performance, and tooling.
 - **[Infra](./infra/README.md)** — 6 skills. Deployment discipline across Kubernetes, Terraform/OpenTofu, self-hosted VPS targets, and the pipelines that ship to them.
