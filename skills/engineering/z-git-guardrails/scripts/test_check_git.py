@@ -30,6 +30,8 @@ class GitFilterTests(unittest.TestCase):
             "git status && git push",
             "git status\ngit push",
             "KEY=value git push",
+            "git \\\npush",
+            "git push \\\norigin main",
         ]
         for command in commands:
             with self.subTest(command=command):
@@ -41,6 +43,7 @@ class GitFilterTests(unittest.TestCase):
             "git checkout feature", "git restore --staged .",
             "git restore -S .", "git --version",
             "git worktree list", "git worktree remove ../wt", "git branch -d feature",
+            "echo 'git push\\\nfake'",
         ]:
             with self.subTest(command=command):
                 self.assertIsNone(guard.check(command, "/tmp"))

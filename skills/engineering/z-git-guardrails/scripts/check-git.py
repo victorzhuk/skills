@@ -53,8 +53,26 @@ def options(operation, args):
             operands.append(arg)
     return flags, operands, None
 
+def strip_continuations(command):
+    out = []
+    i = 0
+    single = False
+    while i < len(command):
+        c = command[i]
+        if c == "'":
+            single = not single
+            out.append(c)
+            i += 1
+        elif not single and c == "\\" and i + 1 < len(command) and command[i + 1] == "\n":
+            i += 2
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
 
 def check(command, cwd):
+    command = strip_continuations(command)
     try:
         lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()\n")
         lexer.whitespace = " \t\r"

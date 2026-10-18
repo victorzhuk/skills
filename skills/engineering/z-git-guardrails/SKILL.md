@@ -69,4 +69,4 @@ Worktree-based flows delete branches and worktrees as routine cleanup, so the ho
 - Blocked command test exits `2` with `BLOCKED:` on stderr; allowed commands exit `0`.
 - `git branch -D` of a merged branch passes; of an unmerged branch is blocked.
 - The hook script is executable and referenced from settings by the correct path.
-- Run `timeout 60s python3 -m unittest discover -s scripts -p 'test_*.py'` from this skill directory. The tests submit command text; they do not run destructive Git operations.
+- Run `python3 -m unittest discover -s scripts -p 'test_*.py'` from this skill directory; prefix with `gtimeout 60s` on hosts without GNU coreutils. The tests submit command text; they do not run destructive Git operations.
