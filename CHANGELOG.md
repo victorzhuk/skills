@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.1
+
+### Patch Changes
+
+- [`e5603f8`](https://github.com/victorzhuk/skills/commit/e5603f8540148c0ebc201f3362bfb3af059150bd) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Align clean-output descriptions with required provenance, generated-file markers, and relevant tool and model names.
+  Match flow-document descriptions to local conventions and the Mermaid default.
+  Clarify that visual review uses available capabilities and requires explicit authorization to introduce screenshot-regression tooling.
+  Add criteria that evaluate skill improvements and retention using observed task outcomes.
+
 ## 0.14.0
 
 ### Minor Changes
