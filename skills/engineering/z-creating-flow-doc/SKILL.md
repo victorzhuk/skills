@@ -1,7 +1,7 @@
 ---
 name: z-creating-flow-doc
 description: >
-  Use when adding a new flow document to a behavioural-contract docs directory (e.g. `docs/{domain}/flows/`), or documenting an operation, RPC, cron, or query as a single-page paired-diagram contract. Trigger on "add a flow doc", "document an RPC", "create a behavioural contract for X". Exemplar corpus: existing flow docs in the project's own `docs/{domain}/flows/`.
+  Document one operation, RPC, cron, or query as a single-page behavioral contract. Follow local conventions. Default to Mermaid, with paired Mermaid/PlantUML diagrams only when required. Trigger on "add a flow doc", "document an RPC", or "create a behavioural contract". Use architecture docs for system-wide structure and runbooks for operational procedures.
 ---
 
 # Creating flow docs

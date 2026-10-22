@@ -123,6 +123,16 @@ Give the agent a finish line it can check itself: **checkable** (the agent can t
 
 Beware **premature completion**: listing later steps makes the agent rush the current one to reach them. Fix by sharpening the current criterion first; only split into a sequence if that fails.
 
+## Demonstrated improvement
+
+Assess behavior changes and retention with task evidence:
+
+- Name the recurring task, mistake, or distinct procedure. Check existing instructions for equivalent coverage.
+- Test a real task and an intended failure or scope boundary with explicit assertions. Separate skill selection from procedure application.
+- Record exact skill contents, model and tool settings, surrounding instructions, inputs, outcomes, and unwanted behavior. Compare matched runs before attributing improvement.
+- Mark missing or ambiguous evidence inconclusive. Scale trials to the behavioral change.
+- Treat observed reads as exposure. Do not retire a skill solely because a short observation window records no use.
+
 ## Failure modes — cut these
 
 | Mode | What it is | Fix |

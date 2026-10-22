@@ -34,6 +34,7 @@ Run this scope when the caller says "run QA" or "test the app" without naming a 
 ### Phase 3: Additional requested checks
 
 - Run load, visual, accessibility, or manual checks when required by the project or the requested scope.
+- Use available browser or screenshot capabilities for visual review. Report missing capabilities and incomplete checks.
 - Use [[z-qa-performance]] for load checks and [[z-qa-browser]] for browser-specific evidence.
 - A check already required for acceptance belongs to the gate. Do not defer it because it is expensive.
 
@@ -62,7 +63,7 @@ The phases above cover running the suite. Reach for a narrower skill when the ta
 - Readable BDD scenarios and acceptance evidence -> [[z-bdd]]
 - Generating explicitly requested skipped stubs -> [[z-qa-spec-writer]]
 - Classifying failures, flaky-test triage, writing a QA report -> [[z-qa-debugger]]
-- Visual regression or screenshot diffing, only if the project actually does it -> [[z-qa-browser]]
+- Visual review, or existing visual regression and screenshot-diff checks -> [[z-qa-browser]]
 - Go behavior contracts, Ginkgo/Gomega or Gherkin/godog -> [[z-go-bdd]]
 - Table-driven tests, testify, goleak patterns -> [[z-go-testing]]
 
@@ -71,6 +72,7 @@ The phases above cover running the suite. Reach for a narrower skill when the ta
 - Do not invent a multi-agent delegation flow -- run the phases yourself, in order.
 - Do not start later phases after a failed phase unless the caller requested continuation.
 - Do not mandate hurl, oha, vegeta, axe, or Lighthouse -- reach for them only if the project already uses them.
+- Do not introduce screenshot-regression tooling or dependencies without explicit authorization.
 - Do not write a fixed `results/` + `SUMMARY.md` file structure -- report inline, or append to the project's own QA doc convention.
 - Do not swap in a raw test command where the project has its own wrapper -- the wrapper carries flags and env setup a raw call misses.
 
