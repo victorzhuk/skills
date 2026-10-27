@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.2
+
+### Patch Changes
+
+- Reassess a shared premise when two fixes fail the same check, and identify state writers and ownership before another patch.
+  Prefer independent worker state when sharing is unnecessary, while preserving required shared-state coordination.
+
+- Correct cancellation and shutdown guidance: guard pipeline receives as well as sends, distinguish RabbitMQ abort-and-redeliver from graceful drain, and make HTTP drain-timeout recovery explicit.
+  Mark SIGABRT diagnostics as process-terminating and bound the Git-filter test command.
+  Preserve required documentation and tooling markers during comment cleanup, remove an invented outcome from a rewrite example, and present GTK shell and tray choices as examples.
+
 ## 0.14.1
 
 ### Patch Changes

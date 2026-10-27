@@ -65,7 +65,7 @@ fn update_cmd(&mut self, msg: Self::CommandOutput, sender: ComponentSender<Self>
 
 ## libadwaita Widget Hierarchy
 
-Real apps compose the shell by hand rather than reaching for `AdwToolbarView`:
+One shell composition uses a vertical `gtk::Box`:
 
 ```
 AdwApplicationWindow
@@ -157,7 +157,7 @@ adw::SwitchRow {
 
 ## System Tray Integration
 
-Use `ksni` — a pure-Rust StatusNotifierItem implementation, no GTK/AppIndicator dependency. Implement `Tray` on a plain struct, spawn it to get a `Handle<T>`, and mutate state through `handle.update()`:
+This example uses `ksni`, a pure-Rust StatusNotifierItem implementation with no GTK/AppIndicator dependency. It implements `Tray` on a plain struct, spawns it to get a `Handle<T>`, and mutates state through `handle.update()`:
 
 ```rust
 use ksni::{Handle, Tray, TrayMethods};

@@ -90,7 +90,9 @@ releases the channel registration so the binary can exit promptly.
 
 ### HTTP server: timeouts + drain
 
-Inside `run`, build the server with inbound timeouts and drain it on cancel:
+Inside `run`, build the server with inbound timeouts and attempt a bounded drain
+on cancel. This sketch returns a drain error to its owner; it does not implement
+forced-stop recovery:
 
 ```go
 srv := &http.Server{
@@ -124,8 +126,13 @@ if err := srv.Shutdown(shutdownCtx); err != nil {
 ```
 
 Shutdown order is fixed: stop accepting → drain in-flight requests → close
-dependencies. The signal context from `signal.NotifyContext` above is the only
-trigger; no new dependencies.
+dependencies. A `Shutdown` error does not prove handlers have stopped. On drain
+timeout, the owner must apply the agreed recovery policy: close ordinary HTTP
+connections with `Server.Close`, cancel and join owned handlers, and handle
+hijacked connections separately. `Close` alone does not join handlers. Do not
+release dependencies while handlers can still use them or claim `run` is safe
+for in-process reuse without verifying this path. Keep the signal context as
+the trigger and the drain context independent so cancellation allows draining.
 
 ## Flags
 

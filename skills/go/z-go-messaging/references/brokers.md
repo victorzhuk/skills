@@ -83,6 +83,9 @@ Producer key for ordering — `kafka.Writer{Balancer: &kafka.Hash{}}`; franz-go 
 
 The RabbitMQ team's own AMQP 0.9.1 client (successor to the unmaintained `streadway/amqp`) — the only client to reach for on RabbitMQ. It exposes the protocol directly: no built-in reconnect loop, so wrap `Dial` + `NotifyClose` in a reconnect helper for anything long-running.
 
+The following sketch aborts on cancellation and permits redelivery. Use it only
+when that recovery behavior is intended; it does not implement graceful drain.
+
 ```go
 ch, err := conn.Channel()
 if err != nil {
@@ -119,10 +122,19 @@ for d := range deliveries {
 }
 ```
 
-On cancel the channel close ends the range; prefetch already bounds in-flight
-deliveries. Drain handlers still running under the existing bounded timeout,
-then close the channel and the connection, in that order. `NotifyClose` keeps
-the goroutine from leaking when the broker closes the channel first.
+On cancel, closing the channel stops further broker delivery and requeues
+unacknowledged messages. Buffered deliveries may still reach the loop; handlers
+must honor cancellation and tolerate redelivery. An acknowledgement racing the
+close can fail. `NotifyClose` lets the cancellation watcher exit when the broker
+closes the channel first.
+
+For graceful drain, assign a consumer tag, call `Cancel(tag, false)`, and keep
+reading deliveries and acknowledging completed work while the channel remains
+open. Give processing a separate bounded drain context. Close the channel and
+connection after completion; on deadline, cancel processing and force-close
+under an explicit redelivery policy. Join owned handlers before releasing their
+dependencies. Verify this lifecycle against the broker; the abort sketch above
+does not establish it.
 
 
 `Qos(prefetchCount, 0, false)` bounds in-flight unacked messages per consumer — without it RabbitMQ pushes as fast as the network allows, and a slow handler backs up unbounded. Dead-lettering is declared on the queue at setup time (`x-dead-letter-exchange` argument), not in the consume loop.

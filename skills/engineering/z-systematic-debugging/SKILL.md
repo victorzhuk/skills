@@ -29,7 +29,11 @@ Performance regressions need a baseline and representative workload before instr
 
 Default to a regression test before the fix, at the agreed seam. Preserve an approved tests-after flow. Under zapply, sealed tests change only through the caller's test-amendment channel.
 
-Apply the smallest fix at the confirmed cause. Re-run the original scenario, not only the minimized example. If three fixes fail, reassess the evidence; architecture is one possible cause, not a conclusion.
+Apply the smallest fix at the confirmed cause. Re-run the original scenario, not only the minimized example.
+
+When two fixes share a premise and fail the same check, state that premise and test it before another patch. For state failures, identify every writer, the state each owns, and the invariant their updates must preserve. Check for competing owners or update paths with different assumptions.
+
+If three fixes fail, reassess the evidence; architecture is one possible cause, not a conclusion.
 
 Escalate a required scope or contract change to its owner. Loading a diagnostic reference does not create a new approval gate or convert authorized implementation into read-only work.
 

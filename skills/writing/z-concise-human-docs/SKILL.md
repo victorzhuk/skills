@@ -20,7 +20,7 @@ The style is factual and compressed. It avoids inflated explanations, tutorial t
 - Keep technical names as-is when they connect to code, API, flags, statuses, or configs.
 - Do not translate domain terms if translation makes the text less searchable.
 - Use short paragraphs. Split dense docs with tables or bullets, not with long narration.
-- For comments, write only WHY, invariant, edge case, or non-obvious constraint. If the comment explains WHAT, rename code or delete the comment.
+- For implementation comments, write WHY, invariant, edge case, or non-obvious constraint. Apply [[z-zero-comments]] within the authorized edit scope; preserve required API docs, example output markers, generated-file markers, and operator-facing config or migration contracts.
 
 ## Style pass
 
@@ -55,7 +55,7 @@ Good:
 
 ## Comments
 
-Same discipline applies to code comments inside docs and runbooks: write only WHY, invariant, edge case, or migration hazard. See [[z-zero-comments]] for the full rule and examples.
+Apply the same implementation-comment discipline and exceptions to examples inside docs and runbooks. See [[z-zero-comments]] for the full rule and examples.
 
 ## Verify
 
@@ -63,4 +63,4 @@ Same discipline applies to code comments inside docs and runbooks: write only WH
 - No sentence exists only to explain that the previous sentence matters.
 - The reader can identify the rule, condition, and consequence without reading around filler.
 - Technical terms stay searchable.
-- Comments explain WHY, not WHAT.
+- Implementation comments add context; required documentation and tooling markers remain intact.

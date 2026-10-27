@@ -14,6 +14,8 @@ Every goroutine is a liability until proven necessary. Correctness and leak-free
 
 ## Principles
 
+Before adding synchronization, check whether workers can own independent state without changing the required behavior. Separate state when sharing serves no required purpose. When the contract requires shared state, preserve it and coordinate updates under an explicit ownership protocol.
+
 1. Give every goroutine an exit condition and an owner that waits for completion. A WaitGroup joins work; it does not cancel or unblock it.
 2. Channel sends copy values, not referenced data. Choose exclusive ownership transfer, immutable sharing, or synchronized mutation.
 3. Pointer payloads are valid under that protocol. Copied slices, maps, and pointer-bearing structs still share storage; the sender must stop accessing transferred mutable data until ownership returns.
@@ -127,12 +129,10 @@ func (s *Service) fetchUser(ctx context.Context, id string) (*User, error) {
 
 ### Fan-out / fan-in
 
-```go
-// fanOut: spawn n workers reading from in; each gets its own output channel.
-// Each goroutine: defer close(ch), for item := range in { select ch<-/ctx.Done }.
-// merge: one goroutine per upstream channel draining → out with ctx.Done guard;
-// WaitGroup closes out when all upstreams finish.
-```
+- Fan-out: start a bounded number of workers reading from the input, each owning its output channel.
+- Select on `ctx.Done()` for both input receives and output sends. A bare range over an open, idle input cannot observe cancellation.
+- Fan-in: give each upstream a forwarding goroutine with the same receive/send cancellation guards.
+- Each worker closes its own output on exit. Close the merged output only after all forwarding goroutines have joined.
 
 ### Timer reuse in hot loop
 

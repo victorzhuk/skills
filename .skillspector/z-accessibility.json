@@ -4,6 +4,12 @@
     {
       "id": "P2",
       "path": "SKILL.md",
+      "message": "<!-- ✅ With instructions -->",
+      "reason": "reviewed 2026-10-27: labels the visible form-help example in an HTML code fence; contains no instruction to the reader or executor."
+    },
+    {
+      "id": "P2",
+      "path": "SKILL.md",
       "message": "*<!--*❌*Missing*alt*-->*<img*src=\"chart.png\">*<!--*✅*Descriptive*alt*-->*<img*src=\"chart.png\"*alt=\"Bar*chart*showing*40%*increase*in*Q3*sales\">*<!--*✅*Decorative*image*(empty*alt)*-->*<img*src=\"decor*",
       "reason": "reviewed 2026-09-26"
     },

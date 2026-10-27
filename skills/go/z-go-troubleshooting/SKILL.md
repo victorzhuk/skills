@@ -105,12 +105,14 @@ timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./...
 GORACE="log_path=/tmp/race" timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./...
 ```
 
-For a running service:
+For a running service with an accessible diagnostic endpoint:
 ```sh
-kill -SIGABRT <pid>   # dumps all goroutine stacks
-# or
-curl localhost:6060/debug/pprof/goroutine?debug=2
+curl 'http://localhost:6060/debug/pprof/goroutine?debug=2'
 ```
+
+Go's default `SIGABRT` handling dumps stacks and terminates the process.
+Use `kill -SIGABRT <pid>` only when that disruption is authorized; it is not
+a live-inspection substitute for pprof.
 
 Deadlock signatures: `all goroutines are asleep`, cyclic lock acquisition,
 channel send/recv with no other side, WaitGroup counter goes negative.

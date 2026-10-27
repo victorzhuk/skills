@@ -45,7 +45,7 @@ Go finding by finding. The cardinal rule: **never fix a pattern by paraphrasing 
 Every negative parallelism gets exactly one of these treatments:
 
 1. **The negation is a strawman** (nobody believes X). Delete the X half entirely and assert Y directly, with whatever evidence the text has.
-   - *"It's not just a tool, it's a fundamental shift in how teams work"* → *"Teams that adopted it stopped holding standups within a month."*
+   - *"It's not just a tool, it's a fundamental shift in how teams work"* → *"It changes how teams work. [ADD: observed change and source]"*
 2. **The contrast is real** (people genuinely hold X). Then earn it: name who holds X, say concretely why Y beats it. A real contrast survives being made specific; slop doesn't.
 3. **The sentence asserts nothing** (the contrast is decoration on an empty claim). Delete the whole sentence. Most cases are this one.
 
