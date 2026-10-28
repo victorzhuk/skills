@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.3
+
+### Patch Changes
+
+- [`b21d615`](https://github.com/victorzhuk/skills/commit/b21d615903bcc6fb05e7e3cdb3c5fec451b61482) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Check exact branch references before permitting cleanup, and reject malformed skill metadata and missing local resources. Add regression coverage for both validation paths.
+
+  Require release prerequisites and complete payment-idempotency handling. Preserve HTTP shutdown errors and independent cancellation for shared work, and align Goose commands and lint suppression settings.
+
+  Correct SSH authentication, double-NAT forwarding, JSONB queries, reactive banners, and async application-lifespan tests. Clarify npm setup requirements, version assertions, and Worktrunk's staging behavior.
+
 ## 0.14.2
 
 ### Patch Changes
