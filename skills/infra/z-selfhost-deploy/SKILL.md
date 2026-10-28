@@ -90,7 +90,7 @@ Caddy is the simpler default for a handful of services on one host — no separa
 
 ## Base hardening
 
-- SSH key-only auth: `PasswordAuthentication no` in `sshd_config`; disable root login (`PermitRootLogin no`) once a non-root sudo user is confirmed working.
+- SSH key-only auth: set `AuthenticationMethods publickey` and `PubkeyAuthentication yes` in `sshd_config`. Keep `PasswordAuthentication no`. Disabling password authentication alone does not disable keyboard-interactive authentication. Disable root login (`PermitRootLogin no`) once a non-root sudo user is confirmed working.
 - Firewall default-deny inbound, explicit allows only (`ufw default deny incoming`, then `ufw allow 22,80,443/tcp`).
 - Docker-published ports can bypass UFW's normal input rules. Omit host publication for private services, or bind to loopback when appropriate. Apply forwarding policy for the actual Docker firewall backend and verify exposure from another host; a local UFW listing is insufficient.
 - Unattended security upgrades (`unattended-upgrades` on Debian/Ubuntu) so a known CVE doesn't sit unpatched for a release cycle.
@@ -109,6 +109,8 @@ Dokploy (and similar self-hosted PaaS tools) wraps most of the above — Compose
 - Leave password SSH auth on "just in case" once key auth is confirmed working.
 
 ## Verify
+
+Keep the current SSH session open while changing authentication. Run `sshd -t` before reloading the service. Inspect `sshd -T`, with `-C` connection parameters when `Match` blocks apply. After reload, confirm a separate key-authenticated session works and password-only and keyboard-interactive-only attempts fail before closing the original session.
 
 ```sh
 docker compose config -q                    # syntax + resolution check, no output on success

@@ -51,7 +51,7 @@ migrate:create:
   desc: Create a migration (NAME=... required)
   requires: { vars: [NAME] }
   cmds:
-    - 'go tool goose -dir {{.MIGDIR | shellQuote}} create {{.NAME | shellQuote}} sql'
+    - 'goose -dir {{.MIGDIR | shellQuote}} create {{.NAME | shellQuote}} sql'
 ```
 
 - Free-form passthrough to a CLI: `{{.CLI_ARGS}}` (everything after `--`):
@@ -81,7 +81,7 @@ migrate:up:
   desc: Apply migrations
   deps: [db:up]
   cmds:
-    - 'go tool goose -dir {{.MIGDIR | shellQuote}} postgres "$DATABASE_URL" up'
+    - 'goose -dir {{.MIGDIR | shellQuote}} postgres "$DATABASE_URL" up'
 
 db:nuke:
   desc: Drop the database volume (DESTRUCTIVE)
@@ -96,6 +96,9 @@ db:nuke:
 | build / test / lint / fmt / generate | Makefile (task delegates) | pure Go inner loop |
 | docker up/down, db shell, migrate-with-db | Taskfile | needs a running environment |
 | pipelines, seeds, E2E, CLI shortcuts | Taskfile | multi-step orchestration |
+
+Use the pinned global `goose` executable installed per [[z-go-goose]], available
+on `PATH`; these tasks do not assume a `go.mod` tool directive.
 
 Migration nuance: a Makefile `migrate-up` (bare goose, no docker — for CI/remote DBs) and
 a Task `migrate:up` (`deps: [db:up]` then the same goose) coexist on purpose; the Task one

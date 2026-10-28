@@ -101,11 +101,10 @@ No immortal keys, including "static" reference data — schema changes and forgo
 
 A cold key under load means N concurrent requests per instance all miss at once and all hit the source of truth — across a fleet of M instances that's M×N total load on it. Collapse that in-process before reaching for anything distributed — see [[z-go-concurrency]] for the mechanics:
 
-```go
-v, err, _ := s.sf.Do(id, func() (any, error) {
-    return s.loadPlan(ctx, id) // the read-through function above, minus the outer cache check
-})
-```
+Use the `DoChan` pattern in [[z-go-concurrency]] around `s.loadPlan(loadCtx, id)`.
+Give the shared load a bounded service-owned context and each caller a separate
+cancellable wait. Do not let the first request's cancellation abort healthy
+waiters, or close the cache/database before owned loads have joined.
 
 `singleflight.Group` dedupes callers within one process, so a fleet of instances still sends up to one load per instance to the database on a cold key — that's the M×N problem shrinking to just M, one load per instance, and M is normally something the database already survives.
 

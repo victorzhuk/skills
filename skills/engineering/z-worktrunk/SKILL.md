@@ -16,7 +16,7 @@ Before copying commands, check the installed version (`wt --version`) and the su
 - `wt switch` (no args) — interactive picker; `--branches`/`--remotes`/`--prs` widen candidates.
 - `wt switch -x <program> -- <args...>` — run one program in the switched-to worktree; args after `--` bypass worktrunk parsing. Shell syntax needs an explicit shell: `wt switch feature -x sh -- -c 'npm install && npm test'`.
 - `wt list [--full] [--branches] [--format=json]` — worktrees, status, divergence, uncommitted changes; `--full` adds CI status and LLM summaries (network + LLM).
-- `wt merge` — squash-merge current branch into the target (default branch), running hooks.
+- `wt merge` — by default, stages all tracked and untracked changes, includes them in the squash commit, merges into the target (default branch), and runs hooks. Cleanup removes the worktree by default.
 - `wt remove [<branch>]` — remove worktree; delete branch only when merged (`--force` for a dirty worktree, `-D` for an unmerged branch).
 - `wt step` — individual operations (`wt step commit`, `wt step squash`, `wt step copy-ignored`, `wt step tether`, `wt step relocate`).
 - `wt hook <type> [name...]` — run configured hooks manually; `user:`/`project:` prefixes filter by source.
@@ -48,6 +48,7 @@ Ten hook types, configured in `.config/wt.toml` (project) or user config: `pre-s
 ## Conventions and safety
 
 - Address worktrees by branch name or worktree path; paths are computed from the template. `wt list` marks out-of-template paths; `wt step relocate` moves them back.
+- Inspect source-worktree status, staged and unstaged diffs, and untracked files before merging. Prefer a clean source worktree with reviewed commits. If committing pending work is intended, establish its exact scope first. The default `--stage all` includes untracked files. Check installed `--stage` options before selecting a narrower scope, and preserve unrelated work before cleanup.
 - Dirty worktree refuses removal unless `--force`; unmerged branch is kept unless `-D`. Both are deliberate acts.
 - `--clobber` removes a stale non-worktree directory occupying the target path.
 - `wt switch` failure causes: branch missing → `--create`; path occupied → switch to or remove the other worktree; stale directory → `--clobber`.
@@ -63,7 +64,7 @@ Ten hook types, configured in `.config/wt.toml` (project) or user config: `pre-s
 
 - Assume `git worktree` semantics — `wt switch` navigates between worktrees; it does not change branches in place (use `git switch` inside a worktree for that).
 - Hardcode worktree paths; set the `worktree-path` template.
-- Run `wt merge` without reviewing the changes first — it squashes and removes the worktree by default.
+- Run `wt merge` without reviewing commits and pending files — it can commit untracked files, squash, and remove the worktree by default.
 - Pass `--no-hooks` to `wt hook` — it has no such flag.
 
 ## Verify

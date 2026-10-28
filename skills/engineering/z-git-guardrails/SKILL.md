@@ -22,7 +22,7 @@ The filter parses direct commands and command separators. It understands Git's `
 Worktree-based flows delete branches and worktrees as routine cleanup, so the hook deliberately lets through:
 
 - Literal `git worktree` commands pass this filter. Destructive cleanup still needs the host's checks and existing user authorization.
-- An isolated `git branch -D` passes when every named branch tip is an ancestor of `HEAD` in the command's effective repository. This snapshot check does not protect against concurrent ref changes or preserve the branch name for the user.
+- An isolated `git branch -D` passes when every named branch tip is an ancestor of `HEAD` in the command's effective repository. Resolve local branches under `refs/heads/` and `-r`/`--remotes` targets under `refs/remotes/`; a same-named tag cannot establish ancestry. This snapshot check does not protect against concurrent ref changes or preserve the branch name for the user.
 - `git branch -d` — git itself refuses unmerged branches on lowercase `-d`.
 
 ## Steps
@@ -68,5 +68,6 @@ Worktree-based flows delete branches and worktrees as routine cleanup, so the ho
 
 - Blocked command test exits `2` with `BLOCKED:` on stderr; allowed commands exit `0`.
 - `git branch -D` of a merged branch passes; of an unmerged branch is blocked.
+- Same-named tags or local branches do not change the decision for the selected local or remote-tracking branch.
 - The hook script is executable and referenced from settings by the correct path.
 - Run `timeout 60s python3 -m unittest discover -s scripts -p 'test_*.py'` from this skill directory; use `gtimeout` where GNU timeout is installed under that name. The runner is serial. The tests submit command text; they do not run destructive Git operations.

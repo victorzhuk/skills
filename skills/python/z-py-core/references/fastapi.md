@@ -89,15 +89,31 @@ def test_get_user(client: TestClient) -> None:
     assert response.status_code == 200
 ```
 
-`httpx.AsyncClient` with `ASGITransport` when the test itself needs to run inside an event loop — testing an async dependency chain, or when the app talks to something else async during the request:
+Use `httpx.AsyncClient` with `ASGITransport` when the test needs an event loop. Reuse the project's async runner and lifespan fixture. The example uses pytest's AnyIO plugin, selects asyncio, and assumes `asgi-lifespan` is a declared test dependency. Add missing dependencies through the project's existing dependency workflow.
 
 ```python
+import pytest
+from asgi_lifespan import LifespanManager
+from httpx import ASGITransport, AsyncClient
+
+from .main import app
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
+
+
+@pytest.mark.anyio
 async def test_get_user_async() -> None:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/users/1")
-        assert response.status_code == 200
+    async with LifespanManager(app) as manager:
+        transport = ASGITransport(app=manager.app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/v1/users/1")
+    assert response.status_code == 200
 ```
+
+`ASGITransport` does not run startup or shutdown. Keep lifespan management when the application uses those events. Use `manager.app` so lifespan state reaches requests. Verify required startup state and shutdown cleanup, not only the response status. Do not start a second lifespan manager around a fixture that already owns it.
 
 Override dependencies per test via `app.dependency_overrides`, clear them in a fixture teardown so one test's override doesn't leak into the next.
 

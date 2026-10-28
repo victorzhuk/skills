@@ -109,6 +109,7 @@ adw::StatusPage {
 // Inline alert
 adw::Banner {
     set_title: "Connection failed",
+    #[watch]
     set_revealed: model.has_error,
     set_button_label: Some("Retry"),
     connect_button_clicked[sender] => move |_| sender.input(Msg::Retry),

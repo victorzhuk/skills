@@ -72,7 +72,7 @@ name: security
 on: [push, pull_request]
 
 jobs:
-  govulncheck:
+  security:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -86,16 +86,15 @@ jobs:
 
 ## Release workflow
 
-`.github/workflows/release.yml` — triggers on `v*` tags only:
+Add this job to the same workflow as `test`, `lint`, and `security`. Keep those
+checks enabled for tag pushes (`on: [push, pull_request]` above). Every job must
+check the triggering commit; only successful `v*` tag pushes may publish:
 
 ```yaml
-name: release
-on:
-  push:
-    tags: ["v*"]
-
 jobs:
   release:
+    needs: [test, lint, security]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -159,7 +158,7 @@ jobs:
           exit-code: 0
 ```
 
-The snippets above are job ingredients, not independent publication gates: merge them under one workflow and name the vulnerability job `security`, or adjust `needs` to its actual ID. If an existing design requires `workflow_run`, restrict its triggering event/branch, bind checkout to the verified head SHA, and require every release check before publishing. Never execute an arbitrary PR head with registry credentials.
+The snippets above are job ingredients, not independent publication gates: merge them under one workflow and retain the `needs` edges for both publishers. Do not override failed or skipped prerequisites with `always()`. If an existing design requires `workflow_run`, restrict its triggering event/branch, bind checkout to the verified head SHA, and require every release check before publishing. Never execute an arbitrary PR head with registry credentials.
 
 One `docker/build-push-action` call, one platform. Multi-platform builds, provenance/sbom attestations, and image scanning are real options — see Optional hardening — not part of the baseline.
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { frontmatter } from "./frontmatter.mjs";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 const skillsRoot = join(root, "skills");
 const forbidden = [
   /(^|[\s`'"=(,\[{])\/home\/[^\s`'"]+/,
@@ -21,37 +23,6 @@ function walk(dir) {
   return out;
 }
 
-function frontmatter(file) {
-  const text = readFileSync(file, "utf8");
-  const match = text.match(/^---\n([\s\S]*?)\n---\n/);
-  if (!match) return null;
-  const fm = match[1];
-  const name = fm.match(/^name:\s*(.+)$/m)?.[1]?.trim().replace(/^['"]|['"]$/g, "") ?? "";
-  const descLine = fm.match(/^description:\s*(.+)$/m)?.[1]?.trim() ?? "";
-  let description = descLine;
-  let style = "plain";
-  const singleQuoted = /^'[\s\S]*'$/.test(descLine);
-  const doubleQuoted = /^"[\s\S]*"$/.test(descLine);
-  if (singleQuoted) {
-    description = descLine.slice(1, -1).replace(/''/g, "'");
-    style = "single";
-  } else if (doubleQuoted) {
-    description = descLine.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\");
-    style = "double";
-  } else if ([">", "|", ">-", "|-"].includes(descLine)) {
-    const lines = fm.split("\n");
-    const start = lines.findIndex((line) => line.startsWith("description:"));
-    const block = [];
-    for (let i = start + 1; i < lines.length; i++) {
-      if (/^[a-zA-Z0-9_-]+:/.test(lines[i])) break;
-      block.push(lines[i].trim());
-    }
-    description = block.filter(Boolean).join(" ");
-    style = "block";
-  }
-  return { name, description, descLine, style };
-}
-
 const files = walk(skillsRoot);
 const skillFiles = files.filter((file) => basename(file) === "SKILL.md");
 const names = new Set();
@@ -62,9 +33,11 @@ let descTotal = 0;
 
 for (const file of skillFiles) {
   const rel = relative(root, file);
-  const meta = frontmatter(file);
-  if (!meta) {
-    errors.push(`${rel}: missing frontmatter`);
+  let meta;
+  try {
+    meta = frontmatter(readFileSync(file, "utf8"));
+  } catch (err) {
+    errors.push(`${rel}: ${err.message}`);
     continue;
   }
   if (!/^z-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(meta.name)) {
@@ -76,9 +49,6 @@ for (const file of skillFiles) {
     errors.push(`${rel}: description is ${meta.description.length} chars, house cap ${descCap} (spec max 1024)`);
   }
   descTotal += meta.description.length;
-  if (meta.style === "plain" && meta.descLine.includes(": ")) {
-    errors.push(`${rel}: description has unquoted ": " — breaks strict YAML parsers, quote the value`);
-  }
   if (/[<>]/.test(meta.description)) {
     errors.push(`${rel}: description contains an angle bracket (< or >) — the Claude app rejects XML tags in descriptions; use {placeholder} or reword`);
   }
@@ -96,10 +66,64 @@ for (const file of files) {
   }
 }
 
-for (const file of skillFiles) {
-  const text = readFileSync(file, "utf8");
-  for (const match of text.matchAll(/\[\[(z-[^\]#|]+)(?:[#|][^\]]*)?\]\]/g)) {
-    if (!names.has(match[1])) errors.push(`${relative(root, file)}: unresolved z-skill link [[${match[1]}]]`);
+function prose(text) {
+  let fence;
+  return text.split(/\r?\n/).map((line) => {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length && !marker[2].trim()) fence = undefined;
+      return "";
+    }
+    if (marker) {
+      fence = marker[1];
+      return "";
+    }
+    return line.replace(/(`+).*?\1/g, "");
+  }).join("\n");
+}
+
+for (const skill of skillFiles) {
+  const skillRoot = dirname(skill);
+  const pending = [skill];
+  const seen = new Set();
+  while (pending.length) {
+    const file = pending.pop();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    const text = prose(readFileSync(file, "utf8"));
+    const targets = [
+      ...Array.from(text.matchAll(/\[\[([^\]#|]+)(?:[#|][^\]]*)?\]\]/g), (match) => ({ target: match[1], wiki: true })),
+      ...Array.from(text.matchAll(/\[[^\]\n]*\]\(\s*(?:<([^>]+)>|([^\s)]+))(?:\s+["'][^"']*["'])?\s*\)/g), (match) => ({ target: match[1] ?? match[2], wiki: false })),
+      ...Array.from(text.matchAll(/^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*(?:<([^>\n]+)>|([^\s]+))(?:[ \t]+["'][^"'\n]*["'])?[ \t]*$/gm), (match) => ({ target: match[1] ?? match[2], wiki: false })),
+    ];
+    for (const { target, wiki } of targets) {
+      if (wiki && /^z-[^/]+$/.test(target)) {
+        if (!names.has(target)) errors.push(`${relative(root, file)}: unresolved z-skill link [[${target}]]`);
+        continue;
+      }
+      if (/^(?:[a-z][a-z0-9+.-]*:|[/#~])/i.test(target)) continue;
+      let localTarget;
+      try {
+        localTarget = decodeURIComponent(target.split(/[?#]/)[0]);
+      } catch {
+        errors.push(`${relative(root, file)}: invalid local resource URI encoding ${target}`);
+        continue;
+      }
+      if (!localTarget) continue;
+      const path = resolve(dirname(file), localTarget);
+      const resource = /^(?:references|assets|scripts)(?:[/\\]|$)/.test(relative(skillRoot, path));
+      if (!resource) {
+        if (/^(?:\.\.?\/)*(?:references|assets|scripts)(?:\/|$)/.test(localTarget)) {
+          errors.push(`${relative(root, file)}: local resource leaves skill directory ${target}`);
+        }
+        continue;
+      }
+      if (!existsSync(path)) {
+        errors.push(`${relative(root, file)}: missing local resource ${target}`);
+      } else if (path.endsWith(".md") && statSync(path).isFile()) {
+        pending.push(path);
+      }
+    }
   }
 }
 

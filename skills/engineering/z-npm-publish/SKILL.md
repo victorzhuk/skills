@@ -13,7 +13,7 @@ Tag-triggered GitHub Actions publish authenticated by OIDC. Verify npm CLI ≥11
 npm OIDC and `npm trust` **cannot create a brand-new package**. Until the name exists on the registry, OIDC `npm publish` and `POST /-/package/<pkg>/trust` both return `E404 ... you do not have permission` (anti name-hijack). So the first publish is manual:
 
 1. `npm run build && npm publish --access public` — once, locally, with npm login (handles 2FA/OTP). Creates the package.
-2. `npm trust github <pkg> --allow-publish --repo <owner/repo> --file npm-publish.yml` — grants the workflow publish rights (npm v11+, 2FA required).
+2. `npm trust github <pkg> --allow-publish --repo <owner/repo> --file npm-publish.yml` — grants the workflow publish rights (npm ≥11.15.0, 2FA required). With an older publishing-capable CLI, configure the trusted publisher on the npm website.
 3. Validate the new trusted publisher with a successful publish within its two-day activation window. Push the intended release tag only within the authorized release flow.
 
 Prefer OIDC after bootstrap. If token authentication is required, use current granular token permissions and expiry, not removed classic automation tokens. Choose direct publishing or staged publishing explicitly. Current npm policy schedules removal of direct publishing with bypass-2FA tokens in January 2027; verify the current policy before setting up a pipeline.
@@ -88,7 +88,7 @@ The guard step aborts if the tag and `package.json` version disagree — this is
 
 ## Do not
 
-- **Pin the version in a test snapshot.** The publish job runs the suite; a bump then fails `npm test` and blocks the release. Assert shape instead: `expect(v).toMatch(/^\d+\.\d+\.\d+/)`.
+- **Pin the version in a test snapshot or check only its shape.** Compare the built CLI's reported version with the current `package.json` version, including prerelease and build metadata. A version bump must pass without a snapshot edit, and stale CLI output must fail.
 - **Reuse a published version or tag.** npm rejects re-publishing an existing version; bump instead.
 - **Set `NODE_AUTH_TOKEN` when using OIDC** — trusted publishing needs only `id-token: write`. Add the token env only on the token path.
 - **Interpolate untrusted event input into `run:`** — the tag guard reads `process.env.GITHUB_REF_NAME`, never a `${{ }}` shell splice.

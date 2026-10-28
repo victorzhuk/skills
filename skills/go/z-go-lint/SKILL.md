@@ -45,6 +45,10 @@ linters:
     - bodyclose
     - sqlclosecheck
     - nolintlint         # enforces correct nolint usage
+  settings:
+    nolintlint:
+      require-specific: true
+      require-explanation: true
   exclusions:
     generated: strict    # default — skips files matching the Go generated-file convention
 
@@ -83,6 +87,10 @@ linters:
     - bodyclose
     - sqlclosecheck
     - nolintlint
+  settings:
+    nolintlint:
+      require-specific: true
+      require-explanation: true
   exclusions:
     generated: strict
 
@@ -94,38 +102,34 @@ formatters:
 
 ## Choose the project's lint scope
 
-Real repos split into two tiers rather than one shared "essentials" list — pick the tier that
-matches the project's risk profile, don't default to a merged superset.
+Pick the tier that matches the project's risk profile. Keep the bootstrap
+`nolintlint` settings in either tier; extend its enabled list rather than replacing
+the whole `linters` mapping.
 
-**Minimal** (ytrack) — a small service, five linters:
+**Minimal** — use these entries in `linters.enable` with the bootstrap settings:
 
 ```yaml
-linters:
-  default: none
-  enable:
-    - govet
-    - errcheck
-    - staticcheck
-    - unused
-    - misspell
+- govet
+- errcheck
+- staticcheck
+- unused
+- misspell
+- nolintlint
 ```
 
 **Strict** — adds contract- and correctness-focused linters on top:
 
 ```yaml
-linters:
-  default: none
-  enable:
-    - cyclop
-    - goconst
-    - testifylint
-    - contextcheck
-    - depguard
-    - errname
-    - errorlint
-    - bodyclose
-    - sqlclosecheck
-    - ginkgolinter
+- cyclop
+- goconst
+- testifylint
+- contextcheck
+- depguard
+- errname
+- errorlint
+- bodyclose
+- sqlclosecheck
+- ginkgolinter
 ```
 
 Start minimal on a new service; move to strict once the codebase has enough tests and

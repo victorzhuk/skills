@@ -11,6 +11,7 @@
   "scripts": {
     "list": "node scripts/list-skills.mjs",
     "check": "node scripts/check-skills.mjs",
+    "test:skills": "node --test --test-concurrency=1 scripts/check-skills.test.mjs",
     "test:guard": "python3 -B -m unittest discover -s skills/engineering/z-git-guardrails/scripts -p 'test_*.py'",
     "changeset": "changeset",
     "version": "changeset version",

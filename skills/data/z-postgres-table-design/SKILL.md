@@ -151,7 +151,7 @@ Use a non-owner application role without superuser or `BYPASSRLS` privileges. Ow
   - **Containment** `jsonb_col @> '{"k":"v"}'`
   - **Key existence** `jsonb_col ? 'k'`, **any/all keys** `?\|`, `?&`
   - **Path containment** on nested docs
-  - **Disjunction** `jsonb_col @> ANY(ARRAY['{"status":"active"}', '{"status":"pending"}'])`
+  - **Disjunction** `jsonb_col @> ANY(ARRAY['{"status":"active"}', '{"status":"pending"}']::jsonb[])`
 - Heavy `@>` workloads: consider opclass `jsonb_path_ops` for smaller/faster containment-only indexes:
   - `CREATE INDEX ON tbl USING GIN (jsonb_col jsonb_path_ops);`
   - **Trade-off**: supports `@>`, `@?`, and `@@`, but not key-existence operators (`?`, `?|`, `?&`).

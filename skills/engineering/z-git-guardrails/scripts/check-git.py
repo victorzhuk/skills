@@ -15,7 +15,7 @@ def options(operation, args):
         "clean": ("force",),
         "restore": ("staged", "worktree", "no-staged"),
         "checkout": ("force",),
-        "branch": ("delete", "force"),
+        "branch": ("delete", "force", "remotes"),
     }.get(operation, ())
     values = {
         "checkout": {"b", "B", "--orphan", "--conflict", "--pathspec-from-file"},
@@ -32,7 +32,9 @@ def options(operation, args):
             break
         if arg.startswith("--"):
             name, separator, _ = arg.partition("=")
-            if name == "--no-staged" or any(
+            if name in ("--no-staged", "--no-remotes"):
+                return flags, operands, "unsupported negated Git option"
+            if any(
                 target.startswith(name[2:]) and name != "--" + target
                 for target in protected
             ):
@@ -146,10 +148,19 @@ def check(command, cwd):
         branches = operands
         if not branches:
             return "missing branch name"
+        namespace = "remotes" if "r" in flags or "--remotes" in flags else "heads"
         for branch in branches:
+            ref = f"refs/{namespace}/{branch}"
             try:
+                exists = subprocess.run(
+                    ["git", *context, "show-ref", "--verify", "--quiet", ref],
+                    cwd=cwd, stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5,
+                )
+                if exists.returncode != 0:
+                    return "cannot verify branch reference"
                 result = subprocess.run(
-                    ["git", *context, "merge-base", "--is-ancestor", branch, "HEAD"],
+                    ["git", *context, "merge-base", "--is-ancestor", ref, "HEAD"],
                     cwd=cwd, stdin=subprocess.DEVNULL,
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5,
                 )

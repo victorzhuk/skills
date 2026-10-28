@@ -49,12 +49,12 @@ parameters:
 ```
 
 - Note on status: `Idempotency-Key` is not an RFC. `draft-ietf-httpapi-idempotency-key-header` expired in the IETF httpapi working group without reaching Proposed Standard. Treat it as the de-facto convention Stripe popularized, not a ratified spec — solid enough to ship, but don't cite it as "per RFC" in your own docs.
-- Server-side store: `(client_id, key) → (request_hash, response_body, status_code, expires_at)`. On a repeat request with the same key:
-  - same `request_hash` → replay the stored response verbatim, without re-executing the handler.
-  - different `request_hash` under the same key → `409`/`422`, reject it. A client reusing a key for a different request body is a bug on their side; never silently execute either version.
-- TTL the key store — 24 hours is a common default, long enough to cover retry storms, short enough that the table doesn't grow unbounded.
-- This is the duplicate-charge guard on the money path. Treat a missing or broken idempotency store on a payment endpoint as a P0, not a nice-to-have.
-- Scope keys per authenticated client, not globally — two different clients reusing the same key string must never collide.
+- Scope keys per authenticated client. Store `(client_id, key) -> (request_hash, state, response_body, status_code, expires_at)` with a unique constraint on `(client_id, key)`.
+- Atomically claim the key before executing side effects; only the owner may proceed. A duplicate with a different `request_hash` gets `409`/`422`. A matching completed request replays its stored response. A matching pending request gets a documented in-progress response, such as `409`, and must not execute again.
+- For effects in the same database, commit the business write and completed idempotency result in one transaction. A rollback leaves neither committed. Use the unique key/transaction to serialize competing attempts.
+- For external effects such as payment capture, persist the operation before dispatch and reuse a stable downstream idempotency key across attempts. Recover a crash after dispatch by querying/reconciling that operation or retrying under the provider's verified idempotency contract. A timeout or expired ownership lease is not proof the charge failed; never issue a fresh charge while the outcome is unknown. See [[z-go-messaging]] for durable delivery and external-effect boundaries.
+- Retain completed keys for the documented retry window; 24 hours is a common example, not a universal guarantee. Never expire pending or unresolved operations into a fresh execution. Define recovery and retention against the downstream provider's key lifetime too.
+- Verify concurrent same-key requests, payload mismatch, rollback, crash after the effect but before response persistence, and retry after retention expiry. Response caching alone is not a duplicate-charge guarantee; fail closed when the payment idempotency store is unavailable.
 - The calling side's job — retrying with the same key, backing off, honoring `Retry-After`, walking `next_cursor` pages — is a separate contract; see [[z-go-http-client]].
 
 ## Error shape

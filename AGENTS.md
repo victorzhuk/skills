@@ -11,6 +11,7 @@ A public catalog of reusable `z-*` agent skills, not an application. There is no
 ```bash
 npm ci             # install (release.yml uses this; lockfile is package-lock.json → npm)
 npm run check      # validate all SKILL.md files — this is the CI gate
+timeout 60s npm run test:skills  # serial validator and listing regression checks
 timeout 60s npm run test:guard  # serial regression checks for the literal Git filter
 npm run scan       # SkillSpector security scan; needs `skillspector` on PATH
 npm run scan -- --accept z-<name>   # re-baseline a skill after reviewing its findings
@@ -19,7 +20,7 @@ npm run changeset  # record a version note (Changesets)
 npm run version    # apply pending changesets to CHANGELOG + package version
 ```
 
-CI (`.github/workflows/check.yml`) runs `npm run check` on Node 22 and the serial Python 3 Git-filter tests for every push to `master` and every PR. Neither check needs `npm ci`; both use standard libraries. A second job installs SkillSpector (pinned) and runs `npm run scan`; it fails on any HIGH or CRITICAL finding not suppressed by `.skillspector/<name>.json`. Review a new finding before accepting it — a baseline hides it for good. `release.yml` runs `npm ci` (it needs Changesets), re-runs the check, then opens a "Version" PR via Changesets. Run `npm run check` locally before pushing any skill change and `npm run test:guard` when changing the Git filter.
+CI (`.github/workflows/check.yml`) runs `npm run check`, the serial Node 22 validator tests, and the serial Python 3 Git-filter tests for every push to `master` and every PR. These checks use standard libraries and do not need `npm ci`. A second job installs SkillSpector (pinned) and runs `npm run scan`; it fails on any HIGH or CRITICAL finding not suppressed by `.skillspector/<name>.json`. Review a new finding before accepting it — a baseline hides it for good. `release.yml` runs `npm ci` (it needs Changesets), re-runs the check, then opens a "Version" PR via Changesets. Run `npm run check` locally before pushing any skill change, `timeout 60s npm run test:skills` when changing validation or listing, and `timeout 60s npm run test:guard` when changing the Git filter.
 
 ## Layout
 
@@ -39,11 +40,13 @@ docs/inventory.md                   # provenance + public-sanitization log
 
 `npm run check` walks `skills/` and fails on any of these. Know them before editing a skill — a violation blocks CI:
 
-- Every `SKILL.md` needs YAML frontmatter (`---` block) with `name` and `description`.
+- Every `SKILL.md` needs YAML frontmatter (`---` block) with `name` and `description`. Only those fields and optional `allowed-tools` are accepted; values must be strings and keys must be unique.
+- The dependency-free reader supports unindented fields with inline plain, single-quoted, or double-quoted strings, and consistently space-indented `>`/`|` blocks with optional `-`/`+` chomping. Single quotes escape by doubling; double quotes use JSON-compatible escapes. Quote values that YAML treats as numbers, booleans, or null. Collections, aliases, anchors, tags, and nested fields are unsupported.
 - `name` must match `^z-[a-z0-9]+(?:-[a-z0-9]+)*$` (lowercase, hyphen-separated, `z-` prefix), ≤ 64 chars, and be unique across the repo.
 - **The skill's directory name must equal its frontmatter `name`** — renaming one means renaming both.
 - `description` is required, ≤ 600 chars (house cap under the 1024 spec max), and the catalog-wide description total must stay ≤ 43,000 chars — harnesses skip skills once their budget (~50 KB) is exceeded, so the check fails before that cliff. Aim 300–450 chars per description.
 - `[[z-other-skill]]` wiki-links in a body must resolve to an existing skill `name`.
+- Local Markdown/wiki links into `references/`, `assets/`, and `scripts/` must exist. Linked Markdown resources are checked recursively. Fenced and inline code examples and ordinary application-output paths are excluded.
 - **No personal markers** anywhere under `skills/`: absolute home paths (`/home/...`, `/Users/...`), `~/.agents/references`, or `rules/commits.md`. This is the public-sanitization gate — when copying a private skill in, strip local paths and replace private references with generic or in-repo ones (`docs/inventory.md` records past substitutions).
 
 ## Authoring skills

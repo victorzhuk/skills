@@ -2,6 +2,7 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
@@ -53,7 +54,7 @@ class GitFilterTests(unittest.TestCase):
             run.return_value.returncode = 0
             self.assertIsNone(guard.check("git -C 'repo with spaces' branch -D topic", "/tmp"))
             self.assertEqual(run.call_args.args[0], [
-                "git", "-C", "repo with spaces", "merge-base", "--is-ancestor", "topic", "HEAD",
+                "git", "-C", "repo with spaces", "merge-base", "--is-ancestor", "refs/heads/topic", "HEAD",
             ])
             self.assertEqual(run.call_args.kwargs["cwd"], "/tmp")
             self.assertEqual(run.call_args.kwargs["timeout"], 5)
@@ -115,6 +116,59 @@ class GitFilterTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, code, result.stderr)
             self.assertEqual("BLOCKED:" in result.stderr, code == 2)
+
+    def test_branch_ancestry_uses_the_deletion_namespace(self):
+        with TemporaryDirectory() as repo:
+            def git(*args, input=None):
+                result = subprocess.run(
+                    ["git", "--git-dir", repo, *args], input=input,
+                    text=True, capture_output=True, check=True, timeout=5,
+                )
+                return result.stdout.strip()
+
+            git("init", "--bare")
+            tree = git("mktree", input="")
+            metadata = "author test <test> 0 +0000\ncommitter test <test> 0 +0000\n"
+            base = git("hash-object", "-t", "commit", "-w", "--stdin",
+                       input=f"tree {tree}\n{metadata}\nbase\n")
+            tip = git("hash-object", "-t", "commit", "-w", "--stdin",
+                      input=f"tree {tree}\nparent {base}\n{metadata}\nunmerged\n")
+            refs = {
+                "refs/heads/current": base,
+                "refs/heads/topic": tip,
+                "refs/tags/topic": base,
+                "refs/heads/merged": base,
+                "refs/tags/merged": tip,
+                "refs/remotes/origin/topic": tip,
+                "refs/heads/origin/topic": base,
+                "refs/tags/origin/topic": base,
+                "refs/remotes/origin/merged": base,
+                "refs/heads/origin/merged": tip,
+                "refs/tags/refs/heads/unknown": base,
+            }
+            for ref, commit in refs.items():
+                git("update-ref", ref, commit)
+            git("symbolic-ref", "HEAD", "refs/heads/current")
+
+            for command, code in [
+                ("git branch -D topic", 2),
+                ("git branch -D merged", 0),
+                ("git branch -Dr origin/topic", 2),
+                ("git branch --remotes -D origin/topic", 2),
+                ("git branch -Dr origin/merged", 0),
+                ("git branch --remo -D origin/topic", 2),
+                ("git branch -r --no-remotes -D topic", 2),
+                ("git branch -D unknown", 2),
+            ]:
+                with self.subTest(command=command):
+                    result = subprocess.run(
+                        ["bash", str(SCRIPT.with_name("block-dangerous-git.sh"))],
+                        input=json.dumps({"tool_input": {"command": command}, "cwd": repo}),
+                        text=True, capture_output=True, timeout=5,
+                    )
+                    self.assertEqual(result.returncode, code, result.stderr)
+            for ref, commit in refs.items():
+                self.assertEqual(git("rev-parse", "--verify", ref), commit)
 
 
 if __name__ == "__main__":

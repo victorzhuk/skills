@@ -115,17 +115,41 @@ service after first use. An ID-only key is valid only when the result depends
 solely on that ID within the instance. Include tenant, authorization, or other
 result-affecting scope in an unambiguous key when those vary per call.
 
+Pass a service-owned `workCtx` separately from each caller's `ctx`. All calls
+on the instance share that work lifetime; derive it at application startup and
+cancel it during owned shutdown. The example uses a five-second source budget;
+choose the bound from the dependency contract.
+
 ```go
-func (s *Service) fetchUser(ctx context.Context, id string) (*User, error) {
-    v, err, _ := s.sf.Do(id, func() (any, error) {
-        return s.repo.GetUser(ctx, id)
-    })
-    if err != nil {
-        return nil, fmt.Errorf("fetch user: %w", err)
+func (s *Service) fetchUser(ctx, workCtx context.Context, id string) (*User, error) {
+    if err := ctx.Err(); err != nil {
+        return nil, err
     }
-    return v.(*User), nil
+    result := s.sf.DoChan(id, func() (any, error) {
+        const loadTimeout = 5 * time.Second
+        loadCtx, cancel := context.WithTimeout(workCtx, loadTimeout)
+        defer cancel()
+        return s.repo.GetUser(loadCtx, id)
+    })
+    select {
+    case <-ctx.Done():
+        return nil, ctx.Err()
+    case r := <-result:
+        if r.Err != nil {
+            return nil, fmt.Errorf("fetch user: %w", r.Err)
+        }
+        return r.Val.(*User), nil
+    }
 }
 ```
+
+`DoChan` lets a caller stop waiting; it does not cancel or join the shared load.
+Keep shared work registered with the application's existing work owner before
+it can start. On shutdown, close admission, cancel `workCtx`, and join all loads
+before closing the repository. A timeout cannot stop a dependency that ignores
+cancellation. Do not call `Forget` when one waiter cancels: that permits a second
+load while the first is still running. Test leader and follower cancellation
+independently, plus service shutdown during a load.
 
 ### Fan-out / fan-in
 

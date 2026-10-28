@@ -199,17 +199,31 @@ serve := func(srv *http.Server) func() error {
 }
 g.Go(serve(apiSrv))
 g.Go(serve(mgmtSrv))
-g.Go(func() error {
-    <-ctx.Done()
+<-ctx.Done()
+
+drain := func(srv *http.Server) error {
     shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
     defer cancel()
-    _ = apiSrv.Shutdown(shutdownCtx)
-    return mgmtSrv.Shutdown(shutdownCtx)
-})
-if err := g.Wait(); err != nil {
+    if err := srv.Shutdown(shutdownCtx); err != nil {
+        return fmt.Errorf("shutdown %s: %w", srv.Addr, err)
+    }
+    return nil
+}
+apiErr := drain(apiSrv)
+mgmtErr := drain(mgmtSrv)
+if err := errors.Join(g.Wait(), apiErr, mgmtErr); err != nil {
     return err
 }
 ```
+
+Each listener gets a fresh drain budget; the API drain cannot consume the
+management drain's deadline. Preserve both errors even when a listener failed
+first. A drain error means shutdown is incomplete: the owner must close ordinary
+connections with `Server.Close`, cancel and join owned handlers, and close/join
+hijacked connections separately before releasing their dependencies. `g.Wait()`
+joins the serving goroutines only; `Close` does not join handlers. Apply the
+bounded recovery policy from [[z-go-entrypoint]] and report noncompletion rather
+than treating a returned error as permission to tear down shared resources.
 
 The public mux MUST NOT register `/metrics` — scraping and profiling traffic never touches the API listener. Verify probe:
 
