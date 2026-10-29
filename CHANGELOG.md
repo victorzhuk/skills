@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.4
+
+### Patch Changes
+
+- Preserve boundaries with a current purpose when simplifying code. Remove usage-count requirements and the one-line comment limit from lean fixes.
+
 ## 0.14.3
 
 ### Patch Changes

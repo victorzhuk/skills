@@ -11,9 +11,9 @@ Match the file you're editing. New code should read like the maintainer who owns
 
 - Short, natural names over descriptive-but-bloated ones: `cfg`, `repo`, `srv`, `pool` — not `applicationConfiguration`, `userRepositoryInstance`, `httpServerInstance`, `databaseConnectionPool`.
 - Error context is a phrase, not a sentence: `"create user: %w"`, not `"failed to create user in the database: %w"`.
-- Don't split a type into an `Interface` + `Impl` pair for one concrete implementation — see [[z-no-over-engineering]].
+- Use [[z-no-over-engineering]] to decide whether a type boundary is needed. Avoid redundant `Interface` and `Impl` naming.
 - Before writing, read a neighboring file in the same package and match its naming density, abstraction level, and idiom. A diff that looks more "polished" than its surroundings is a signal, not a compliment.
-- Prefer the shape the codebase already uses over a textbook-correct alternative it doesn't use — consistency with the file beats abstract correctness.
+- Match existing idioms while preserving correctness and required contracts.
 
 ## Examples
 
@@ -50,7 +50,6 @@ type UserService struct { ... }
 
 - Name a variable after its type (`userRepositoryInstance UserRepository`) — the type is already visible at the declaration.
 - Wrap an error with a phrase that repeats the callee's own wrap ("get user: get user by id: %w").
-- Reach for an interface, factory, or builder because it's "more testable" with no second concrete case in sight.
 - Write a docstring-style block comment above a function whose name already says what it does.
 
 ## Verify

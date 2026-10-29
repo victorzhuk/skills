@@ -5,7 +5,7 @@ description: YAGNI and reuse-first implementation for coding tasks, dependency c
 
 # No over-engineering
 
-Build the smallest thing that solves the problem in front of you. Add the next layer of abstraction when a second concrete case demands it, not before.
+Build the smallest complete, readable solution to the current problem.
 
 ## Reuse ladder
 
@@ -21,24 +21,24 @@ Take the first rung that solves the whole requested task:
 Work the ladder after you understand the change, never instead of understanding it.
 A one-liner a reader must decode is not the smallest change.
 Do not add a dependency for a few straightforward lines.
-Do not delete established architecture to shrink the diff. The shortest working diff wins only once you know everything it must touch.
+Do not delete established architecture to shrink the diff. Correctness, readability, and complete scope take precedence over line count.
 
 ## Core rules
 
-- Order of work: make it work → make it right → make it fast. Don't skip ahead to "make it extensible."
-- One concrete implementation doesn't need an interface. Extract the interface when a second real implementation (or a test double you actually need) shows up.
-- A domain struct that already carries the right fields doesn't need a DTO wrapping it "for the API layer" — add the DTO when the API shape actually diverges from the domain shape.
-- Split a package for a current ownership, invariant, dependency, or caller need. Caller count alone does not establish whether the boundary is useful.
-- Don't add a config knob, feature flag, or plugin point for a variation nobody has asked for yet.
-- "We might need this later" is not a requirement. A requirement is a ticket, a caller, or a failing test.
+- Add an abstraction for a current ownership, invariant, dependency, representation, lifecycle, or substitution need.
+- A real boundary can justify an interface or DTO on first use. Caller and implementation counts alone decide nothing.
+- Keep each decision or invariant in one authoritative owner. Share behavior that must change together, not merely similar text.
+- Fix a shared defect at its owning boundary, then update every affected caller and contract.
+- Do not add a config knob, feature flag, or plugin point for a variation nobody needs yet.
+- "We might need this later" is not a requirement. Identify the current caller, contract, or observed failure.
 
 ## Do not
 
-- Add an interface whose only implementation is the concrete type, justified by "makes it testable" — the concrete type is already testable.
-- Introduce a repository/service/factory layer around a single struct with three fields.
-- Generalize a function to take a callback or strategy object for a single call site.
+- Add a test seam without identifying the behavior that requires substitution.
+- Introduce repository, service, or factory layers that add no current policy, boundary, or lifecycle behavior.
+- Generalize a function with a callback or strategy for hypothetical callers.
 - Add a "for future flexibility" parameter that nothing currently sets.
-- Justify complexity with "clean architecture" or "SOLID" without a concrete second case driving it.
+- Justify complexity with pattern names or "SOLID" alone.
 
 ## Safety boundaries
 
@@ -52,6 +52,6 @@ Delegation, approval, and completion authority stay with the caller.
 
 ## Verify
 
-Ask what current behavior, substitution, ownership, or established architectural contract the abstraction serves. Remove it when the only reason is hypothetical future flexibility; do not erase a valid boundary merely because it has one caller.
+Check each addition against a current requirement. Remove introduced unused helpers, options, files, dependencies, and scaffolding. Preserve necessary boundaries and the complete requested behavior.
 
 Reuse guidance adapted from [Ponytail](https://github.com/DietrichGebert/ponytail/blob/742e0abae1501e12d1254a81d05f16bba10d08c1/skills/ponytail/SKILL.md). See [MIT notice](LICENSE.ponytail).

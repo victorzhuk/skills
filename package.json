@@ -1,6 +1,6 @@
 {
   "name": "victorzhuk-skills",
-  "version": "0.14.3",
+  "version": "0.14.4",
   "private": true,
   "description": "Reusable z-prefixed agent skills for software engineering.",
   "repository": {
