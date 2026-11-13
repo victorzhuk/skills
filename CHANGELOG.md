@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.0
+
+### Minor Changes
+
+- [`2d2ecfc`](https://github.com/victorzhuk/skills/commit/2d2ecfcff31c1a41ecf133a16a8f895f63afa180) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add Android device QA guidance and scripts for adb control, headless emulation, and exact screenshot comparison.
+
 ## 0.14.4
 
 ### Patch Changes
