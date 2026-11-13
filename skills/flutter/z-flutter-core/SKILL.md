@@ -37,6 +37,7 @@ Build Flutter clients as thin, typed consumers of an API — one Dart codebase p
 ## Testing
 
 - running-app acceptance (integration test on a device or emulator) proves required user journeys — the default tier; state native-UI limitations of the runner when choosing it
+- Android device control, headless emulation, and device screenshot comparison: see [[z-qa-android]]
 - widget tests only for named residual risks acceptance cannot prove economically
 - golden tests only for visually sensitive screens (design system, brand surfaces) — expensive to maintain, a per-screen judgment call, not blanket policy
 

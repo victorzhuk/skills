@@ -63,7 +63,8 @@ The phases above cover running the suite. Reach for a narrower skill when the ta
 - Readable BDD scenarios and acceptance evidence -> [[z-bdd]]
 - Generating explicitly requested skipped stubs -> [[z-qa-spec-writer]]
 - Classifying failures, flaky-test triage, writing a QA report -> [[z-qa-debugger]]
-- Visual review, or existing visual regression and screenshot-diff checks -> [[z-qa-browser]]
+- Android device control, headless emulation, or Android screenshot diffs -> [[z-qa-android]]
+- Browser visual review or screenshot diffs -> [[z-qa-browser]]
 - Go behavior contracts, Ginkgo/Gomega or Gherkin/godog -> [[z-go-bdd]]
 - Table-driven tests, testify, goleak patterns -> [[z-go-testing]]
 

@@ -63,4 +63,6 @@ Use the project wrapper. Apply process deadlines, test/hook timeouts, and worker
 - [Playwright assertions](https://playwright.dev/docs/test-assertions).
 - [Authentication state](https://playwright.dev/docs/auth).
 
+Use [[z-qa-android]] for Android device control and native screenshots.
+
 See [[z-qa-api]], [[z-qa-debugger]], [[z-go-bdd]].

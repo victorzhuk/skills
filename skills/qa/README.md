@@ -1,6 +1,6 @@
 # QA Skills
 
-QA planning and autonomous API, browser, performance, and failure-triage workflows.
+QA planning and autonomous Android, API, browser, performance, and failure-triage workflows.
 
 ## Model-invoked
 
@@ -8,6 +8,7 @@ Model- or user-reachable via skill name and trigger phrasing.
 
 - **[z-bdd](./z-bdd/SKILL.md)** — Readable BDD contracts and repeatable acceptance evidence across UI, API, and CLI products.
 - **[z-qa-analyst](./z-qa-analyst/SKILL.md)** — Plan tests by behavior and risk; map requirements to assertions and execution evidence, distinguishing coverage from proof.
+- **[z-qa-android](./z-qa-android/SKILL.md)** — Control Android test devices with adb, run headless emulators, and compare screenshots pixel by pixel.
 - **[z-qa-api](./z-qa-api/SKILL.md)** — Run API acceptance through the service boundary; use focused Go handler and integration tests for named residual risks.
 - **[z-qa-browser](./z-qa-browser/SKILL.md)** — Test browser flows through available host tools and the project's Playwright runner; verify current page state, meaningful assertions, and bounded execution.
 - **[z-qa-debugger](./z-qa-debugger/SKILL.md)** — Test execution without fail-fast, failure classification, flaky detection, and QA report authoring. Auto-activates for: test failure triage, flaky tests, QA report, race conditions, test run…

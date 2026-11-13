@@ -7,6 +7,11 @@ It owns readable acceptance contracts and execution evidence across UI, API, and
 `z-go-bdd` retains Go harness details. Test selection belongs to `z-testing-strategy`.
 The catalog is the source for these reusable skills. Installed copies are deployment outputs.
 
+## Android device QA
+
+[`z-qa-android`](../skills/qa/z-qa-android/SKILL.md) was authored in this catalog.
+It owns Android device control, headless emulation, and device screenshot comparisons.
+
 ## Original imports
 
 Copied 51 `z-*` skills from `~/.agents/skills` into this repo. A further 5
