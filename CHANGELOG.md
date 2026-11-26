@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.15.0
+
+### Minor Changes
+
+- [`2d2ecfc`](https://github.com/victorzhuk/skills/commit/2d2ecfcff31c1a41ecf133a16a8f895f63afa180) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add Android device QA guidance and scripts for adb control, headless emulation, and exact screenshot comparison.
+
+- [`ab04cb4`](https://github.com/victorzhuk/skills/commit/ab04cb46ab0f1a2c974eba1d99234f507c068af6) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add z-just for discovering, running, and writing justfile recipes.
+
+### Patch Changes
+
+- [`ab04cb4`](https://github.com/victorzhuk/skills/commit/ab04cb46ab0f1a2c974eba1d99234f507c068af6) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Shorten skill descriptions and procedures across the catalog. Correct version-specific commands, test evidence requirements, and accessibility examples.
+
 ## 0.14.4
 
 ### Patch Changes
