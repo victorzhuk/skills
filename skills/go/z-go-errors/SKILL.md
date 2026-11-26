@@ -1,18 +1,18 @@
 ---
 name: z-go-errors
-description: Idiomatic Go error handling, wrapping, inspection, and hygiene — the single handling rule, sentinel vs typed errors, panic discipline. Use when creating, wrapping, or inspecting errors; auditing log-and-return patterns; or designing error boundaries. Triggers on "errors.Is", "errors.As", "%w", "log and return", "double handling", "error hygiene". Does not cover slog ecosystem; see [[z-go-observability]].
+description: "Handle Go errors at package boundaries. Use for wrapping, sentinel and typed errors, errors.Is, errors.As, logging, and panic recovery."
 ---
 
 # Go errors
 
 ## Core rules
 
-1. **Check every error** — never discard with `_`.
-2. **Wrap with context:** `fmt.Errorf("create user: %w", err)` — short prefix, lowercase, no period.
-3. **Translate errors at transport boundaries** — `%v` removes wrapping but does not sanitize the message. Return stable public errors; retain internal causes for one safe log.
-4. **Inspect via `errors.Is` / `errors.As`** — never `==` on wrapped errors or bare type assertions.
-5. **Handle exactly once** — log OR return, never both (see Single Handling below).
-6. **Panic only for truly unrecoverable states** — programmer errors, broken invariants; never for expected conditions.
+1. Check errors that affect the result. Explain any intentional discard.
+2. Use a short lowercase operation name when you wrap an error.
+3. Use `%w` when callers may inspect the cause. Translate private causes at public boundaries.
+4. Use `errors.Is` for a sentinel and `errors.As` for a type.
+5. Give one boundary responsibility for logging a failed operation.
+6. Return an error for expected failures. Reserve panic for broken invariants.
 
 ## Wrapping and inspection
 
@@ -58,10 +58,7 @@ Error strings: lowercase, no trailing punctuation.
 
 ## Single handling rule
 
-An error must be **logged OR returned**, never both. Violating this creates duplicate log
-lines and buries the wrapped chain during incidents.
-
-**Interior code** (repos, services, domain): wrap and return only.
+Interior functions return the cause with context. The boundary decides whether to retry, translate, or record the failure.
 
 ```go
 // before — log-and-return violation
@@ -76,8 +73,7 @@ if err != nil {
 }
 ```
 
-**Boundary code** (HTTP handler, gRPC interceptor, worker loop, `main`): log and absorb.
-Never log inside interior layers; the boundary does it once.
+At a worker or transport boundary, record the failure once and return the contractual result.
 
 ```go
 // boundary: worker loop
@@ -89,15 +85,15 @@ for job := range w.jobs {
 }
 ```
 
-### False positives — do NOT fix
+### Other handling patterns
 
 | Pattern | Why it's OK |
 |---|---|
-| Log + `return nil` / `continue` | Error absorbed; logging IS the single handling |
+| Log and continue | The operation handles the failure locally |
 | Log in goroutine that can't return | No caller to propagate to |
 | Boundary handler logs + returns HTTP status | It IS the top-level handler |
 | Log + `panic` / `os.Exit` / `log.Fatal` | Terminal, not propagation |
-| Deferred cleanup (`defer tx.Rollback()`) | Can't return errors to caller |
+| Deferred transaction rollback | Ignore `sql.ErrTxDone` after commit. Handle other failures when they affect the result. |
 | Metrics counter + return error | Metrics are aggregations, not per-event log noise |
 
 ## Panic discipline
@@ -112,48 +108,18 @@ func mustPositive(n int) int {
 }
 ```
 
-Do not recover an unexpected panic merely to keep a server or worker alive.
-A broken invariant can leave shared state unsafe even when the goroutine exits.
+Recover a package's private panic value only at its documented boundary. Re-panic unexpected values. Record the stack when a containment boundary handles a panic. Define the result and resource cleanup. Isolate mutable state before continuing after an unexpected panic.
 
-If an existing package uses an internal panic protocol, recover only its private
-panic type at the package boundary and re-panic every unexpected value. Define
-the returned error and resource cleanup. Any broader containment boundary must
-establish state isolation, define the failed operation's result, and preserve
-stack diagnostics; a goroutine boundary alone provides no such guarantee.
+Join independent failures with `errors.Join` when callers need to inspect each cause. Keep identifiers in structured log attributes.
 
-## Quick reference
-
-| Pattern | Rule |
-|---|---|
-| Wrap format | `"create user: %w"` — short, lowercase, no period |
-| Chain exposure | wrap internally; translate to a safe public error at transport boundaries |
-| Sentinel match | `errors.Is(err, ErrFoo)` |
-| Typed extraction | `errors.As(err, &target)` |
-| Join independent | `errors.Join(errA, errB)` |
-| Single handling | log OR return; boundary logs, interior wraps |
-| Panic scope | Programmer errors and broken invariants only |
-| Recovery | Owned panic protocol or explicit containment; re-panic unexpected values |
-| Error var name | `ErrFoo` |
-| Error type name | `FooError` |
-
-## Do not
-
-- Log AND return in the same error branch (interior code).
-- Use `==` to compare errors that may be wrapped.
-- Use bare type assertions on errors — use `errors.As`.
-- Produce high-cardinality data in the stable log message; attach as structured attrs.
-- Expose raw internal errors to external callers — translate at the boundary.
-- Convert every panic to an error or log entry without a containment contract.
-
-## Verify
+## Checks
 
 ```sh
 go build ./... && timeout 5m go test -parallel 4 -p 2 -short -timeout 2m ./...
 golangci-lint run ./...
 ```
 
-Review any recovery path for its accepted panic values, unexpected-value
-propagation, cleanup, and explicit failure result.
+Test wrapped sentinels, typed errors, and transport error messages. Check cleanup and unexpected panic propagation.
 
 ## Sources
 

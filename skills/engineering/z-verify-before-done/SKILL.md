@@ -1,59 +1,29 @@
 ---
 name: z-verify-before-done
-description: Evidence before completion claims, commits, PRs, or reliance on subagent reports. Use for "done", "fixed", "should work now", "tests pass", or "looks correct". Require fresh verification output and bug reproduction. Test depth belongs to [[z-testing-strategy]]. Debugging belongs to [[z-systematic-debugging]].
+description: "Verify claims about a fix, build, test, or completed requirement. Match each claim to evidence from the current revision and scope. See [[z-testing-strategy]] for test selection."
 ---
 
-# Verify before done
+# Verify a completion claim
 
-No completion claims without fresh verification evidence. A claim made from memory, confidence, or a previous run is a guess wearing a status report.
+## Select evidence
 
-## The gate
+| Claim | Evidence |
+|---|---|
+| Tests pass | The required tests ran and passed. Identify skips and missing scenarios. |
+| Lint passes | The linter covered the requested files and returned success. |
+| Build succeeds | The build produced the intended artifact and returned success. |
+| Bug fixed | The original failure now produces the expected result. |
+| Regression test works | The test fails against the defect and passes with the fix. |
+| Delegated work is complete | The reviewed diff and verification evidence satisfy the assigned scope. |
+| Requirements are complete | Each requirement maps to an observed result. |
 
-Before claiming any status:
+## Verify the result
 
-1. **Identify** the command that proves the claim.
-2. **Run** it — fresh, complete, not a skipped or partial run. Complete relative to the dispatched scope; a subset scope is satisfied by the full subset, not the full suite.
-3. **Read** the full output: exit code, failure counts, warnings.
-4. **Compare** output to claim. Output contradicts it → state the actual status with the evidence. Output confirms it → state the claim *with* the evidence.
+1. Identify the revision, inputs, environment, and scope of the claim.
+2. Run the command that proves the claim. Use the exact command when the caller supplies one.
+3. Read the exit status, failures, skips, and warnings. A partial run supports only its observed scope.
+4. Report the evidence beside the claim. If a prerequisite is missing, identify the unverified outcome.
 
-Skipping a step isn't efficiency; it's reporting fiction.
-
-Fresh means after the last edit, not cache-busted: a cache hit on an unchanged package is valid evidence, and `-count=1` belongs to merge gates, not to your proof. Under a zapply dispatch the command that proves the claim is the chunk's literal verify command — the suite and the repo-wide merge-gate floor belong to the caller, and re-running an identical command that already gave its answer adds nothing.
-
-## What each claim requires
-
-| Claim | Requires | Not sufficient |
-|---|---|---|
-| Tests pass | test command output, 0 failures | previous run, "should pass" |
-| Lint clean | linter output, 0 errors | partial check |
-| Build succeeds | build exit 0 | linter passing |
-| Bug fixed | original symptom re-tested | code changed, assumed fixed |
-| Regression test works | red-green verified (fails without fix, passes with) | test passed once |
-| Subagent finished | diff inspected, changes verified | agent's own "success" report |
-| Requirements met | line-by-line checklist against the plan | tests passing |
-
-## Red flags
-
-Stop and run the verification when you catch yourself:
-
-- writing "should", "probably", "seems to";
-- expressing satisfaction before the command ran ("Great!", "Done!");
-- about to commit, push, or open a PR without a fresh run;
-- trusting a subagent's success report without checking the diff;
-- rationalizing — "just this once", "I'm confident", "the linter passed so the build is fine", "partial check is enough".
-
-Every rationalization has the same answer: run the command.
-
-## Do not
-
-- Claim success in any wording — direct, paraphrased, or implied — without fresh evidence for the current state of the code: same reviewed state, inputs, environment, and scope.
-- Substitute a weaker check for the real one (lint for build, one test for the suite, compile for behavior). Under a zapply dispatch the chunk's targeted command *is* the real check — the suite is the caller's floor, not a stronger substitute you owe.
-- Report a subagent's claim as verified fact.
-- Let tiredness or a long session lower the bar.
-
-## Verify
-
-- Every status claim in the final report sits next to the command that proves it and its observed result.
-- The verification ran *after* the last code change, not before it.
-
-see [[z-testing-strategy]], [[z-systematic-debugging]], [[z-tdd]]
+Reuse evidence when it covers the same revision, inputs, environment, and scope.
+After a relevant change, repeat the affected command. A compatible cache hit can supply evidence under the project's cache policy.
+See [[z-testing-strategy]] for test depth and [[z-systematic-debugging]] for failure investigation.

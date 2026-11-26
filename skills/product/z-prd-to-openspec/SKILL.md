@@ -1,63 +1,31 @@
 ---
 name: z-prd-to-openspec
-description: Decomposes a PRD into OpenSpec change proposals using vertical slices — each cuts through every layer end-to-end and is independently verifiable — then writes proposal.md, design.md, tasks.md, and spec deltas per slice. Use after [[z-to-prd]] produces docs/prd/{slug}.md. Triggers on "open spec this", "break this into changes", "vertical slices". Does not implement tasks. Test depth per slice belongs to [[z-testing-strategy]].
+description: "Split a PRD into independently verifiable OpenSpec changes. Map stories, dependencies, and acceptance scenarios. Use [[z-to-prd]] to write the PRD and [[z-testing-strategy]] to choose test scope."
 ---
 
-# PRD to OpenSpec
+# Convert a PRD to OpenSpec changes
 
-Decompose a PRD into OpenSpec change proposals, one per vertical slice. Each slice is a tracer bullet: a thin path through every layer, independently verifiable when done.
+## Establish the project convention
 
-## Confirm the OpenSpec surface
+Read the PRD, authoritative glossary, and existing changes. Inspect the installed CLI's help and project wrapper.
+If the project has no OpenSpec configuration, establish the intended location and setup authority before writing files.
 
-- `openspec/` must exist; if not, the user initializes it (`openspec init`).
-- Discover the installed CLI's verbs via `openspec --help` or the project's task runner before writing — don't assume command names.
-- Change layout: `openspec/changes/<change-id>/` holding `proposal.md`, `design.md`, `tasks.md`, and `specs/` deltas per touched capability.
+## Agree on the slices
 
-## Slice the PRD
+1. Group stories by outcomes that can be demonstrated independently. Include only the layers each outcome needs.
+2. Separate preparatory work when a later slice genuinely depends on it.
+3. Present each slice's title, covered stories, dependencies, and acceptance scenario.
+4. Reuse an approved breakdown. Resolve any missing decisions about scope, order, or testing before writing.
+5. Preserve the agreed test sequence. Use [[z-bdd]] for acceptance and [[z-testing-strategy]] for named residual risks.
 
-- Vertical, not horizontal: each slice cuts schema → API → UI → tests end-to-end. "All the endpoints" is a layer, not a slice.
-- A finished slice is demoable or verifiable on its own.
-- Prefactoring that makes later slices easy goes in its own first slice — make the change easy, then make the easy change.
-- Use the existing OpenSpec glossary and decisions. Fall back to the project's CONTEXT/ADR convention only when it is the authoritative record.
+## Write the changes
 
-## Quiz the user
+Write each approved slice under the project's change directory. Follow the active schema.
+For the standard layout, describe the change in `proposal.md` and record applicable design decisions in `design.md`.
+Order `tasks.md` according to the agreed test flow. Include acceptance criteria in its checklist.
+Put capability deltas under `specs/`. Link each delta to its authoritative acceptance scenarios.
+Include code or file paths only when they record an established design decision.
 
-Present the breakdown as a numbered list — per slice: title, blocked-by, user stories covered. Ask whether the granularity feels right, the dependencies are correct, and anything should merge or split. Iterate until approved; only then write.
-
-Take testing flow and boundaries from the PRD or other caller-approved record. Preserve tests-after when approved.
-If missing, propose readable acceptance scenarios at the product boundary per [[z-testing-strategy]] and [[z-bdd]].
-Resolve genuinely missing decisions before writing changes. Name any additional unit or integration tests and the residual risks they prove.
-
-## Write each change
-
-Per approved slice, in dependency order so blocked-by references point at real change ids:
-
-- `proposal.md` — why and what changes; end-to-end behavior, not layer-by-layer steps.
-- `design.md` — technical approach, only where the slice needs one.
-- `tasks.md` — implementation checklist with acceptance criteria, ordered by the testing flow: TDD puts each slice's failing test before its implementation tasks ([[z-tdd]]); tests-after puts test tasks last.
-- `specs/` — requirement deltas for each capability the slice touches, linked to its authoritative acceptance scenarios.
-
-No file paths or code snippets unless a prototype pinned a decision — then trim to the decision-rich part.
-
-## Closing
-
-Done when every approved slice has a change directory that passes validation. Report the change ids and stop — changes are proposals, not work in progress. Ask whether to start implementation now; on yes, go through the project's apply workflow — the `openspec` CLI's apply step or the project's own apply command, discovered rather than assumed — one change at a time. Never edit source straight from the PRD or the spec deltas.
-
-## Do not
-
-- Slice horizontally by layer.
-- Write changes before the user approves the breakdown.
-- Invent requirements the PRD doesn't contain.
-- Apply or implement anything unprompted — implementation starts only when the user says so, through the apply workflow.
-- Hardcode CLI verbs from memory; discover them.
-
-## Verify
-
-    fd -t d -d 1 . openspec/changes/    # one directory per approved slice
-    openspec --help                     # CLI surface confirmed, not assumed
-
-- Every user story in the PRD maps to a slice; every slice names its stories.
-- Blocked-by references point at real change ids.
-- The project's own openspec validation passes, when the CLI provides it.
-
-see [[z-to-prd]], [[z-testing-strategy]], [[z-tdd]]
+Check that each story maps to a slice and each dependency names an existing change.
+Run the project's OpenSpec validator on each change. Report change IDs and unresolved validation errors.
+Start implementation through the project's apply workflow when the user authorizes it.

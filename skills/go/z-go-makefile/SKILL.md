@@ -1,16 +1,15 @@
 ---
 name: z-go-makefile
-description: Author a clean Makefile for a Go project's inner loop — DRY build recipes, build-dir handling (inline mkdir or order-only prereq), self-documenting help, version stamping, go tool codegen, and test/lint layering. Use when writing or refactoring a Makefile, adding a make target, or splitting build commands from orchestration. Triggers on "Makefile", "make target", "make build", ".PHONY", "build/test/lint command", "GO_BUILD".
+description: "Write or maintain Make targets for Go builds, generators, tests, lint, and version metadata. Use [[z-go-taskfile]] for Task orchestration."
 ---
 
 # Go Makefile (the inner loop)
 
-Preserve the project's existing build tool and approved commands. When both Make and Task are already used, keep build/test/codegen recipes in Make and let [[z-go-taskfile]] delegate orchestration to them. Do not introduce a second tool solely to enforce this split.
+Reuse the project's build runner. When Make and Task coexist, let [[z-go-taskfile]] call Make targets that already own the commands.
 
 ## Self-documenting help
 
-Two conventions exist. **Inline `target: ## desc`** puts the comment on the target line
-itself:
+Follow the existing help convention. This example uses inline target comments.
 
 ```make
 .PHONY: help
@@ -22,8 +21,7 @@ build: ## compile the main binary
 	$(GO_BUILD) -o $(BUILD_DIR)/app ./cmd/app
 ```
 
-**Standalone `## name: desc`** as its own comment line above the target is an equally
-valid variant — pick whichever a project already has, don't mix both in one Makefile:
+This alternative uses a standalone help comment above each target.
 
 ```make
 ## build: compile the main binary
@@ -60,18 +58,13 @@ build-cli: ## build-cli: compile the admin CLI
 	$(GO_BUILD) -o $(BUILD_DIR)/cli ./cmd/cli
 ```
 
-- Inline `@mkdir -p $(BUILD_DIR)` is simple and idempotent; use an order-only prerequisite when it improves the existing file.
-- Stamp the version through `-ldflags -X` with all three symbols; `-trimpath` + `CGO_ENABLED=0`
-  for reproducible, static binaries.
-- Stub contract: package `main` declares three `string` vars — `Version`, `CommitHash`,
-  `BuildDate` — printed by a `--version` flag or a `/version` log line. `[[z-go-dockerfile]]`
-  build args `ARG VERSION` / `ARG GIT_COMMIT` / `ARG BUILD_DATE` MUST mirror these three names.
+- Create the build directory before writing binaries. Use an order-only prerequisite if several targets share it.
+- Use `-X` with actual package variables of type `string`. Match their names to the release and image builds.
+- Check whether the target supports `CGO_ENABLED=0`. Reproducibility also requires stable inputs and build metadata. See [[z-go-dockerfile]].
 
-### Optional: order-only dir prereq
+### Create a shared build directory
 
-A `$(BUILD_DIR)` target with an order-only prereq (`| $(BUILD_DIR)`) avoids repeating
-`@mkdir -p` across recipes — a DRY-er alternative worth it once a Makefile grows many
-build targets, at the cost of one more moving part:
+An order-only prerequisite creates the directory before the build without treating its modification time as a source change.
 
 ```make
 $(BUILD_DIR):
@@ -109,7 +102,7 @@ generate: ## generate: regenerate code from schemas
 	go tool ogen --target internal/gen --clean api/v1/openapi.yaml
 ```
 
-Pin source generators, including ogen and sqlc, to the project's selected versions. Preserve an existing installation convention when it is reproducible; do not silently move tools to `@latest`. The go.mod tool directive requires Go 1.24+.
+Pin generators such as ogen and sqlc. Use the project’s existing reproducible installation method. The `go.mod` tool directive requires Go 1.24 or later.
 
 ## Test and lint layering
 
@@ -132,12 +125,14 @@ vet:             ## vet: go vet
 	go vet ./...
 ```
 
-Keep `GOTESTFLAGS` for optional selectors such as `-run Foo`; do not accept `-args`, package operands, shell metacharacters, or timeout/concurrency overrides through this seam. Fixed bounds follow the selectors so ordinary selection cannot replace them. `timeout` bounds the whole command, `-timeout` each test binary, `-p` package concurrency, and `-parallel` parallel tests/fuzz workers. Select bounds for the project and use an equivalent process deadline where GNU timeout is unavailable. Discover `BASE_REF` from the actual review target before `lint-new`; never assume master. Preserve caller-emitted commands rather than rewriting them.
+Reserve `GOTESTFLAGS` for trusted optional selectors. Keep package operands, shell input, and deadline or worker overrides outside this variable.
+Bound the process, each test binary, package concurrency, and parallel tests separately. Use [[z-testing-strategy]] for runner limits.
+Set `BASE_REF` from the actual review target. Preserve caller-supplied commands.
 
 ## dotenv and DSN handling
 
-Optionally load a `.env` for local runs; strip surrounding quotes from any DSN you pass on a
-command line (a quoted `DATABASE_URL="…"` in `.env` otherwise reaches the tool with quotes):
+Include a local environment file only when you trust its contents as Make syntax. Make can evaluate expressions while reading it.
+If the project's file uses dotenv syntax, use its existing dotenv loader. Handle quoted values according to that format.
 
 ```make
 -include .env
@@ -161,7 +156,7 @@ coverage.html
 dist/
 ```
 
-`.air.toml` is ignored only for the working-copy variant; a committed `.air.toml` stays tracked.
+Ignore `.air.toml` only for a local configuration. Keep a shared configuration under version control.
 
 ## dev target
 
@@ -170,24 +165,17 @@ dev: ## dev: watch-reload via air
 	go tool air
 ```
 
-Pin air in the `go.mod` tool block (`go get -tool github.com/air-verse/air@latest`). A minimal
-`.air.toml` builds to `bin/app` and excludes `vendor/`. A Task `dev` task delegates to
-`make dev` — see [[z-go-taskfile]].
+Pin the selected Air version. Build into the project output directory. If Task already calls this recipe, keep that delegation.
 
 ## Do not
 
 - Bare root `go build` (drops a binary in the tree) — always `-o $(BUILD_DIR)/…`.
 - Repeat the same `go build` flags across recipes — hoist them into `GO_BUILD`.
 - Mix the two help-comment conventions (inline and standalone) in the same Makefile.
-- Add a new codegen tool via `go install @latest` without considering `go tool` first —
-  pin new generators there; an existing `@latest` install for a dev-CLI tool elsewhere
-  is an accepted coexisting convention, not something to migrate unprompted. The
-  `@latest` convention applies only to tools that hold no credentials and have no
-  production access; anything that receives credentials or touches production installs
-  at a pinned version.
+- Install an unreviewed generator version during a build. Use the project's pinned tool mechanism.
 - Comments restating WHAT a recipe does — the help annotation is the doc.
 
-## Verify
+## Verification
 
 ```sh
 make help          # renders, lists every target

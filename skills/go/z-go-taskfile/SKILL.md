@@ -1,15 +1,13 @@
 ---
 name: z-go-taskfile
-description: Author a Taskfile.yml (go-task) for orchestration around a Go project — docker, databases, pipelines, CLI shortcuts, E2E — while delegating the inner loop to the Makefile. Use when adding a task, wiring docker/db dependencies, passing CLI args, or splitting orchestration from build. Triggers on "Taskfile", "task target", "go-task", "docker compose task", "task --list", "requires vars".
+description: "Write Go project tasks in Taskfile.yml. Use for task dependencies, arguments, migrations, or E2E orchestration. Delegate to [[z-go-makefile]] when Make already owns a command."
 ---
 
 # Go Taskfile (orchestration)
 
-Preserve the project's existing build tool and approved commands. When Make and Task coexist, let Task compose environment operations and delegate existing build/test targets to [[z-go-makefile]]. Do not add Make to a Task-only project merely to enforce this split.
+Preserve the project runner. When Task and Make coexist, delegate to existing Make targets.
 
-## Single source of truth — delegate, don't duplicate
-
-Never re-implement a Makefile command in a task. Call `make`:
+## Delegate to Make
 
 ```yaml
 test:
@@ -17,15 +15,14 @@ test:
   vars:
     GO_TEST_FLAGS: '{{.GO_TEST_FLAGS | default ""}}'
   cmds:
-    - make test GOTESTFLAGS='{{.GO_TEST_FLAGS}}'
+    - make test GOTESTFLAGS={{.GO_TEST_FLAGS | shellQuote}}
 
 fmt:   { desc: Format Go code, cmds: [make fmt] }
 lint:  { desc: Run linter,    cmds: [make lint] }
 build: { desc: Build the app, cmds: [make build] }
 ```
 
-A copied-out `go build`/`golangci-lint` drifts from the Makefile (missing flags, stale
-install step). Delegation keeps them identical. The Makefile must keep process/test timeouts and concurrency caps separate from `GOTESTFLAGS`, which carries optional selectors only; see [[z-go-makefile]]. A command-line assignment, even empty, overrides a Make `?=` default.
+Pass optional selectors separately from fixed deadlines and worker limits. A command-line Make assignment overrides a `?=` default, even when empty.
 
 ## Discoverability
 
@@ -33,7 +30,7 @@ A `default` that lists tasks, and a one-line `desc:` on every task:
 
 ```yaml
 version: '3'
-dotenv: ['.env', '.env.example']
+dotenv: ['.env']
 
 tasks:
   default:
@@ -54,7 +51,7 @@ migrate:create:
     - 'goose -dir {{.MIGDIR | shellQuote}} create {{.NAME | shellQuote}} sql'
 ```
 
-- Free-form passthrough to a CLI: `{{.CLI_ARGS}}` (everything after `--`):
+- Forward caller-supplied arguments with `CLI_ARGS`. Check quoting rules in the project's Task version.
 
 ```yaml
 run:
@@ -63,7 +60,7 @@ run:
     - 'go run ./cmd/tool {{.CLI_ARGS}}'
 ```
 
-- Dynamic values via `sh:` (computed once at parse):
+- Use `sh:` when a variable needs command output.
 
 ```yaml
 vars:
@@ -93,16 +90,11 @@ db:nuke:
 
 | Concern | Lives in | Why |
 |---|---|---|
-| build / test / lint / fmt / generate | Makefile (task delegates) | pure Go inner loop |
-| docker up/down, db shell, migrate-with-db | Taskfile | needs a running environment |
-| pipelines, seeds, E2E, CLI shortcuts | Taskfile | multi-step orchestration |
+| Build, test, format, lint, generate | Existing project runner | One definition of each command |
+| Provision local dependencies | Task when already used | Explicit environment prerequisites |
+| Run an integration workflow | Task or the existing equivalent | Ordered steps and observable results |
 
-Use the pinned global `goose` executable installed per [[z-go-goose]], available
-on `PATH`; these tasks do not assume a `go.mod` tool directive.
-
-Migration nuance: a Makefile `migrate-up` (bare goose, no docker — for CI/remote DBs) and
-a Task `migrate:up` (`deps: [db:up]` then the same goose) coexist on purpose; the Task one
-can still delegate the goose call to `make migrate-up` to avoid duplicating the command.
+Use the project's pinned migration tool. Make and Task can share one migration recipe while using different environment prerequisites.
 
 ## Do not
 
@@ -111,11 +103,11 @@ can still delegate the goose call to `make migrate-up` to avoid duplicating the 
 - Rename a task another tool/CI/script calls (`task db:up`, `task migrate:up`) without
   updating callers.
 - Hide a destructive action behind an innocuous name with no `prompt:`.
-- Re-derive env the Makefile already loads — set `dotenv:` once at the top.
+- Load sample configuration as runtime defaults unless the project explicitly defines that behavior.
 
-## Verify
+## Verification
 
 ```sh
 task --list                       # renders every task with its desc
-task --dry test                   # shows it expands to `make test …`, runs nothing
+task --dry test                   # inspect the rendered recipe
 ```

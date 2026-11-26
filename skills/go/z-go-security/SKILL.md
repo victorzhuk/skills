@@ -1,11 +1,6 @@
 ---
 name: z-go-security
-description: >
-  Go security hardening — injection prevention, crypto, path traversal, secrets,
-  timing safety, and race-free concurrency. Triggers on "sql injection",
-  "exec.Command", "crypto/rand", "path traversal", "hardcoded secret", "race
-  condition". Does not cover database query patterns; see [[z-go-sqlc]]. Does
-  not cover config/secret loading; see [[z-go-env-v11]].
+description: "Review Go-specific controls for commands, SQL, filesystem access, TLS, passwords, and HTTP limits. Use [[z-security-hardening]] for shared threat modeling and authorization policy."
 ---
 
 # Go Security
@@ -19,16 +14,16 @@ Apply Go-specific controls here. Use [[z-security-hardening]] for threat modelin
 | Critical | SQL injection | Parameterized queries — never concatenate |
 | Critical | Command injection | `exec.Command(bin, arg1, arg2)` — never `bash -c` |
 | Critical | Hardcoded secret | env var or secret manager — never in source |
-| Critical | Ignoring crypto errors | always check; fail closed, never open |
+| Critical | Ignored crypto error | Stop the operation on failure |
 | High | `math/rand` for tokens | `crypto/rand` — `math/rand` output is predictable |
-| High | AES without GCM | GCM provides auth+encrypt; ECB/CBC do not |
-| High | Fast password hashes | Argon2id for new systems; preserve and migrate approved legacy bcrypt |
-| High | Path traversal | Go 1.24+: `os.Root`; older Go: a vetted traversal-resistant open implementation |
+| High | Unauthenticated encryption | Use an approved authenticated mode such as GCM |
+| High | Fast password hashes | Use Argon2id for new systems. Migrate existing bcrypt hashes on successful authentication. |
+| High | Path traversal | Use `os.Root` on Go 1.24+ or a reviewed traversal-resistant open operation on older versions. |
 | High | Secret `==` comparison | `crypto/subtle.ConstantTimeCompare` — `==` leaks timing |
-| High | Race condition | `sync.Mutex` or channels; test with `-race` |
+| High | Data race | Synchronize access and exercise it with `-race` |
 | High | Trusting client headers | `X-Forwarded-For`, `X-Is-Admin` are trivially forged |
-| Medium | TLS misconfiguration | outbound clients: `tls.Config{MinVersion: tls.VersionTLS12}`; server-side TLS usually terminates at ingress |
-| Medium | Detailed error to client | log safe diagnostic context; return generic message |
+| Medium | TLS misconfiguration | Set the required TLS version at the actual client or termination point |
+| Medium | Sensitive client error | Return a generic message and log safe diagnostic context |
 | Medium | Unintended network exposure | bind only where required and restrict ingress |
 
 ## Injection
@@ -43,7 +38,7 @@ db.QueryContext(ctx, "SELECT * FROM users WHERE id = '"+id+"'")
 db.QueryContext(ctx, "SELECT * FROM users WHERE id = $1", id)
 ```
 
-**Command** — separate args, never shell interpolation. Also reject option injection: allowlist argument shapes and use an end-of-options delimiter only where the selected command supports it. Separate arguments alone do not make arbitrary input safe:
+Pass command arguments separately. Check option-like input. Use an end-of-options delimiter only for a command that supports it.
 
 ```go
 // bad — shell parses metacharacters
@@ -85,13 +80,13 @@ if _, err := rand.Read(nonce); err != nil {
 ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
 ```
 
-Never reuse a GCM nonce with a key; rotate before the random-nonce bound of 2^32 messages per key. Go 1.24+ also offers [NewGCMWithRandomNonce](https://pkg.go.dev/crypto/cipher#NewGCMWithRandomNonce), which manages the nonce in the ciphertext.
+Use a unique nonce for each GCM operation with a key. For random nonces, stay within the limit of 2^32 messages per key. Go 1.24 added [NewGCMWithRandomNonce](https://pkg.go.dev/crypto/cipher#NewGCMWithRandomNonce).
 
 Password hashing:
 
 Prefer Argon2id for new password stores. Use a maintained password-storage implementation with random per-password salts, encoded parameters, and constant-time verification. Benchmark work factors under expected authentication load and bound concurrent hashing. Store the algorithm, salt, and parameters with each hash so verification and upgrades remain possible. Follow [OWASP's current parameter guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
 
-For an existing bcrypt store, preserve compatibility and plan upgrades on successful authentication. Validate the 72-byte input limit without truncation; bytes are not characters. Choose the work factor from measured latency and capacity, with OWASP's minimum of 10. This example uses 12:
+For existing bcrypt hashes, migrate on successful authentication. Enforce the 72-byte input limit without truncation. Measure the work factor on deployment hardware. The example uses 12.
 
 ```go
 hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
@@ -138,7 +133,9 @@ if err != nil {
 defer f.Close()
 ```
 
-Root rejects escapes through relative paths and symlinks; safe `..` traversal within the root is allowed. On older Go, use a vetted traversal-resistant open implementation or raise the minimum version. `filepath.IsLocal` and `filepath.Rel` only check names lexically; they cannot prevent symlink escapes. Resolve-then-open also races filesystem changes. See [Go's traversal-resistant file APIs](https://go.dev/blog/osroot).
+Use a traversal-resistant open operation for untrusted paths. Lexical checks cannot establish where symlinks lead.
+Avoid resolving a pathname and then opening it separately. The filesystem can change between operations.
+See [Go's traversal-resistant file APIs](https://go.dev/blog/osroot) for `os.Root` semantics and platform limits.
 
 ## Secrets
 
@@ -155,9 +152,10 @@ Use `,notEmpty` not `,required` — required accepts empty strings (see [[z-go-e
 
 ## HTTP Security
 
-Require verified TLS for sensitive connections. Set a minimum of TLS 1.2 or a stricter deployment policy; never disable certificate verification. Identify the actual TLS termination point and protect the hop behind it according to the trust boundary.
-
-Set header and idle timeouts. Bound body reads and response writes for each endpoint. Ordinary endpoints can use `ReadTimeout` and `WriteTimeout`; uploads and streams need deliberate per-request limits. A short global write timeout can terminate a healthy stream. See [Go server deadlines](https://pkg.go.dev/net/http#Server) and [[z-go-llm-streaming]].
+Check the TLS termination point and protect each sensitive hop. Enforce the deployment's minimum TLS version and certificate checks.
+Set header and idle timeouts. Bound ordinary request reads and response writes.
+Choose per-request limits for uploads and streams. A short global write timeout can interrupt a healthy stream.
+See [Go server deadlines](https://pkg.go.dev/net/http#Server) and [[z-go-llm-streaming]].
 
 Limit inbound bodies before decoding, independently of `Content-Length`:
 
@@ -166,17 +164,18 @@ r.Body = http.MaxBytesReader(w, r.Body, maxRequestBytes)
 defer r.Body.Close()
 ```
 
-Choose `maxRequestBytes` from the endpoint contract, handle `*http.MaxBytesError`, and reject oversize requests. Limit decompressed data separately when accepting compressed bodies. Set appropriate header limits and bound concurrent work. Apply rate limits per authenticated principal where possible; a process-local limiter does not enforce a fleet-wide quota.
-
-For browser-facing responses, select CSP, framing, MIME-sniffing, and HSTS policies for the served content and TLS deployment. Do not copy a blanket policy into every API. For cookie-authenticated mutations, enforce CSRF protection. For outbound URLs, use the SSRF controls in [[z-go-http-client]].
+Handle `*http.MaxBytesError`. Limit decompressed data separately when accepting compressed bodies.
+Bound header size and concurrency. Match rate-limit scope to the quota. A per-process limiter cannot enforce a fleet-wide quota.
+Select browser headers for the actual content and TLS deployment. Protect cookie-authenticated mutations against CSRF.
+Use [[z-go-http-client]] for outbound destination checks.
 
 ## Concurrency
 
-Protect shared state with `sync.RWMutex` or channels; a race under auth logic can bypass authorization. Run `timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./...` in CI — treat every race as high-severity.
+Synchronize shared authorization state. Run the project's bounded race checks over relevant concurrent operations.
 
 ## Error Handling
 
-Log safe diagnostic context server-side; return a generic message to the caller. Error chains can contain credentials, URLs, or provider bodies: redact before logging. Never swallow errors from `crypto/rand`, cipher operations, or TLS setup — always fail closed.
+Return safe errors to callers. Redact credentials, URLs, and provider bodies before logging diagnostic context. Handle cryptography and TLS errors explicitly.
 
 ## Do not
 
@@ -187,11 +186,11 @@ Log safe diagnostic context server-side; return a generic message to the caller.
 - Rely on `filepath.Clean` + `strings.HasPrefix` for path validation.
 - Log passwords, tokens, or PII — scrub before passing to `slog`.
 - Ignore errors from `crypto/rand`, cipher operations, or TLS setup.
-- Trust client-supplied headers (`X-Forwarded-For`, `X-Is-Admin`) — verify server-side.
+- Trust client-supplied headers (`X-Forwarded-For`, `X-Is-Admin`) — check server-side.
 - Share secrets across environments — staging breach → production compromise.
 - Roll your own crypto — use `crypto/aes` GCM and `golang.org/x/crypto/argon2`.
 
-## Verify
+## Verification
 
 ```sh
 # Known CVEs in dependencies — standalone CI step
@@ -205,4 +204,4 @@ golangci-lint run
 timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./...
 ```
 
-Exercise rejected authorization, oversized bodies, path escapes, invalid signatures, and malformed password hashes at the changed boundary. For LLM features, verify tool authorization independently of the model's refusal text; see [[z-security-hardening]].
+Test rejected authorization, oversized bodies, path escapes, invalid signatures, and malformed password hashes at the changed boundary. For LLM features, enforce tool permissions outside the model. See [[z-security-hardening]].

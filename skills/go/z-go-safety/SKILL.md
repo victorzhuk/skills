@@ -1,6 +1,6 @@
 ---
 name: z-go-safety
-description: Defensive Go against panics and silent data corruption — nil panics, append aliasing, map concurrent-write panics, float comparison, numeric overflow, defer-in-loop leaks. Also hardens exported API boundaries — copying slices/maps, compile-time interface checks, zero-value design. Triggers on "nil interface", "append alias", "type assertion", "int overflow". Does not cover error wrapping; see [[z-go-errors]]. Concurrency belongs to [[z-go-concurrency]].
+description: "Prevent Go panics, aliasing, numeric overflow, and shared-state corruption. Use for nil interfaces, slice ownership, map iteration, deferred cleanup, and API boundaries. See [[z-go-concurrency]] for synchronization."
 ---
 
 # Go Safety
@@ -11,14 +11,14 @@ description: Defensive Go against panics and silent data corruption — nil pani
 |---|---|
 | Typed nil in interface | Return untyped `nil`, never a typed nil pointer |
 | Nil map write | `make` or lazy-init in the method |
-| `append` aliasing | Cap-limit before growing; clone for independent elements; both are shallow |
+| `append` aliasing | Limit capacity before growth. Clone the slice for independent element storage. |
 | Bare type assertion | Always comma-ok: `v, ok := x.(T)` |
 | `defer` in loop | Extract body to a function |
 | Integer narrowing | Bounds-check against `math.MaxInt32` first |
-| Float comparison | choose domain-specific absolute/relative tolerances; handle NaN/infinity explicitly |
-| Iota enum | Plain `iota` from 0 with a real state at zero (default); `iota + 1` only if zero-as-invalid genuinely matters |
+| Float comparison | Choose tolerances for the domain. Handle NaN and infinity. |
+| `iota` enum | Give zero a defined meaning. Start at one when zero means invalid. |
 | Mutable global | Inject `func() time.Time` |
-| Crypto keys | `rand.Read()` + `hex.EncodeToString` (or `rand.Int(rand.Reader, ...)`); `rand.Text()` (Go 1.24+) is a shorthand alt |
+| Crypto keys | Use `crypto/rand` for bytes, bounded integers, or a random string (`rand.Text`, Go 1.24+). |
 
 ---
 
@@ -57,18 +57,18 @@ b := append(a, 4)        // bad: b[0] = 99 also mutates a[0]
 b := append(a[:len(a):len(a)], 4) // good: forces new allocation
 ```
 
-Exported getters return copies: `func (c *Config) Hosts() []string { return slices.Clone(c.hosts) }`
+Copy slices returned from accessors when clients must not change internal state. A shallow copy still shares pointer-bearing elements.
+A full slice expression and `slices.Clip` limit append capacity. Both retain existing elements and backing storage.
 
-A full slice expression (or `slices.Clip`) limits capacity; it does not copy existing elements or release the backing array. Appending at least one element to a slice with `len == cap` obtains new backing storage. Direct writes before that still affect aliases.
-
-`copy`, `slices.Clone`, and `maps.Clone` are shallow: nested slices, maps, and pointers still share data. At an API boundary, copy the mutable depth the contract promises to isolate, or document immutable sharing/ownership transfer. Sending the value through a channel does not change this; see [[z-go-concurrency]].
+`copy`, `slices.Clone`, and `maps.Clone` make shallow copies. Nested mutable values can still share storage. Copy to the depth the API promises, or document shared ownership. Sending a value through a channel preserves that sharing. See [[z-go-concurrency]].
 
 ## Range and map mutation
 
-- `for _, v := range s` copies each element into `v`; `&v` is not `&s[i]`, even with Go 1.22 loop semantics. Use indices when mutating elements or retaining their addresses.
-- Slice range saves the initial slice header and length. Appending does not extend that iteration; writes to shared backing storage can affect later values.
-- Map iteration order is unspecified. Deleting an unreached entry skips it; an entry inserted during iteration may be visited or skipped. Sort keys when order matters; use a separate pass when visiting every new entry matters.
-- Concurrent map access involving a write requires synchronization. Runtime detection is not a safety guarantee; see [[z-go-concurrency]].
+- `for _, v := range s` copies each element. Use `&s[i]` when the address must identify an element.
+- Ranging over a slice captures its initial length. Changes to the backing array can affect later values.
+- Map iteration has no defined order. A deleted, unvisited entry disappears. A new entry can appear or be skipped.
+- Collect keys before a second pass when deterministic traversal matters.
+- Synchronize map access that overlaps a write. Runtime detection cannot prove race freedom. See [[z-go-concurrency]].
 
 ---
 
@@ -108,7 +108,7 @@ func processOne(path string) error {
 }
 ```
 
-Deferred call arguments and method receivers are evaluated when registering the defer. A closure instead reads captured variables when it runs; choose deliberately for cleanup targets, named results, and elapsed-time measurements. In `defer record(time.Since(start))`, the duration is computed immediately; defer a closure to measure at return. Defers run in reverse registration order.
+Go evaluates deferred arguments and method receivers when it registers the call. A closure can read captured variables later. Use a deferred closure to measure elapsed time at return. Deferred calls run in reverse registration order.
 
 ---
 
@@ -124,25 +124,25 @@ if val > math.MaxInt32 || val < math.MinInt32 {
 }
 ```
 
-Float comparisons need scale-appropriate absolute/relative tolerances; no universal epsilon works for every domain. Decide how NaN, infinity and exact representable values should behave. Guard division by zero where the domain forbids it.
+Choose absolute and relative tolerances for the domain. Define how comparisons handle NaN, infinity, and exact values. Guard division by zero where required.
 
 ---
 
 ## API Boundary Checklist
 
-1. Establish ownership before storing incoming slices/maps; clone mutable data when callers retain access
-2. Return copies when promising isolation; shallow clones do not isolate nested mutable values
+1. Establish ownership before retaining slices or maps. Clone mutable values that callers can change.
+2. For isolated return values, copy any mutable nested data.
 3. Compile-time interface check: `var _ I = (*T)(nil)`
 4. `defer` cleanup immediately after resource open
-5. iota enums start at 0 with a real state there; reserve `iota + 1` for when zero-as-invalid genuinely matters
-6. Inject `time.Now` as `func() time.Time`; never call it directly in logic
+5. Reserve zero as invalid only when the enum needs that distinction.
+6. Inject a clock when logic needs a controllable time source.
 7. `crypto/rand` for keys, never `math/rand`
 
 ---
 
 ## Zero-Value & Initialization
 
-Design zero values deliberately. Initialize fallible dependencies explicitly and return errors. If an existing API uses sync.Once, store both the value and initialization error; sync.Once will not retry a failed call. Do not discard sql.Open errors or assume opening validates connectivity; use a bounded PingContext when startup readiness requires it.
+Return initialization errors explicitly. With `sync.Once`, store both the result and the error. A failed initialization will not run again. Check `sql.Open` errors. Use a bounded `PingContext` when startup requires a working connection.
 
 Enums — plain `iota` from 0, with a real state at zero (observed default):
 `const ( Add Operation = iota; Subtract; Multiply )`. Use `iota + 1` only when
@@ -158,28 +158,21 @@ Inject instead of mutating package-level vars: `type signer struct{ now func() t
 
 ## Panic / Must
 
-`Must` helpers are acceptable at package init only. Return errors for expected
-failures. Do not add blanket recovery at package or server-goroutine boundaries:
-an unexpected panic may indicate corrupted shared state.
+Return errors for expected failures. Reserve `Must` helpers for invariants such as a constant expression at package initialization.
 
 ```go
 var re = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
 ```
 
-Recover only an owned internal panic protocol or at a documented containment
-boundary with state isolation, cleanup, an explicit failure result, and stack
-diagnostics. Re-panic unexpected values; see [[z-go-errors]]. Recovery must be
-called directly by a deferred function in the panicking goroutine. A caller's
-defer cannot recover a child goroutine's panic.
+Use recovery only for an owned panic protocol or an isolated containment boundary.
+The boundary must clean up, preserve diagnostics, and return an explicit failure.
+Call `recover` directly from a deferred function in the panicking goroutine. Re-panic unexpected values. See [[z-go-errors]].
 
 ---
 
 ## Crypto
 
-`math/rand` and `math/rand/v2` are deterministic from a seed — never safe for
-keys, tokens, or anything else that must be unpredictable. `crypto/rand` is
-the only safe source; `rand.Int(rand.Reader, max)` covers a bounded integer,
-`rand.Text()` (Go 1.24+) a random string.
+Use `crypto/rand` for keys and tokens. Use `rand.Int(rand.Reader, max)` for bounded integers or `rand.Text()` for strings on Go 1.24+.
 
 See [[z-go-security]] for the token-generation and encryption snippets.
 
@@ -187,9 +180,7 @@ See [[z-go-security]] for the token-generation and encryption snippets.
 
 ## Inbound server hardening
 
-An unbounded inbound `http.Server` can be held open by a slow client
-(slowloris). The gosec G112 fix is setting all four timeouts plus a header cap
-at construction:
+Set timeouts and a header limit on an inbound `http.Server`. Choose values for the supported routes and expected client behavior.
 
 ```go
 srv := &http.Server{
@@ -201,11 +192,9 @@ srv := &http.Server{
 }
 ```
 
-The values are defaults; tune per route (long uploads or SSE need larger
-`WriteTimeout` or per-route overrides). Drain-on-shutdown wiring lives in
-[[z-go-entrypoint]].
+These times are examples. Tune streaming and upload routes separately. See [[z-go-entrypoint]] for graceful shutdown.
 
-## Verify
+## Verification
 
 ```sh
 golangci-lint run --enable=forcetypeassert,nilerr,errcheck

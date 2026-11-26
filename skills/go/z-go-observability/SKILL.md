@@ -1,6 +1,6 @@
 ---
 name: z-go-observability
-description: Production observability for Go services — structured logging with log/slog, Prometheus metrics, OpenTelemetry tracing, pprof profiling, signal correlation. Use when instrumenting a service, adding metrics or spans, or migrating from zap/logrus/zerolog. Triggers on "slog", "prometheus", "opentelemetry", "otel", "pprof", "trace_id". Does not cover profiling methodology; see [[z-go-troubleshooting]]. Error handling strategy lives in [[z-go-errors]].
+description: "Instrument Go services with slog, Prometheus, OpenTelemetry, or pprof. Use for trace correlation, metrics cardinality, health probes, and private management endpoints."
 ---
 
 # Go Observability
@@ -31,13 +31,9 @@ slog.LogAttrs(ctx, slog.LevelInfo, "request handled",
 )
 ```
 
-Levels: Debug (dev-only), Info (lifecycle), Warn (recoverable), Error (operator attention). `slog.Error` must include `"err"` attr. Keys use `snake_case`.
-
-In middleware, attach `slog.With("request_id", ..., "trace_id", ...)` to context so all downstream calls carry the same fields.
-
-**Dev-mode pretty console:** `samber/slog-zerolog/v2` behind `slog.Handler` is a
-permanent house pattern, not a migration-then-delete shim — production keeps a plain
-`slog.NewJSONHandler`, dev/local swaps in the pretty-console handler:
+Choose log levels from the project's operating contract. Attach an error attribute when an error caused the event.
+Pass request context to context-aware slog methods. A handler can then read request and trace fields.
+For separate local and production formats, select a handler during startup. This example uses a console adapter locally.
 
 ```go
 import (
@@ -70,7 +66,7 @@ timer := prometheus.NewTimer(httpDuration.WithLabelValues(method, route, status)
 defer timer.ObserveDuration()
 ```
 
-**Label cardinality:** never use user IDs, full URLs, or other unbounded values as label values — it destroys Prometheus memory and performance.
+Use bounded label values. User IDs and complete URLs can create an unbounded number of metric series.
 
 ## Tracing
 
@@ -100,15 +96,13 @@ func (s *OrderService) Create(ctx context.Context, req CreateOrderReq) (*Order, 
 }
 ```
 
-Span every meaningful operation: service methods, DB queries, external calls, queue publishes. Always `defer span.End()`.
+Instrument operations relevant to the trace. Avoid duplicate spans when an existing integration covers the operation. End each span you create.
 
 ## Signal Correlation
 
 ### Logs + Traces: attrs.go + enricher.go
 
-House default is hand-rolled: an `attrs.go` helper pulls `trace_id`/`span_id` off the
-span in `ctx`, and an `enricher.go` slog handler wrapper injects them into every
-record — no bridge dependency to keep in sync with the SDK.
+A slog handler can add trace and span IDs from the current context to stdout records.
 
 ```go
 // attrs.go
@@ -145,11 +139,8 @@ slog.SetDefault(slog.New(enricher{Handler: slog.NewJSONHandler(os.Stdout, nil)})
 slog.InfoContext(ctx, "order created", "order_id", orderID) // trace_id/span_id now attached
 ```
 
-`go.opentelemetry.io/contrib/bridges/otelslog` is a different tool, not a substitute
-for the pair above: it exports log records through an OpenTelemetry `LoggerProvider`
-and does not enrich a JSON stdout handler. Keep the JSON enricher for stdout; use
-`otelslog` only as a separate export route with a configured `LoggerProvider`,
-processor, exporter, and shutdown, and state explicitly whether stdout stays enabled.
+Use `otelslog` when the service exports log records through an OpenTelemetry `LoggerProvider`.
+Configure its processor, exporter, and shutdown. Decide whether stdout should receive a separate copy.
 
 ### Metrics + Traces: Exemplars
 
@@ -164,7 +155,7 @@ if eo, ok := obs.(prometheus.ExemplarObserver); ok {
 
 ## Profiling
 
-Enable pprof conditionally; register the handlers ONLY on `mgmtMux` (see below) and only behind `ENABLE_PPROF=true` or a loopback bind. Never on the public mux.
+Register pprof routes on a restricted management listener. Enabling a feature flag alone does not restrict network access.
 
 ```go
 if os.Getenv("ENABLE_PPROF") == "true" {
@@ -172,11 +163,11 @@ if os.Getenv("ENABLE_PPROF") == "true" {
 }
 ```
 
-For continuous profiling, wire Pyroscope at startup — it runs always-on without redeployment toggles. Neither continuous profiling nor Pyroscope is running anywhere in the current fleet — that's not evidence against them, just that `net/http/pprof` snapshots have covered every incident so far; reach for continuous profiling once that stops being true.
+Use a continuous profiler only when the deployment supports its access controls, overhead, and retention policy.
 
 ## Management listener (metrics/pprof isolated)
 
-The business `mux` serves the API only. `/metrics` and pprof live on a second mux bound to the management port (`managementAddr` env, default `:9090`), with its own `http.Server`:
+Use a separate management mux and server for private diagnostics. Bind to a restricted address appropriate to the deployment.
 
 ```go
 mgmtMux := http.NewServeMux()
@@ -216,16 +207,11 @@ if err := errors.Join(g.Wait(), apiErr, mgmtErr); err != nil {
 }
 ```
 
-Each listener gets a fresh drain budget; the API drain cannot consume the
-management drain's deadline. Preserve both errors even when a listener failed
-first. A drain error means shutdown is incomplete: the owner must close ordinary
-connections with `Server.Close`, cancel and join owned handlers, and close/join
-hijacked connections separately before releasing their dependencies. `g.Wait()`
-joins the serving goroutines only; `Close` does not join handlers. Apply the
-bounded recovery policy from [[z-go-entrypoint]] and report noncompletion rather
-than treating a returned error as permission to tear down shared resources.
+Give each listener a separate drain budget. Preserve each shutdown error.
+After a drain failure, follow the bounded recovery policy in [[z-go-entrypoint]].
+`Server.Close` does not join handlers. Close and join hijacked connections separately before releasing their dependencies.
 
-The public mux MUST NOT register `/metrics` — scraping and profiling traffic never touches the API listener. Verify probe:
+The public mux MUST NOT register `/metrics` — scraping and profiling traffic never touches the API listener. Check probe:
 
 ```sh
 curl -s localhost:9090/metrics | grep http_request_duration
@@ -235,8 +221,8 @@ curl -s localhost:9090/metrics | grep http_request_duration
 
 Two endpoints, two meanings — never merge them:
 
-- `GET /healthz` — liveness: process alive, no dependency checks, always 200 unless the process is deadlocked.
-- `GET /readyz` — readiness: bounded `PingContext` per dependency (2s timeout each), 200 only when all pass; otherwise 503 with `{"dep":"db","err":"..."}`.
+- `GET /healthz` reports process liveness. Keep remote dependencies out of this handler.
+- `GET /readyz` reports whether the instance can serve traffic. Bound checks for required dependencies. Return a safe failure response.
 
 Register them by hand in the composition root — these handlers live outside generated code (see [[z-go-ogen]]). Consumers hit these paths: Kubernetes probes in [[z-k8s-deploy]] and compose healthchecks in [[z-go-dockerfile]].
 
@@ -253,10 +239,10 @@ Register them by hand in the composition root — these handlers live outside ge
 
 ## Definition of Done
 
-- Histogram per latency path; `slog.InfoContext(ctx, ...)` everywhere; no PII in attrs.
-- Span per service method, DB query, external call; errors via `span.RecordError`; alert rules wired.
+- Check latency histograms for the selected operations. Inspect trace and log attributes for sensitive data.
+- Exercise an error path. Check span error recording, status, and the corresponding alert.
 
-## Verify
+## Verification
 
 ```sh
 curl -s http://localhost:9090/metrics | grep http_request_duration

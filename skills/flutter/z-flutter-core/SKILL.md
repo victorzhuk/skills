@@ -1,58 +1,38 @@
 ---
 name: z-flutter-core
-description: Flutter mobile clients from one Dart codebase for iOS and Android, API-driven — Dart 3 essentials (null safety, records, sealed classes), Riverpod as state default, feature-first layout, typed API clients. Triggers on Flutter, Dart, riverpod, setState. Does not cover backend API contracts; see [[z-go-api-design]].
+description: "Build Flutter clients with Dart, typed API models, and widget state. Use for Riverpod, feature layout, themes, platform channels, or device tests. See [[z-qa-android]] for device control."
 ---
 
-# Flutter core
+# Flutter mobile clients
 
-Build Flutter clients as thin, typed consumers of an API — one Dart codebase per product, business state lives in providers, not widgets.
+## Select representations
 
-## Dart 3 essentials
+- Check the Dart SDK constraints before using records, patterns, or sealed classes.
+- Use a record such as `(String, int)` for a small multi-value return.
+- Model closed UI states such as loading, data, and error with a sealed hierarchy. Handle each state in the switch.
+- Use a null assertion only when the code establishes the invariant.
+- Decode API payloads once. Pass typed models to the UI. See [[z-go-api-design]] for backend contracts.
 
-- sound null safety is the default — don't reach for `!` without a documented invariant that makes it safe
-- records for lightweight multi-value returns (`(String, int)`), not a throwaway class
-- pattern matching / switch expressions over `if`/`else` chains on a type
-- sealed classes for closed variant hierarchies (e.g. `Loading`/`Data`/`Error` UI state) — the compiler flags a missing case in an exhaustive `switch`
+## Organize state and views
 
-## State management — Riverpod is house default
+Read `pubspec.yaml` and the lockfile. Preserve the project's state-management library.
+Riverpod is the default for a new project. Select APIs from the installed major version.
+Keep shared business state in a provider or notifier. Keep local controls such as expansion state in the widget when appropriate.
+Render in `build()`. Dispatch events outside rendering. Avoid retaining `BuildContext` for state access.
 
-- Riverpod is the house default for a new project. Check `pubspec.yaml`, the lockfile, and the installed major's migration guide before choosing APIs; preserve an existing Bloc/Provider design.
-- widgets stay dumb: read a provider, render, dispatch an event. Business logic and mutable state live in providers/notifiers, not in `State` objects
-- no `BuildContext` threading to reach state — that dependency is what Riverpod removes
+Group files by feature. Add `data`, `domain`, or `presentation` directories when their contents require them.
+Place shared themes, widgets, and clients in the project's shared directory.
+Use theme colors, such as Material 3's `ColorScheme.fromSeed`. Check contrast in each supported theme.
 
-## Project layout — feature-first
+## Connect to the platform
 
-- Group by feature. Add `data`, `domain`, or `presentation` subdirectories only when existing code needs them; do not scaffold empty layers.
-- shared code (theming, the API client, common widgets) lives in `lib/core` or `lib/shared`
+Check maintained plugins before adding a `MethodChannel`. Implement and test each supported native side.
+Keep expensive CPU work off the mobile UI isolate. Measure before choosing `compute()` or a dedicated isolate.
 
-## API client discipline
+## Check the app
 
-- a generated client or one typed hand-written client — never pass raw `Map<String, dynamic>` through the UI or business layers
-- decode at the boundary once; everything past it sees typed models
-
-## Theming
-
-- Material 3 via `ColorScheme.fromSeed` — hardcoded colors scattered through widgets are a theming bug waiting to surface
-
-## Testing
-
-- running-app acceptance (integration test on a device or emulator) proves required user journeys — the default tier; state native-UI limitations of the runner when choosing it
-- Android device control, headless emulation, and device screenshot comparison: see [[z-qa-android]]
-- widget tests only for named residual risks acceptance cannot prove economically
-- golden tests only for visually sensitive screens (design system, brand surfaces) — expensive to maintain, a per-screen judgment call, not blanket policy
-
-## Platform channels
-
-- only after confirming no maintained plugin covers the gap (checked pub.dev) — a `MethodChannel` is host-specific code the team now owns forever
-
-## Do not
-
-- drive app architecture from `setState` — fine for a single widget's own ephemeral UI state (an expand/collapse toggle), wrong the moment another widget needs to read it
-- put business logic in `build()` — it re-runs on every rebuild; side effects and computation belong in providers
-- block the main isolate — long CPU work (parsing a huge JSON payload, image processing) goes through `compute()` or a separate isolate
-
-## Verify
-
-- `dart format --set-exit-if-changed .`
-- `flutter analyze`
-- Existing bounded test wrapper first; otherwise use the installed runner's timeout and concurrency options inside a whole-process deadline. See [[z-testing-strategy]].
+1. Check formatting without editing files with `dart format --output=none --set-exit-if-changed .`.
+2. Run `flutter analyze`.
+3. Exercise required journeys on a device or emulator. Record any native UI the runner cannot exercise.
+4. Add widget tests for specific uncovered behavior. Use golden tests for visual contracts.
+5. Use a bounded test wrapper. See [[z-testing-strategy]] and [[z-qa-android]].

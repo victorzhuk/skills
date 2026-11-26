@@ -1,20 +1,13 @@
 ---
 name: z-go-modernize
-description: >
-  Modernize Go code and tooling to current idioms (Go 1.21–1.27) — deprecated
-  package replacements, language feature adoption, stdlib upgrades, and
-  test/bench patterns. Triggers on "interface{}", "math/rand", "ioutil",
-  "sort.Slice", "range over int", "slog migration". Does not cover linter
-  config; see [[z-go-ci]]. Does not cover error wrapping; see [[z-go-errors]].
+description: "Modernize Go syntax, standard-library calls, or tools for a project's supported version. Check loop semantics, compatibility settings, and migrations. See [[z-go-errors]] for error handling."
 ---
 
 # Go Modernization
 
-Check the selected toolchain and the owning module's `go` directive first;
-account for workspace selection and per-file language-version constraints.
-Language semantics, library availability, and runtime compatibility settings
-are separate gates. Propose a version bump when needed; do not raise the
-minimum version merely to enable a cleanup.
+Check the selected toolchain and the owning module's `go` directive.
+Account for workspace selection and per-file language versions. Check library availability and runtime compatibility separately.
+Request a higher minimum version only when the requested change requires it.
 
 ## Migration priority
 
@@ -23,7 +16,7 @@ minimum version merely to enable a cleanup.
 | Pattern | Fix | Since |
 |---|---|---|
 | `math/rand` + `rand.Seed` | `math/rand/v2` | 1.22 |
-| Captured loop variable declared with `:=` | Remove redundant shadow only under Go 1.22+ language semantics; `=` still reuses variables | 1.22 |
+| Captured loop variable declared with `:=` | Remove redundant shadows under Go 1.22+ semantics. Assignment with `=` still reuses variables. | 1.22 |
 | `reflect.SliceHeader` / `StringHeader` | `unsafe.Slice` / `unsafe.String` | 1.21 |
 | `crypto/elliptic` | `crypto/ecdh` | 1.20 |
 | `runtime.SetFinalizer` | `runtime.AddCleanup` | 1.24 |
@@ -32,10 +25,10 @@ minimum version merely to enable a cleanup.
 | `os.Root` missing on user-supplied paths | Add `os.Root` to prevent path traversal | 1.24 |
 | `rsa.EncryptPKCS1v15` for new code | `rsa.EncryptOAEP` or HPKE/KEM | 1.26 |
 | `net/http/httputil.ReverseProxy.Director` | `.Rewrite` | 1.20 |
-| Injected `rand.Reader` for deterministic `rsa`/`ecdsa`/`ed25519`/`ecdh` keygen | now ignored — real crypto-random is always used; switch to `testing/cryptotest.SetGlobalRandom`, or `GODEBUG=cryptocustomrand=1` as a stopgap | 1.26 |
+| Deterministic `rsa`, `ecdsa`, `ed25519`, or `ecdh` key generation in tests | Check the package’s randomness contract. Use `testing/cryptotest.SetGlobalRandom` in supported tests. | 1.26 |
 | Long-lived cache retaining entries forever | `weak.Pointer[T]` + `runtime.AddCleanup` for eviction | 1.24 |
 
-Run `govulncheck ./...` as part of any modernization pass.
+Use the project's vulnerability check when changing dependencies or supported toolchains.
 
 ### Medium — readability and maintainability
 
@@ -142,47 +135,29 @@ for b.Loop() { ... }             // replaces: for i := 0; i < b.N; i++
 // idle — use it over a hand-rolled Clock interface for controlling fake time
 ```
 
-`t.Context()` does not inherit `t.Deadline()`; derive a deadline explicitly when
-the tested operation requires one. See [[z-go-testing]].
+For an operation with a deadline, derive it explicitly from `t.Deadline()`. `t.Context()` supplies cancellation. See [[z-go-testing]].
 
-## Loop-version migration
+## Check loop semantics
 
-- Fresh variables per iteration apply to loop declarations (`:=`) under Go
-  1.22+ language semantics. Assignment to existing variables (`=`) still reuses
-  them. A newer toolchain alone does not change a module targeting Go 1.21.
-- Remove `tt := tt` only after checking the declaration and effective language
-  version. Per-iteration copies still share nested slices, maps, and pointers;
-  parallel subtests need independent mutable fixtures.
-- In a three-clause loop, the next iteration's declared variables are copied
-  from the previous iteration before the post statement. Keep used locks,
-  WaitGroups, typed atomics, and nonzero `strings.Builder` values outside the
-  loop initializer or behind stable pointers. Do not rely on vet catching
-  every implicit copy.
-- `&v` from `for _, v := range s` points to an iteration copy, not a slice
-  element. Use `&s[i]` when element identity matters. Escaping addresses can
-  allocate on current Go versions too.
-- Converting a three-clause loop to integer range changes bound evaluation:
-  range evaluates its bound once; the original condition runs each iteration.
-  Check side effects, changing bounds, and post-step behavior before replacing.
+- Under Go 1.22+ semantics, variables declared with `:=` have per-iteration identity. Assignment with `=` still reuses existing variables.
+- Check captured values, retained addresses, and nested mutable state. A shallow copy can share maps, slices, or pointers.
+- Keep used locks, WaitGroups, typed atomics, and nonzero `strings.Builder` values outside loop initializers or behind stable pointers.
+- Use `&s[i]` when the result must identify the slice element. An address of the iteration variable identifies its copy.
+- Before converting a counted loop to integer range, inspect changing bounds, side effects, and the post statement.
+- Test at the minimum supported language version.
 
 ## Logging migration
 
-Migrate from zap / logrus / zerolog to `slog` (1.21) only when the team agrees;
-coordinate first — this is disruptive.
+Migrate a logging backend only when its callers, field contracts, and deployed sinks support the change.
 
 ## Tooling
 
-- `golangci-lint` v2.6.0+ ships the `modernize` linter. Repos here are already on
-  versions well past v2.6.0 but don't have it enabled — a low-risk quick win to flag,
-  not something to force into a config unprompted.
+- Check whether the pinned linter includes the modernization analyzer. Review its findings under the project's compatibility policy.
 - `govulncheck` in CI catches vulnerabilities in transitive deps.
-- PGO (`-pgo=auto`, 1.21+): measure before enabling; not always a win.
+- Measure profile-guided optimization (`-pgo=auto`, Go 1.21+) on the target workload.
 - Tool deps in `go.mod` `tool` directives (1.24) instead of `tools.go`.
-- `encoding/json/v2` is stdlib since 1.27; `encoding/json` is backed by it
-  (opt out with `GOEXPERIMENT=nojsonv2`). Prefer v2 in new code on 1.27+.
-  Below 1.27 it is experimental (`GOEXPERIMENT=jsonv2`) — do not adopt there.
-- `cmd/doc` and `go tool doc` are deleted (1.26) — `go doc` is the drop-in
-  replacement, same flags and output. `go doc` accepts `package@version` and
+- Go 1.27 includes `encoding/json/v2` and uses its implementation for `encoding/json`. Check compatibility before changing wire formats. Earlier experimental versions require `GOEXPERIMENT=jsonv2`.
+- Go 1.26 removed `cmd/doc` and `go tool doc`. Use `go doc`. `go doc` accepts `package@version` and
   `-ex` for runnable examples (1.27).
 - `go test` runs the `stdversion` vet check by default (1.27).
 
@@ -213,15 +188,14 @@ coordinate first — this is disruptive.
 
 ## Do not
 
-- Apply language features below the effective language version; propose the
-  required version upgrade separately.
+- Use language features above the module’s effective version. Propose an upgrade separately.
 - Migrate to `slog` mid-task without team consent.
 - Treat the Go 1.22 loop change as a runtime fix or remove captures from loops
   assigning existing variables without checking their lifetime.
 - Adopt `encoding/json/v2` below Go 1.27 — experimental there
   (`GOEXPERIMENT=jsonv2`).
 
-## Verify
+## Verification
 
 ```sh
 go vet ./...

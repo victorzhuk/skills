@@ -1,35 +1,26 @@
 ---
 name: z-go-bdd
-description: "Wire Go behavior scenarios through existing Ginkgo/Gomega or godog harnesses. Use for Go BDD suites, step adapters, tags, and runner reports. Shared readable contracts and acceptance evidence belong to [[z-bdd]]. Test selection belongs to [[z-testing-strategy]]."
+description: "Run Go behavior scenarios with an existing Ginkgo/Gomega or godog harness. Use for step adapters, labels, fixtures, and test reports. See [[z-bdd]] for acceptance contracts."
 ---
 
 # Go BDD
 
 Implement the agreed behavior contract through the project's Go harness. Use [[z-bdd]] for scenario semantics and acceptance evidence.
 
-Ginkgo and godog are runner choices. Neither framework is required merely to write a readable behavior contract.
+Choose the framework that the project uses. A readable behavior contract can also use standard Go tests.
 
 ## Workflow
 
-1. Classify the task.
-   - Observable behavior: API/CLI response, workflow, permission, auth, billing, retry, state transition, persistence effect, external side effect, user-visible error, production bug.
-   - Internal-only: private helper, mechanical refactor, generated code, DTO mapping without logic.
-2. Inspect the project for an existing harness — `**/*_bdd_test.go` with `ginkgo`/`gomega` imports, `features/**/*.feature` with `godog`, BDD Make/Task targets. Match whatever is already wired.
-3. Preserve an existing harness and map readable scenarios to its executable assertions.
-   - **Pattern A — ginkgo/gomega**: use when already adopted or chosen for Go scenario execution.
-   - **Pattern B — godog/Gherkin**: use when the project chooses executable `.feature` files.
-4. For observable behavior, write or update the scenario first.
-   - If acceptance criteria are ambiguous, draft the scenario and ask for confirmation.
-   - Without a BDD harness, use readable scenarios with the existing runner. Treat new dependencies as a separate tooling decision.
-5. Implement steps/specs as adapters.
-   - They prepare state, perform actions, and assert outcomes.
-   - Business logic stays in domain/use-case code, not in step or spec functions.
-6. Run targeted BDD first, then the relevant suite.
-7. Report evidence: file path, scenario/spec name, command, pass/fail result, report path when generated.
+1. Identify the observable contract or the reason an internal change preserves behavior.
+2. Inspect existing Go tests, Ginkgo imports, feature files, build tags, and runner targets.
+3. Map each agreed scenario to the existing harness. Resolve ambiguous acceptance criteria before changing behavior.
+4. Use Ginkgo specs or godog steps as adapters. Keep business rules in the application.
+5. Run the affected scenario and the required suite. Follow the project's deadlines and worker limits.
+6. Record the scenario, command, result, and report path.
 
 ## Pattern A — ginkgo/gomega
 
-`Describe`/`When`/`It` nesting; `Label("p0"/"p1"/"p2")` for priority. One `_bdd_test.go` per feature area, one `_suite_test.go` per package registering `RunSpecs`:
+Use `Describe`, `When`, and `It` for observable behavior. Register `RunSpecs` once per suite package.
 
 ```go
 var _ = Describe("Registry List", Label("p1"), func() {
@@ -57,37 +48,35 @@ func TestScenarioSuite(t *testing.T) {
 ```
 
 Labels: `p0` (critical), `p1` (important), `p2` (lower impact). Keep cost and infrastructure labels separate from risk.
-Filter with `timeout 5m go test -parallel 4 -p 2 -timeout 5m ./... -ginkgo.label-filter=p0` when no wrapper exists.
+Filter a single Ginkgo suite package from its directory with `timeout 5m go test -p 2 -parallel 4 -timeout 4m . -ginkgo.label-filter=p0`.
 Follow existing build tags and Make/Task targets. Required acceptance suites must run in the acceptance gate even when ordinary tests exclude them.
 
-`Describe`/`When`/`It` text should still read as behavior, not implementation — the same discipline as Gherkin's `Given`/`When`/`Then` (below), just expressed in Go instead of a separate file.
+Use behavior names such as “shows zero runtimes” for both Ginkgo assertions and Gherkin steps.
 
 ## Pattern B — godog/Gherkin
 
 Reference routing — load only the needed file:
 
-- `references/gherkin-style.md` — writing or reviewing `.feature` files.
-- `references/godog-suite.md` — godog harness, step registration, commands.
-- `references/tag-taxonomy.md` — tags and CI filters.
-- `references/report-artifacts.md` — JUnit/Cucumber JSON outputs and evidence.
-- `references/testcontainers-pattern.md` — real DB/queue/cache boundaries.
-- `references/llm-feature-context.md` — using features as agent/RAG context.
-- `references/anti-patterns.md` — review checklist.
+- [Gherkin style](references/gherkin-style.md) covers feature files.
+- [godog suite](references/godog-suite.md) covers steps and runner setup.
+- [Tag taxonomy](references/tag-taxonomy.md) covers CI filters.
+- [Report artifacts](references/report-artifacts.md) covers JUnit and Cucumber JSON.
+- [Testcontainers patterns](references/testcontainers-pattern.md) covers real persistence and delivery boundaries.
+- [Feature context](references/llm-feature-context.md) covers feature files as retrieval input.
+- [Review checklist](references/anti-patterns.md) covers common test failures.
 
 Starting points to copy: [assets/feature.template](assets/feature.template) for a tagged `.feature` skeleton, [assets/suite_test.template.go](assets/suite_test.template.go) for the `go test`-driven godog suite with CI report formats.
 
-Follow [[z-bdd]] for the shared contract. Use `references/gherkin-style.md` for syntax examples and step semantics.
-
-Use `go test` integration for godog; avoid the deprecated godog CLI unless the project already depends on it.
+Use the project's `go test` integration for godog. Preserve an existing CLI runner when required.
 
 ## Shared rules
 
 Apply to both patterns:
 
 - Keep `_bdd_test.go`/`_test.go` files near the tested package unless the project has a dedicated BDD package.
-- Use `t.Context()` where possible. For suite hooks (ginkgo `BeforeEach`/`AfterEach`, godog `TestSuiteInitializer`), pass the context through closures.
-- Reset scenario/spec state in hooks; scenarios must not depend on execution order.
-- Use testcontainers or contract fakes for real boundaries; do not make mock-only BDD prove persistence, queue, or provider behavior.
+- Use `t.Context()` when the Go version and test lifecycle support it. Supply the correct context to suite hooks.
+- Reset mutable state before each scenario. Check that scenarios can run in any order.
+- Exercise a real persistence or delivery boundary before claiming its behavior.
 
 ## Output
 
@@ -102,4 +91,4 @@ Validated:
 - report: `<path>`
 ```
 
-If no behavior test was added, state the reason in one sentence.
+If you add no behavior test, state why.

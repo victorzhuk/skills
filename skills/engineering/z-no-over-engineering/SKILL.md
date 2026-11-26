@@ -1,6 +1,6 @@
 ---
 name: z-no-over-engineering
-description: YAGNI and reuse-first implementation for coding tasks, dependency choices, and PR scope review. Use for "ponytail", "simplest solution", "interface for testing", "just in case", "future flexibility", or "extensible". Prefer existing code, standard libraries, platform features, and installed dependencies. Established architecture belongs to [[z-go-clean-arch-di]] and [[z-go-interfaces]].
+description: "Apply YAGNI when choosing dependencies, interfaces, configuration, or PR scope. Use for the simplest complete solution, speculative flexibility, or ponytail requests. Preserve required contracts."
 ---
 
 # No over-engineering
@@ -12,16 +12,14 @@ Build the smallest complete, readable solution to the current problem.
 Take the first rung that solves the whole requested task:
 
 1. Establish the complete requested outcome and every affected caller before choosing an implementation.
-2. Omit features, options, and flexibility nobody requested. Omit nothing the request requires.
+2. Include each required path. Omit unused extension points.
 3. Reuse code that already exists in this repository, the way the surrounding code uses it.
 4. Use the standard library or a native platform feature when no house abstraction already owns the behavior.
 5. Use an installed dependency when it fits the task.
 6. Otherwise write the smallest readable implementation that works.
 
-Work the ladder after you understand the change, never instead of understanding it.
-A one-liner a reader must decode is not the smallest change.
-Do not add a dependency for a few straightforward lines.
-Do not delete established architecture to shrink the diff. Correctness, readability, and complete scope take precedence over line count.
+Compare alternatives against the complete behavior. Preserve established boundaries when they carry a current responsibility.
+Add a dependency only when its present benefit warrants its maintenance cost.
 
 ## Core rules
 
@@ -29,8 +27,7 @@ Do not delete established architecture to shrink the diff. Correctness, readabil
 - A real boundary can justify an interface or DTO on first use. Caller and implementation counts alone decide nothing.
 - Keep each decision or invariant in one authoritative owner. Share behavior that must change together, not merely similar text.
 - Fix a shared defect at its owning boundary, then update every affected caller and contract.
-- Do not add a config knob, feature flag, or plugin point for a variation nobody needs yet.
-- "We might need this later" is not a requirement. Identify the current caller, contract, or observed failure.
+- Identify the caller, contract, or observed failure before introducing a flag, option, or plugin point.
 
 ## Do not
 
@@ -52,6 +49,6 @@ Delegation, approval, and completion authority stay with the caller.
 
 ## Verify
 
-Check each addition against a current requirement. Remove introduced unused helpers, options, files, dependencies, and scaffolding. Preserve necessary boundaries and the complete requested behavior.
+Match each addition to a present requirement. Remove unused helpers, options, files, or dependencies introduced by the change. Preserve established boundaries and the full requested behavior.
 
 Reuse guidance adapted from [Ponytail](https://github.com/DietrichGebert/ponytail/blob/742e0abae1501e12d1254a81d05f16bba10d08c1/skills/ponytail/SKILL.md). See [MIT notice](LICENSE.ponytail).

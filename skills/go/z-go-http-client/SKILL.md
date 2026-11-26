@@ -1,24 +1,24 @@
 ---
 name: z-go-http-client
-description: Outbound HTTP client hardening for Go calling external APIs — timeouts, transport tuning, body draining, retry with backoff/jitter, and circuit breakers. Use when a Go client calls another service. Triggers on "http.Client", "RoundTripper", "MaxIdleConnsPerHost", "retry with backoff", "circuit breaker", "otelhttp". Does not cover deadlines, API design, OTel, or API testing; see [[z-go-context]], [[z-go-api-design]], [[z-go-observability]], [[z-qa-api]].
+description: "Build outbound HTTP clients in Go. Use for timeouts, redirects, response limits, connection reuse, retries, circuit breakers, and tracing. See [[z-go-api-design]] for server contracts."
 ---
 
 # Go HTTP client hardening
 
-Every outbound `net/http` call to another service needs a bound on time, a bound on connections, a closed body, and a retry policy that knows what it's retrying. None of this is optional hardening — a bare `http.Client{}` calling a flaky dependency is how one slow provider takes down the whole pod.
+Bound each outbound operation by its contract. Define time, connection, and response limits. Decide whether a failed request can be replayed.
 
 ## Quick reference
 
 | Concern | Default | Reach for more when |
 |---|---|---|
 | Timeout | per-call deadline, `Client.Timeout` as a bounded-call backstop | streaming needs first-byte, idle and maximum-lifetime budgets |
-| Transport | clone `http.DefaultTransport`, raise `MaxIdleConnsPerHost` | one dependency gets real QPS |
+| Transport | Clone `http.DefaultTransport` and size the pool for the dependency | Measure connection churn before increasing idle capacity |
 | Response body | close on every path | optionally drain a bounded remainder for connection reuse |
 | Retry | idempotent methods, exponential backoff + jitter, bounded by ctx | POST needs a server-honored idempotency key first |
 | Circuit breaker | skip it | one dependency, called from many paths, fails often enough that retries pile up load on it |
 | Instrumentation | `otelhttp.NewTransport` wrapping the tuned transport | always, once the service ships to production |
 
-## Never ship a bare http.Client{}
+## Request deadlines
 
 ```go
 // bad: no timeout at all — a hung dependency hangs this goroutine forever
@@ -28,13 +28,13 @@ client := &http.Client{}
 client := &http.Client{Timeout: 10 * time.Second}
 ```
 
-`Client.Timeout` bounds connection setup, redirects, headers, and body reading. With a request context, the earlier deadline wins: a 10s client timeout does not extend a caller's remaining 200ms. Propagate the caller with `http.NewRequestWithContext`; optionally shorten its budget with `context.WithTimeout`. Keep a client timeout as a backstop for bounded calls. Streaming needs a separate policy; see [[z-go-llm-streaming]] and [[z-go-context]].
+`Client.Timeout` covers connection setup, redirects, headers, and body reads. The earlier client or request deadline wins. Pass the caller's context to `http.NewRequestWithContext`. Apply a shorter timeout if the dependency needs one. Give streams a separate policy. See [[z-go-llm-streaming]] and [[z-go-context]].
 
 | Situation | Use |
 |---|---|
 | Call inside a request handler / use case | `context.WithTimeout(ctx, …)` sized to the budget left in the caller's deadline |
 | Background job, cron, no inbound deadline to inherit | `Client.Timeout` set on the client itself |
-| Bounded calls | use both when useful; the earlier deadline wins |
+| Bounded calls | When both limits apply, the earlier deadline wins |
 
 ## Restrict outbound destinations
 
@@ -43,10 +43,10 @@ For a fixed dependency, keep the base URL in trusted configuration. Do not let u
 For URL-fetching features, apply an explicit destination policy before connecting:
 
 - Allow only required schemes, hosts, and ports. Reject URL credentials and ambiguous addresses.
-- Disable redirects with `CheckRedirect` returning `http.ErrUseLastResponse`, or validate every hop before following it. Reject unexpected 3xx responses.
-- Validate resolved IPv4 and IPv6 addresses at connection time. Connect to the validated address without another unchecked DNS lookup. Preserve the hostname for TLS verification.
+- Disable redirects with `CheckRedirect` returning `http.ErrUseLastResponse`, or check every hop. Reject unexpected 3xx responses.
+- Check resolved IPv4 and IPv6 addresses at connection time. Connect to the approved address without a second lookup. Preserve the hostname for TLS verification.
 - For public fetches, deny loopback, private, link-local, and other reserved destinations, including cloud metadata services. Explicitly authorize required internal services separately.
-- Apply egress restrictions outside the process. Account for proxies and DNS changes; URL parsing or a hostname check alone does not prevent SSRF.
+- Include proxies in the destination policy. Enforce egress restrictions outside the process.
 - Limit response headers and decompressed body bytes, alongside time and concurrency limits.
 
 See [OWASP SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html) and [[z-security-hardening]].
@@ -69,7 +69,7 @@ client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
 | `IdleConnTimeout` | 90s | a provider's LB recycles connections faster — lower it to match, or churn shows up as sporadic `EOF` |
 | `MaxConnsPerHost` | 0 (unlimited) | you need a hard ceiling to avoid overwhelming a small provider, not just an idle-pool hint |
 
-Preserve useful transport defaults. Set response-header limits and connection deadlines from the dependency contract; streaming may need different budgets. Change pooling and protocol settings only for a demonstrated need.
+Keep the transport defaults that the dependency supports. Set connection and response-header deadlines. Give streaming requests their own time budget.
 
 ## Close the response body on every path
 
@@ -94,31 +94,32 @@ if err := json.Unmarshal(body, &v); err != nil {
 }
 ```
 
-Choose the byte limit from the API contract; 1 MiB is an example. Apply it after decompression, including custom decompression. Reading one extra byte distinguishes oversize input from a valid body exactly at the limit. Handle status codes before interpreting a success payload.
+Set the byte limit from the API contract. Read at most one byte past the limit after decompression. Check the status before decoding a success payload.
 
-Closing releases the body; not reading to EOF can sacrifice HTTP/1 connection reuse, not leak the connection. If reuse matters, drain only a small bounded remainder under a live deadline. Never unconditionally drain an untrusted or streaming body. Go 1.27 adds bounded automatic HTTP/1 draining on Close; check the selected Go version and protocol. See [net/http changes](https://go.dev/doc/go1.27).
+Close every response body. For HTTP/1, reading to EOF helps reuse connections. Bound any drain by bytes and time. Check the selected Go version for automatic draining. See [Go HTTP changes](https://go.dev/doc/go1.27).
 
 ## Retry discipline
 
-Retry only what's safe to retry, and never for longer than the caller can afford to wait.
+Retry only replay-safe requests within the caller's budget. For a POST, require server-side deduplication or another explicit replay contract. Reuse the same idempotency key across attempts.
 
-- **Idempotent methods only** by default: `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`. A `POST` is retryable only if the provider defines and honors an idempotency key (`Idempotency-Key` header or equivalent) — without server-side dedup, a retried `POST` after a timed-out-but-actually-succeeded request double-charges or double-books. That's a contract the provider has to support; you can't invent it client-side.
-- **Exponential backoff with full jitter** — a fixed backoff schedule synchronizes retries across every caller into the same pile-on:
+Use exponential backoff with full jitter.
 
 ```go
 import "math/rand/v2"
 
 func backoff(attempt int) time.Duration {
-    base := 100 * time.Millisecond
-    maxDelay := 5 * time.Second
-    d := min(base*time.Duration(1<<attempt), maxDelay)
+    d := 100 * time.Millisecond
+    const maxDelay = 5 * time.Second
+    for i := 0; i < attempt && d < maxDelay; i++ {
+        d = min(2*d, maxDelay)
+    }
     return time.Duration(rand.Int64N(int64(d)))
 }
 ```
 
-- **Respect `Retry-After` on 429 and 503** — parse it as either delay-seconds or an HTTP-date and wait at least that long before the next attempt; don't let your own backoff schedule override a value the server explicitly asked for.
-- **Cap the total attempt budget with the context deadline as the outer bound**, not a fixed attempt count alone — check `ctx.Err()` before every attempt and stop the moment the deadline is gone, even mid-backoff-sleep. Close every intermediate response before retrying; any optional draining must respect byte and time bounds.
-- **Rebuild the request on every attempt.** Request bodies are consumed and closed by the client. Use a factory that accepts the shared context and returns a fresh request and body, or explicitly obtain a new body from `GetBody`:
+- Parse `Retry-After` as delay-seconds or an HTTP date. Stop if the caller cannot wait that long.
+- Cap attempts and elapsed time. Stop promptly on cancellation, including during backoff.
+- Close intermediate responses. Rebuild each request with a fresh body from a factory or `GetBody`.
 
 ```go
 if maxAttempts < 1 {
@@ -147,26 +148,24 @@ for attempt := 1; ; attempt++ {
 }
 ```
 
-Two real options save you from hand-rolling this: `hashicorp/go-retryablehttp` is a drop-in `*http.Client` replacement with backoff and status-based retry built in — reach for it when the default policy (5xx and connection errors, exponential backoff, honors `Retry-After`) fits as-is. `cenkalti/backoff/v5` gives you just the backoff policy to compose into your own retry loop — reach for it when you need custom retry predicates go-retryablehttp doesn't expose.
+Choose a retry library only if its policy supports the API. Check status handling and replay behavior in the pinned version. `go-retryablehttp` provides a client. `cenkalti/backoff/v5` provides retry primitives.
 
 ## Status handling
 
 | Response | Action |
 |---|---|
 | 2xx | success |
-| 400, 401, 403, 404, 405, 422 | inspect the API contract; usually fix the request or credentials before retrying |
-| 409 | resolve the conflict/reload state when the API defines that recovery; do not blindly replay |
-| 429 | retryable — back off, honor `Retry-After` if present |
+| 400, 401, 403, 404, 405, 422 | Fix the request or credentials according to the API contract |
+| 409 | Resolve the conflict before sending another request |
+| 429 | Honor `Retry-After` if replay is safe and time remains |
 | 5xx | retry only transient failures when replay is safe and budget remains |
-| network error, timeout, connection refused/reset | outcome may be unknown; retry only with safe replay semantics |
+| Network error or timeout | The server may have completed the request. Check replay safety. |
 
-Don't collapse this into "retry on any non-2xx" — that turns a caller bug into a request storm against a service that will keep saying no.
+A successful `Do` call can return an HTTP error status. Inspect `StatusCode` explicitly.
 
-## Circuit breaker: earn it, don't default to it
+## Circuit breakers
 
-Timeout plus bounded retry covers the overwhelming majority of outbound calls. A circuit breaker earns its place only when all of these hold: one dependency is called from many call sites or goroutines, it fails often enough that retries from all of them pile additional load onto a dependency that's already struggling, and failing fast for a cooldown window is measurably better than every caller timing out on its own. Add it after you've seen that pattern in practice, not preemptively on every outbound client.
-
-Two real, current options if the evidence is there:
+Add a circuit breaker when repeated failures create measurable load despite bounded retries. Set the open interval and recovery probe policy for the dependency.
 
 | Library | Shape | Reach for it when |
 |---|---|---|
@@ -189,7 +188,7 @@ resp, err := cb.Execute(func() (*http.Response, error) {
 })
 ```
 
-`client.Do` returns a nil error on a 503 — the breaker only sees failures you turn into errors, so map bad status codes to an error inside the wrapped func or `ConsecutiveFailures` never moves and the breaker never opens.
+A 503 response normally returns a nil transport error. Within the wrapped call, convert selected failure statuses to errors the breaker can count.
 
 ## Instrument the client
 
@@ -202,7 +201,7 @@ client := &http.Client{
 }
 ```
 
-`otelhttp.NewTransport` (`go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`) wraps a `RoundTripper` to start a span per request, inject trace context into outbound headers, and record request metrics — wrap your tuned `Transport`, not a fresh `http.DefaultTransport`, so the pool settings above still apply. Full collector/exporter wiring belongs to [[z-go-observability]].
+Wrap the configured transport in `otelhttp.NewTransport`. It adds tracing, context propagation, and metrics while retaining pool settings. See [[z-go-observability]] for exporters.
 
 ## Test outbound clients against httptest.Server, not the real dependency
 
@@ -217,27 +216,14 @@ _, err := client.Fetch(ctx)
 require.Error(t, err)
 ```
 
-Drive the handler with an atomic counter to fail N times then succeed, and assert both the final result and the attempt count — that's what proves the retry loop and backoff actually run, not just that the happy path works. This is for your own outbound client's behavior; testing your own service's inbound API surface is [[z-qa-api]]'s job, not this one.
+Configure the test server to fail a known number of attempts. Assert the final result and exact attempt count. See [[z-qa-api]] for inbound API tests.
 
-## Do not
-
-- Ship `http.Client{}` with no `Timeout` and no context deadline on the request.
-- Leave a body open, or drain an unbounded body merely to preserve reuse.
-- Retry a `POST` without a server-honored idempotency key — that's a double-submit bug, not resilience.
-- Retry status codes without the API's recovery contract, safe replay semantics and a remaining budget.
-- Use a fixed-delay retry loop with no jitter — synchronized retries across callers cause a thundering herd on the dependency's recovery.
-- Let a retry loop run past the context deadline because it only counts attempts, not elapsed budget.
-- Reach for a circuit breaker before a timeout + bounded retry has actually proven insufficient.
-- Wrap `http.DefaultTransport` directly in `otelhttp.NewTransport` after already tuning a separate transport — instrument the tuned one, not a second untuned one.
-
-## Verify
+## Checks
 
 ```sh
-grep -rn 'http.Client{}' --include='*.go' .          # bare client with no Timeout
+rg -n 'http\.Client\{\}' -g '*.go'  # inspect request deadlines as well
 golangci-lint run --enable bodyclose ./...           # response bodies closed on every path
 timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./... -run TestProviderClient
 ```
 
-Read the retry test output for attempt counts, not just pass/fail — a retry test that passes on the first attempt isn't exercising the retry path at all.
-
-Test oversized and compressed responses, a body that stalls, and cancellation during retry backoff. For URL-fetching features, test forbidden destinations, redirect escapes, and DNS changes at the connection boundary. Verify that the earlier request/client deadline wins.
+Test oversized and compressed bodies, stalled reads, and cancellation during backoff. Check both deadline orders. For URL fetches, test forbidden addresses, redirects, and changes in DNS resolution.

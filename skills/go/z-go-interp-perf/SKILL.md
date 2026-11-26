@@ -1,70 +1,56 @@
 ---
 name: z-go-interp-perf
-description: Interpreter/scripting VM performance in Go — batched cancellation polls, preboxing, versioned-cell site caches, operand-only fusion, freeze-then-share startup templates, striped compile caches.
+description: "Profile Go interpreters and scripting VMs. Use for dispatch costs, boxing, binding caches, opcode fusion, or startup regressions. Use [[z-go-bench-ab]] for comparisons."
 ---
 
 # Go interpreter/VM performance
 
-In a Go VM the hot costs are rarely "dispatch architecture" — they are clocks, atomics, locks, and interface boxing executed per instruction or per host call. Remove those before considering an encoding rewrite; on one production VM, half of the flagship benchmark's runtime was clock + lock overhead.
+Profile a representative program before changing its bytecode or execution model.
 
-## Dispatch-loop overhead anatomy
+## Dispatch and metering
 
-Profile-verified shares from a stack VM running a recursive workload — check these before anything structural:
+- Measure clocks, cancellation checks, atomics, locks, and interface conversions per instruction.
+- If polling dominates, batch checks within an instruction budget. Test cancellation latency on loops, host calls, and short programs.
+- Preserve the original deadline. A delayed poll must not start a new timeout period.
+- Settle metering charges at poll boundaries, host calls, and exit. Enforce the original resource limits.
+- Inspect callers of `atomic.Int32.Add` with `go tool pprof -peek 'Int32.*Add'`. Read locks can produce these samples.
+- Before removing runtime checks, check each jump, handler, slot, constant, and fall-through path when loading a chunk.
 
-- `ctx.Err()` per instruction on a deadline context ≈ 10% of runtime; an unconditional `time.Now` at call/loop opcodes ≈ 26%. Poll cancellation on an N-instruction budget (~128), and compute the deadline lazily at the *first* poll so short runs never touch the clock. Precedents: goja checks an atomic interrupt flag with an external `time.AfterFunc`; wasmtime's "slacked fuel" checks only at function entry and loop back-edges.
-- Per-op atomic charging (metering, stats) — batch into a VM-local accumulator settled at poll boundaries, run exit, and host-call dispatch.
-- `RWMutex` read locks surface in pprof as `atomic.Int32.Add`. Attribute with `go tool pprof -peek 'Int32.*Add'` before assuming counters.
-- Validate chunks at load time so the hot loop drops per-instruction bounds checks — then **every** opcode carrying a jump, slot, or constant operand needs a validation case, including exception-handler addresses and fall-off-end (the last instruction must be non-fall-through). Re-audit on every new opcode; this bites twice otherwise.
+## Values and name lookup
 
-## Boxing
+- Measure allocations for the concrete values and escape paths. A conversion to an interface need not allocate.
+- If repeated binding lookup dominates, compare a per-site cache with the locked lookup.
+- Associate each cached binding with its environment, namespace, and version. Capture the version before resolving the binding.
+- Test rebinding and invalidation. Race detection alone cannot identify a stale binding.
+- Measure write-heavy workloads as well as reads. An allocation on every write can erase the gain.
 
-Prebox only values that allocate on the measured VM path. Current gc already has static storage for bools and some small integer representations; nonescaping conversions may use the stack or disappear. Negative values do not universally allocate. Compare representative concrete types and escape paths before adding a cache; verification belongs to [[z-go-performance]] "Verify the premise first".
+## Opcode fusion
 
-## Global/name resolution
+Keep a consumer instruction separate when its operand can arrive after a VM frame returns.
+Test rebinding with a bytecode closure as well as a synchronous host function.
+Compare instruction counts across equivalent executions before attributing a gain to reduced dispatch.
+Include production error paths and closures when comparing encodings.
 
-- A map lookup + `RWMutex` per global read dominates recursive workloads (33–50% of cycles in two separate profiling rounds). Fix: resolved-binding cells plus a per-chunk site cache — a hit is 2–3 atomic loads (site pointer, generation, cell version); a miss falls back to the locked path.
-- The invalidation guard must be the **cell's own version, read before resolving the cell**. Reading it after pairs a fresh generation with an orphaned cell — a logical TOCTOU the race detector cannot see (reproduced as rare sticky divergences per hundreds of thousands of cycles).
-- Publish nothing per write: a design that heap-allocates per *write* to make reads lock-free fails allocation gates on write-heavy loops. Locked-read cells with version snapshots keep both axes clean.
-- Cover every lookup namespace. A Lisp-2 dialect's function-cell reads stayed uncached while value reads had the site cache — extending sites to the second namespace was worth −30% on the recursive cell.
+## Startup and compile caches
 
-## Superinstruction fusion
+- Share an immutable template only across compatible dialects and plugin sets. Reject mutations after publication.
+- Run per-engine plugin initialization separately. `singleflight` shares concurrent results for the same key.
+- For disabled logging, use `slog.DiscardHandler` where supported. A text handler can still format data for `io.Discard`.
+- Consider striping only after measuring compile-cache contention. Check admission and eviction against the global capacity.
+- Test capacities smaller than the stripe count. A zero local quota can prevent all admissions.
+- Measure reclamation frequency and cache-line padding separately.
 
-- Fuse operator resolution + operands into one instruction; keep the consumer (branch, store) a separate real instruction. If a rebind can produce the operand **asynchronously** — a VM-compiled closure call pushes a frame and returns later — a fused compute-and-branch cannot exist at the right time. Test rebind semantics with a bytecode-compiled closure, not a host function: host functions resolve synchronously and hide the hazard.
-- Fusion harvests the instruction-count axis. After it, register encoding and pre-decoded dispatch measured a 2–6% ceiling against literature promising −47% instructions / −32% time on unfused VMs — published figures do not transfer. Measure instructions/op across arms first: identical counts falsify the mechanism outright.
-- A prototype-vs-production dispatch gap is mostly **generality** (full opcode switch, error paths, try/catch, closure machinery), not encoding. Don't quote prototype ratios as architecture wins.
+## Host calls
 
-## Startup
+Cache a resolved handle by environment, namespace, and generation.
+Reuse argument buffers only when callees cannot retain them.
+Measure the call boundary against direct evaluation on the same VM.
+Measure hashing and conversion costs over actual source lengths. Preserve input lifetime and immutability when using borrowed storage.
 
-- Freeze-then-share templates: build the stdlib environment once per (dialect fingerprint, plugin set) key, publish an immutable snapshot behind `atomic.Pointer`, and add a fail-closed guard refusing writes to a published layer. Per-engine cost drops from full init + closure rebuilds to a map copy or less (measured −68% time / −72% allocs). Precedents: goja's lazy templated globals (`sync.Once` name→factory, materialize on first access), starlark-go's freeze-then-share.
-- `singleflight` collapses concurrent same-key calls **even for keys that will never complete** — a plugin that must initialize per engine needs an explicit call-site gate, not "the cache will naturally miss".
-- `slog.DiscardHandler` (Go 1.24) beats `slog.New(TextHandler(io.Discard))`: `Enabled` is always false, skipping attribute formatting on every later call.
+## Verification
 
-## Shared compile cache
+- Compare VM and reference evaluator results on a fixed corpus. Check disagreements against the language contract.
+- Measure latency, bytes, and allocations in both execution modes. Include read-heavy and write-heavy programs.
+- Interleave comparison runs with an unchanged control. Run the race detector separately. See [[z-go-bench-ab]].
 
-- One mutex around the chunk cache stops scaling around 8 cores (measured: the cache was 60–88% of *all* blocking at 24 cores). Stripe it: per-stripe map/LRU/mutex plus engine-wide `atomic.Int64` occupancy counters as the sole aggregate authority, with admission that refuses rather than over-admits — the ceiling then holds exactly, no tolerance term.
-- Per-stripe quotas divide small ceilings to zero (quota 0 → cache silently dead, tests pass vacuously); a pure global total with local-only eviction over-admits or ossifies. The counters+refusal hybrid is the shape that works.
-- Make stripe count adaptive (1 below a ceiling threshold) so tiny-ceiling configs and existing tests keep exact single-stripe semantics.
-- Move epoch/invalidation reclamation behind one CAS; never sweep the LRU on every miss.
-- Skip cache-line padding of small stripe structs unless measured on the target — it measured neutral-to-worse here.
-
-## Host-call boundary
-
-- Give embedders a pre-resolved handle API (cached cell keyed by env + generation) instead of name lookup per call; a value-namespace fallback result must never be cached under a function-namespace key.
-- Reuse a pre-built `[]Value` when the measured call path allocates argument storage. Variadic backing arrays and boxed arguments may stay on the stack or be optimized away; check retained arguments, input sizes, and escape paths before changing the API.
-- A lean fast path (no meter, no callbacks, plain ctx → single defer, CAS-claimed pooled VM) cut the call boundary 21–36%. But measure the raw floor first — bare apply on a reused VM — because if the floor is near a competitor's full path, boundary stripping alone can't win; VM internals must shrink too.
-- Audit per-eval hashing/keying across real source lengths. `sha256.Sum256([]byte(src))` may use stack storage for short inputs and allocate for larger ones. Prefer typed APIs or bounded stack buffers when a measured copy matters. Consider an unsafe borrowed view only after proving the benefit and preserving lifetime and immutability for the whole use; never mutate string-backed bytes.
-
-## Do not
-
-- Rewrite dispatch or bytecode encoding before clocks, atomics, locks, and boxing are gone from the per-instruction path.
-- Fuse a consumer whose operand can arrive asynchronously.
-- Let a performance cache add a per-write heap allocation.
-- Re-propose a closed lever without new evidence — keep a rejected-with-evidence ledger (measured delta, n, why) in the design docs; deferred levers get explicit re-trigger conditions.
-
-## Verify
-
-- Cross-validate VM vs reference evaluator on a fixed corpus after every change (parity is the correctness oracle, not either engine alone).
-- Run the full corpus benchmark on **both** execution modes with alloc/bytes accounting — a win on the flagship microbench can regress write-heavy cells.
-- Interleaved A/B with an untouched control cell per [[z-go-bench-ab]]; race detector separately and untimed.
-
-Release gating for the corpus is [[z-go-perf-gate]]; language/VM design (tail calls, macros, value model) is [[z-lisp-core]].
+Use [[z-go-perf-gate]] for corpus release checks. See [[z-lisp-core]] for language and VM design.

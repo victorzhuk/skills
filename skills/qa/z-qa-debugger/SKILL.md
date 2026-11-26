@@ -1,77 +1,48 @@
 ---
 name: z-qa-debugger
-description: "Test execution without fail-fast, failure classification, flaky detection, and QA report authoring. Auto-activates for: test failure triage, flaky tests, QA report, race conditions, test run analysis, QA_REPORT.md, root cause."
+description: "Triage failed or flaky tests. Use for a failure census, retry analysis, or QA report. Classify evidence and reproduce the failure before identifying its cause."
 ---
 
-# Test failure triage
+# Triage test failures
 
-Classify failures from evidence before changing code. Reuse current run output when it already covers the requested scope.
+## Collect the run
 
-## Run the intended scope
+Read the runner configuration, task scope, and existing results. Start with the failing test or requested phase.
+Reuse a matching run. Expand scope only when the task or evidence requires it.
+For a complete failure census, disable early exit within the requested phase.
 
-Discover the repository runner, configuration, dependencies, and caller's verification contract. Start with the failing scope. Widen only when a complete failure census is requested or the evidence requires it.
-
-Within a census, disable early exit where supported:
-
-| Runner | Relevant behavior |
+| Runner | Check |
 |---|---|
-| Go | Omit `-failfast`; `-x` prints build commands and is unrelated |
-| Cargo | Use `--no-fail-fast` to continue other test binaries |
-| pytest | Omit `-x`, `--exitfirst`, and restrictive `--maxfail` |
-| Vitest / Playwright | Inspect bail/max-failure settings in the installed version |
+| Go | Omit `-failfast`. The `-x` flag prints build commands. |
+| Cargo | Use `--no-fail-fast` to continue other test binaries. |
+| pytest | Check for `-x`, `--exitfirst`, or a restrictive `--maxfail`. |
+| Vitest or Playwright | Inspect the installed runner's bail or maximum-failure settings. |
 
-A QA orchestrator may stop between phases after failure while collecting every failure within the attempted phase. Do not expand a dispatched targeted command into a full suite.
+Apply [[z-testing-strategy]] for run limits. Capture the runner's exit status before filtering its output.
 
-Use [[z-testing-strategy]] for process deadlines, test timeouts, and worker caps. Capture the runner's exit status as well as output; a pipe to a filter or `tee` must not replace it.
+## Classify each failure
 
-## Classify the evidence
-
-| Class | Evidence | Investigation |
+| Class | Observation | Next check |
 |---|---|---|
-| ASSERTION | Expected/actual mismatch | Read assertion and implementation contract |
-| PANIC | Panic, crash, invalid memory access | Trace the stack and triggering state |
-| TIMEOUT | Deadline or hang | Check progress, locks, cancellation, and dependency health |
-| DEPENDENCY | Connection/startup/protocol failure | Inspect actual dependency setup and client configuration |
-| FLAKY | Different outcomes with unchanged code and controlled inputs | Compare timing, ordering, isolation, and environment |
-| UNKNOWN | Evidence cannot yet distinguish causes | State the next discriminating probe |
+| ASSERTION | Expected and actual values differ. | Compare the assertion with the product contract. |
+| PANIC | A crash, panic, or invalid memory access occurred. | Inspect the stack and triggering state. |
+| TIMEOUT | The run reached a deadline or stopped making progress. | Inspect locks, cancellation, and dependency health. |
+| DEPENDENCY | Connection, startup, or protocol failure. | Inspect fixture setup, client configuration, and protocol error codes. |
+| FLAKY | Outcomes differ under equivalent conditions. | Compare ordering, timing, isolation, and environment. |
+| UNKNOWN | Evidence supports multiple causes. | Name the probe that distinguishes them. |
 
-A symptom class is not a root cause. A dependency failure can originate in application code. Add secondary labels when a flaky test times out or panics.
+A symptom can have more than one label. Establish the cause with a targeted probe.
+Inspect resources that belong to the run. If the project disables Testcontainers cleanup, identify how it removes stale resources.
+Interpret SQLSTATE and protocol codes against the dependency's version.
 
-## Inspect the actual dependency mechanism
+## Handle retries and report
 
-Read test setup before choosing Docker, testcontainers, compose, or Kubernetes commands. Inspect only resources belonging to this run.
+Preserve the retry policy and every attempt. Playwright reports a first-attempt pass, a retry pass, or failure after all retries.
+Classify a retry pass as flaky. Use bounded targeted repeats when the runner lacks retries.
+Require the project's owner, issue, expiry, and release-risk decision before quarantine.
 
-Ryuk normally cleans testcontainers resources. If disabled, identify the replacement cleanup mechanism and stale-resource risk. Do not disable it as a generic CI workaround.
+Report the revision, command, scope, limits, duration, exit status, and counts by outcome.
+For each failure, include its signature, relevant path, evidence for the cause or remaining uncertainty, and next probe.
+Identify incomplete checks and approved quarantine. Reproduce each repaired failure before claiming success.
 
-Capture specific SQLSTATE or protocol codes from the failure. Interpret them with the dependency's versioned documentation.
-
-## Flaky handling
-
-Playwright distinguishes:
-
-- **passed**: passed on the first attempt;
-- **flaky**: failed initially, then passed on retry;
-- **failed**: failed initially and on every retry.
-
-Retries expose instability; they do not repair it. Preserve existing retry policy and report retry-pass outcomes separately. Without built-in retries, run a bounded set of targeted repeats and record every result.
-
-Do not quarantine automatically. Follow the repository's owner, issue, expiry, and release-risk policy before skipping a test. No observed failure in a short repeat run does not establish stability.
-
-## Report
-
-Use the project's existing QA report convention or report inline. Include:
-
-- command, scope, revision, effective limits, duration, and exit status;
-- passed, failed, skipped, flaky, and incomplete counts when available;
-- failure signature, relevant code path, confirmed cause or uncertainty;
-- next probe or smallest recommended repair;
-- unavailable checks and any approved quarantine.
-
-Do not invent a root cause or source line to fill a template. Unexpected crashes remain unresolved failures until explained or fixed.
-
-## Verify
-
-Every reported outcome is supported by captured runner evidence. A targeted reproduction checks each repaired failure. Adjacent checks follow the caller's floor.
-
-[Playwright retry outcomes](https://playwright.dev/docs/test-retries).
-See [[z-systematic-debugging]], [[z-qa-analyst]], [[z-qa-orchestrator]].
+[Playwright retry outcomes](https://playwright.dev/docs/test-retries). See [[z-systematic-debugging]] for diagnosis.

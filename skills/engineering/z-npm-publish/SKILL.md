@@ -1,22 +1,22 @@
 ---
 name: z-npm-publish
-description: Publish a Node/TypeScript package to npm via GitHub Actions with OIDC trusted publishing and provenance. Use when setting up npm publishing, writing npm-publish.yml, or debugging an E404/permission error. Key gotcha — npm OIDC and `npm trust` cannot create a new package; publish once manually first. Triggers on "publish to npm", "trusted publisher", "npm provenance", "setup-node registry-url". Does not cover changelog upkeep; see [[z-changelog]].
+description: "Publish npm packages through GitHub Actions with trusted publishing and OIDC. Use for package bootstrap, workflow permissions, release tags, tarball checks, and release verification."
 allowed-tools: Read Edit Write Bash(npm:*) Bash(gh:*) Bash(git:*)
 ---
 
 # Publish a Node package to npm with OIDC trusted publishing
 
-Tag-triggered GitHub Actions publish authenticated by OIDC. Verify npm CLI ≥11.5.1 and Node ≥22.14.0, supported cloud-hosted runners, and matching repository identity. Automatic provenance applies to public packages published from public repositories through supported providers. Use the verified package scope.
+Use GitHub-hosted runners for GitHub Actions OIDC. Match the repository, workflow filename, package name, and scope. Use npm CLI 11.5.1 or later and Node.js 22.14.0 or later. Public packages from public repositories can receive automatic provenance.
 
-## Bootstrap order — the package must exist first
+## Bootstrap a new package
 
-npm OIDC and `npm trust` **cannot create a brand-new package**. Until the name exists on the registry, OIDC `npm publish` and `POST /-/package/<pkg>/trust` both return `E404 ... you do not have permission` (anti name-hijack). So the first publish is manual:
+Set up the first trusted publisher on an existing package. For a new name, publish its first authorized release with a maintainer account.
 
-1. `npm run build && npm publish --access public` — once, locally, with npm login (handles 2FA/OTP). Creates the package.
-2. `npm trust github <pkg> --allow-publish --repo <owner/repo> --file npm-publish.yml` — grants the workflow publish rights (npm ≥11.15.0, 2FA required). With an older publishing-capable CLI, configure the trusted publisher on the npm website.
-3. Validate the new trusted publisher with a successful publish within its two-day activation window. Push the intended release tag only within the authorized release flow.
+1. Build and inspect the package. For a public package, authenticate locally and run `npm publish --access public`.
+2. Configure the workflow in npm package settings. With npm 11.15.0 or later, use `npm trust github <pkg> --allow-publish --repo <owner/repo> --file npm-publish.yml` for direct publishing. Complete the required two-factor authentication.
+3. Complete the publisher's first successful publish within two days. Use the approved release flow and a new package version.
 
-Prefer OIDC after bootstrap. If token authentication is required, use current granular token permissions and expiry, not removed classic automation tokens. Choose direct publishing or staged publishing explicitly. Current npm policy schedules removal of direct publishing with bypass-2FA tokens in January 2027; verify the current policy before setting up a pipeline.
+Use OIDC after bootstrap. Select staged or direct publishing according to the release policy. For token-based publishing, check current granular-token permissions, expiry, and registry restrictions.
 
 ## package.json
 
@@ -32,9 +32,9 @@ Prefer OIDC after bootstrap. If token authentication is required, use current gr
 }
 ```
 
-`files` gates the tarball — `README.md` is auto-included, but `CHANGELOG.md` and any runtime assets must be listed. A `bin` needs a `#!/usr/bin/env node` shebang in its source (npm sets the exec bit on publish).
+Inspect the tarball with `npm pack --dry-run`. Include the changelog and runtime assets in `files` where applicable. Add the Node shebang to a JavaScript CLI entrypoint.
 
-## Workflow: .github/workflows/npm-publish.yml
+## GitHub Actions workflow
 
 ```yaml
 name: Publish npm package
@@ -48,7 +48,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
       contents: read
       id-token: write          # OIDC provenance
     steps:
@@ -63,7 +64,7 @@ jobs:
       - run: npm run build
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm test
+      - run: npm test # configure the project's test runner with a worker limit
       - run: npm publish --access public
 
   release:                     # optional: GitHub Release on success
@@ -78,7 +79,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 ```
 
-The guard step aborts if the tag and `package.json` version disagree — this is what forces the bump-then-tag discipline. Use per-job `permissions` (least privilege): the publish job never needs `contents: write`.
+Grant `id-token: write` to the publish job. Grant `contents: write` only to the optional GitHub Release job. The tag guard rejects a mismatch with the package version.
 
 ## Cut a release
 
@@ -88,12 +89,12 @@ The guard step aborts if the tag and `package.json` version disagree — this is
 
 ## Do not
 
-- **Pin the version in a test snapshot or check only its shape.** Compare the built CLI's reported version with the current `package.json` version, including prerelease and build metadata. A version bump must pass without a snapshot edit, and stale CLI output must fail.
-- **Reuse a published version or tag.** npm rejects re-publishing an existing version; bump instead.
+- Test only the shape of a version string. Compare the built CLI version with `package.json`, including prerelease and build metadata.
+- Reuse a published package version or release tag. Select a new version for a new release.
 - **Set `NODE_AUTH_TOKEN` when using OIDC** — trusted publishing needs only `id-token: write`. Add the token env only on the token path.
 - **Interpolate untrusted event input into `run:`** — the tag guard reads `process.env.GITHUB_REF_NAME`, never a `${{ }}` shell splice.
 
-## Verify
+## Checks
 
 ```bash
 npm pack --dry-run                                   # tarball name + files
@@ -102,12 +103,12 @@ gh run list --workflow npm-publish.yml --limit 1     # CI status
 gh release view vX.Y.Z                               # release job output
 ```
 
-Verify the exact package, version, registry, CI log, and registry result. A temporary 404 can reflect propagation, but do not assume that cause; retry within a bounded window and report unresolved disagreement.
+Compare the exact registry, package, version, workflow run, and release result. Retry a temporary 404 within a bounded window. Report a persistent mismatch.
 
 ## References
 
 - [Trusted publishing](https://docs.npmjs.com/trusted-publishers/).
-- [Granular access tokens and staged publishing](https://docs.npmjs.com/about-access-tokens/).
+- [Granular access tokens](https://docs.npmjs.com/about-access-tokens/) and [staged publishing](https://docs.npmjs.com/staged-publishing/).
 - [npm trust](https://docs.npmjs.com/cli/v11/commands/npm-trust/).
 
 see [[z-changelog]] (release notes), [[z-go-ci]] (Go CI pipelines)

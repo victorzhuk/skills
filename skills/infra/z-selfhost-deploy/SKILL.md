@@ -1,13 +1,11 @@
 ---
 name: z-selfhost-deploy
-description: Startup-cheap self-hosted deploys on a VPS — Docker Compose production patterns, systemd units, Caddy/Traefik reverse proxy with automatic TLS, backup-and-restore discipline, and base hardening (SSH keys, firewall, unattended upgrades). Use when deploying to a VPS instead of Kubernetes. Cluster-scale is [[z-k8s-deploy]].
+description: "Deploy and recover services on a VPS with Compose, systemd, a TLS proxy, and offsite backups. Use [[z-k8s-deploy]] for Kubernetes."
 ---
 
-# Self-Hosted Deploy
+# Deploy a service to a VPS
 
-A VPS deploy earns the same trust a cluster deploy does with far less machinery: services restart themselves, the proxy terminates TLS without a human touching a cert, and a backup nobody has restored is not a backup.
-
-## Docker Compose production patterns
+## Run the service
 
 ```yaml
 services:
@@ -28,15 +26,11 @@ networks:
   app-net: {}
 ```
 
-- `restart: unless-stopped` over `always` — it honors a deliberate `docker compose stop`, `always` fights you back on the next boot.
-- `deploy.resources.limits` applies outside Swarm mode under the Compose Specification (Compose v2) — no need for the older standalone `mem_limit`/`cpus` keys on a current Compose version.
-- Pin an explicit tag or digest. `:latest` means the next `docker compose pull` silently ships whatever the registry has today.
-- Keep Compose's project-scoped network name. An explicit global `name` can accidentally join separate projects to the same network.
-- The healthcheck command must exist in the image. For minimal images, use an application health subcommand or another supported probe instead of assuming `curl` is installed.
+Set the restart policy to match operator intent. `unless-stopped` preserves a deliberate stop across daemon restart.
+Pin a release tag or immutable digest. Inspect the effective CPU and memory limits on the running container.
+Keep private services on project-scoped networks. The healthcheck executable must exist in the image.
 
-## systemd units for non-container daemons
-
-For anything not worth containerizing — a small binary, a cron-style job — a unit file gives you the same restart/health guarantees Compose gives a container:
+For a native daemon, configure a systemd service.
 
 ```ini
 [Unit]
@@ -55,13 +49,12 @@ User=app
 WantedBy=multi-user.target
 ```
 
-`network-online.target` waits only when the network manager's wait-online service is enabled and configured; it does not guarantee remote connectivity. The application still needs reconnect behavior. Restrict permissions on the environment file and keep secrets out of version control.
+The wait-online service can delay startup until local network configuration completes. Remote dependencies can still be unavailable.
+Handle reconnection and restrict access to environment files.
 
-## Reverse proxy and TLS
+## Route HTTPS traffic
 
-Pick one proxy per host — running both invites port conflicts and duplicate cert issuance.
-
-**Caddy** — automatic HTTPS with zero ACME config, a Caddyfile is usually 3 lines per site:
+For a Caddy container, put Caddy and the application on a network where `app` resolves to the backend.
 
 ```
 app.example.com {
@@ -69,7 +62,7 @@ app.example.com {
 }
 ```
 
-**Traefik** — automatic HTTPS via Docker labels, no separate Caddyfile-equivalent:
+For Traefik, configure the Docker provider, entry point, and certificate resolver before using these labels.
 
 ```yaml
 labels:
@@ -80,37 +73,23 @@ labels:
   - traefik.http.services.app.loadbalancer.server.port=8080
 ```
 
-Caddy is the simpler default for a handful of services on one host — no separate router/certresolver config to maintain. Traefik earns its extra config when the proxy needs to auto-discover routes across many dynamically-started containers or multiple hosts.
+Select one proxy for each listening address and port. Check DNS, certificate issuance, backend reachability, and renewal.
 
-## Backup discipline
+## Protect and recover the host
 
-- **What** — named Docker volumes and database dumps (`pg_dump`, not just a filesystem snapshot of a running DB's data directory — a live snapshot can capture a torn write).
-- **Where** — offsite, not on the same VPS. A backup that dies with the host it's backing up isn't a backup.
-- **Restore, actually tested** — schedule a periodic restore drill onto a scratch instance. A backup job that's "been running fine" for a year and has never been restored is an unverified assumption, not a safety net.
+- Store offsite backups of required volumes and databases. Use a database dump or a supported consistent backup.
+- Restore an isolated copy periodically. Exercise the application against the restored data.
+- Check a separate non-root sudo login before disabling root access.
+- Keep the existing SSH session open. Check `sshd -t` and effective settings with `sshd -T`. Include connection parameters when `Match` rules apply.
+- For key-only access, require `AuthenticationMethods publickey` and enable `PubkeyAuthentication`. Disable password authentication.
+- After reload, test a separate key login and the rejected password-only and keyboard-interactive methods.
+- Permit the actual SSH port before enabling the firewall. Allow only intended public service ports.
+- Check Docker exposure from another host. Published ports can follow forwarding rules outside ordinary UFW input rules.
+- Apply the project's security update policy. Use fail2ban when its additional controls address an identified need.
 
-## Base hardening
+Use [[z-dokploy-cli]] when an existing Dokploy service owns deployment.
 
-- SSH key-only auth: set `AuthenticationMethods publickey` and `PubkeyAuthentication yes` in `sshd_config`. Keep `PasswordAuthentication no`. Disabling password authentication alone does not disable keyboard-interactive authentication. Disable root login (`PermitRootLogin no`) once a non-root sudo user is confirmed working.
-- Firewall default-deny inbound, explicit allows only (`ufw default deny incoming`, then `ufw allow 22,80,443/tcp`).
-- Docker-published ports can bypass UFW's normal input rules. Omit host publication for private services, or bind to loopback when appropriate. Apply forwarding policy for the actual Docker firewall backend and verify exposure from another host; a local UFW listing is insufficient.
-- Unattended security upgrades (`unattended-upgrades` on Debian/Ubuntu) so a known CVE doesn't sit unpatched for a release cycle.
-- `fail2ban` is optional hardening on top of key-only SSH — worth adding once the host is internet-facing and you want automatic banning of brute-force scan noise, not required to be safe.
-
-## Managed alternative
-
-Dokploy (and similar self-hosted PaaS tools) wraps most of the above — Compose deploys, reverse proxy with automatic TLS, backups — behind a UI and a CLI, trading direct control for less manual wiring. Reach for it when the team wants Heroku-style deploys without hand-rolling this skill's patterns per host; reach for the patterns above when a specific piece (custom systemd unit, non-standard proxy rule) needs control the PaaS doesn't expose.
-
-## Do not
-
-- Ship `:latest` to a production Compose file — pin a tag or digest.
-- Expect `restart: always` to preserve a deliberate stop across daemon restart; use `unless-stopped` for that behavior.
-- Store secrets inline in a unit file or `docker-compose.yml` — an `EnvironmentFile`/`.env` with restricted permissions, not committed.
-- Keep backups only on the host they protect.
-- Leave password SSH auth on "just in case" once key auth is confirmed working.
-
-## Verify
-
-Keep the current SSH session open while changing authentication. Run `sshd -t` before reloading the service. Inspect `sshd -T`, with `-C` connection parameters when `Match` blocks apply. After reload, confirm a separate key-authenticated session works and password-only and keyboard-interactive-only attempts fail before closing the original session.
+## Check the service
 
 ```sh
 docker compose config -q                    # syntax + resolution check, no output on success

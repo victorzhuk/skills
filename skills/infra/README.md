@@ -6,9 +6,9 @@ Deployment discipline across Kubernetes, Terraform/OpenTofu, self-hosted VPS tar
 
 Model- or user-reachable via skill name and trigger phrasing.
 
-- **[z-container-metadata](./z-container-metadata/SKILL.md)** — Container image metadata with OCI annotations and legacy Label Schema migration. Use for Dockerfile labels, org.label-schema keys, org.opencontainers.image keys, or missing registry metadata. Covers placement, provenance values, and compatibility. Build pipelines belong to [[z-deploy-pipeline]].
-- **[z-k8s-deploy](./z-k8s-deploy/SKILL.md)** — Production Kubernetes deploys with Helm — securityContext, resource limits, probe design with preStop/terminationGracePeriodSeconds shutdown, PDB/HPA/NetworkPolicy, chart/rollout/debug flow.
-- **[z-terraform](./z-terraform/SKILL.md)** — Infrastructure-as-code discipline for Terraform/OpenTofu — remote state locking, thin-env modules with pinned versions, plan-before-apply review, drift detection, workspaces-vs-directory trade-off.
-- **[z-selfhost-deploy](./z-selfhost-deploy/SKILL.md)** — Startup-cheap self-hosted deploys on a VPS — Docker Compose production patterns, systemd units, Caddy/Traefik reverse proxy with automatic TLS, backup-and-restore discipline, and base hardening (SSH keys, firewall…
-- **[z-deploy-pipeline](./z-deploy-pipeline/SKILL.md)** — GitHub Actions delivery pipelines — environments with protection rules, OIDC over long-lived secrets, buildx build/push with layer cache, deploy patterns (helm --atomic --wait, ssh+compose pull/up), concurrency, rollback.
-- **[z-dokploy-cli](./z-dokploy-cli/SKILL.md)** — Manage a self-hosted Dokploy server from the terminal — auth, projects and environments, app and Compose deploys, logs, databases, domains, backups.
+- **[z-container-metadata](./z-container-metadata/SKILL.md)** — Set OCI image annotations and Dockerfile labels.
+- **[z-k8s-deploy](./z-k8s-deploy/SKILL.md)** — Deploy Kubernetes workloads with Helm and verify rollout and recovery.
+- **[z-terraform](./z-terraform/SKILL.md)** — Plan and review Terraform or OpenTofu changes.
+- **[z-selfhost-deploy](./z-selfhost-deploy/SKILL.md)** — Deploy and recover services on a VPS with Compose, systemd, a TLS proxy, and offsite backups.
+- **[z-deploy-pipeline](./z-deploy-pipeline/SKILL.md)** — Configure protected GitHub Actions deployments with OIDC, serialized rollouts, and version-specific rollback.
+- **[z-dokploy-cli](./z-dokploy-cli/SKILL.md)** — Operate Dokploy applications and Compose stacks through the installed CLI.

@@ -1,62 +1,30 @@
 ---
 name: z-go-troubleshooting
-description: >
-  Systematic Go debugging — reproduce, instrument, find root cause, verify fix.
-  Use when encountering panics, deadlocks, races, memory growth, high latency,
-  flaky tests, or any "something is wrong" situation. Triggers on "panic",
-  "deadlock", "race condition", "goroutine leak", "memory leak", "pprof",
-  "GOTRACEBACK", "dlv", "delve", "go test -race", "why is this slow".
-  Does not cover profiling interpretation or optimization patterns; see
-  [[z-go-performance]] and [[z-go-concurrency]].
+description: "Debug Go crashes, hangs, races, leaks, and latency. Use for race reports, goroutine dumps, Delve, or pprof. See [[z-go-performance]] to interpret profiles."
 ---
 
 # Go troubleshooting
 
-No fixes without a root cause. Symptom patches create new bugs. This is
-especially true under time pressure.
+## Reproduce the failure
 
-## Feedback loop first
-
-Before forming any hypothesis, build the tightest pass/fail signal you can —
-**fast** (reruns in seconds), **deterministic** (same result every run),
-**sharp** (fails close to the fault). Jumping straight to a hypothesis is the
-exact failure this discipline prevents.
-
-Prefer the tightest loop you can build:
-
-1. A failing unit test reproducing the bug in-package.
-2. A failing integration test against the real boundary (DB/HTTP/queue via `testcontainers`).
-3. A scripted CLI / `curl` repro that fails deterministically.
-4. `git bisect` against a known-good commit (regressions).
-5. A one-off instrumented build — extra logs/metrics, `GODEBUG`, `-gcflags` — run against a live repro.
-6. Logs/traces captured at the moment of the symptom (loosest; no local repro yet).
-
-Tighten before you widen: make the loop faster (`-count`, smaller input), more
-deterministic (`-race`, fixed seed, `synctest`), and sharper (assert nearer the
-suspected fault) *before* changing code.
+1. Capture the error, stack, inputs, and affected build.
+2. Find the smallest repeatable check through the affected interface. Use a unit test, integration test, or scripted command.
+3. For regressions, use `git bisect` when you have a known working revision.
+4. If reproduction requires a live service, collect bounded logs, traces, or profiles during the failure.
+5. Change one condition at a time. Compare the result with the original failure.
 
 ## Decision tree
 
 | Symptom | First move |
 |---|---|
 | Build fails | `go build ./... 2>&1`, then `go vet ./...` |
-| Wrong output / logic | Write a failing test; check error handling, nil, off-by-one |
+| Wrong output | Reproduce the observed value. Check error handling and boundary inputs. |
 | Panic / crash | `GOTRACEBACK=all ./app`, read the full stack |
 | Flaky / race | `timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./...` |
-| Hang / frozen | `curl localhost:6060/debug/pprof/goroutine?debug=2` |
+| Hang | `curl 'http://127.0.0.1:6060/debug/pprof/goroutine?debug=2'` on the diagnostic listener |
 | High CPU | pprof CPU profile → flamegraph |
 | Memory growing | pprof heap profile (`allocs` vs `inuse_space`) |
 | High p99 latency | mutex + block + goroutine profiles together |
-
-## Golden rules
-
-1. Read the full error — file, line, type. Go there first.
-2. Reproduce before fixing. Write a failing test; use `git bisect` for regressions.
-3. One hypothesis at a time. Change one thing, measure, confirm.
-4. Measure, don't guess — race detector, pprof, benchmarks.
-5. Trace to root cause. Band-aids on symptoms create new bugs.
-6. Check callers first — the "bug" may be unreachable in prod.
-7. `fmt.Println` locally is fine; escalate tools only when needed.
 
 ## Common Go bug patterns
 
@@ -65,9 +33,7 @@ suspected fault) *before* changing code.
 var p *MyType = nil
 var i MyInterface = p  // i != nil — interface has non-nil type
 ```
-Always compare to the concrete type, or return `nil` explicitly from
-functions returning an interface. Recognize it here; the defense lives in
-[[z-go-safety]].
+A nil pointer stored in an interface retains its concrete type. Return an explicit `nil` interface when the result is absent. See [[z-go-safety]].
 
 **Variable shadowing**
 ```go
@@ -77,26 +43,17 @@ if err != nil {
     _ = x
 }
 ```
-Use `=` for the outer variable; only `:=` the new one.
+Use `=` to assign the existing variable.
 
-**Goroutine leak** — always `defer cancel()` right after `context.WithCancel`.
-Detect with `goleak.VerifyNone(t)` in tests.
+**Goroutine leak.** Call the cancel function when its owning operation ends. Check goroutine stacks for blocked workers. See [[z-go-testing]] for leak checks in parallel suites.
 
-**Slice aliasing** — `b := a[:2]` shares memory; `append` may overwrite `a[2]`.
-Copy when you don't own the slice: `b = append([]int(nil), a[:2]...)`. Same
-append-aliasing trap [[z-go-safety]] covers as a design-time rule.
+**Slice aliasing.** `b := a[:2]` shares its backing array with `a`. An append can overwrite `a[2]`. Copy with `b = append([]int(nil), a[:2]...)` when the caller needs independent storage.
 
-**Concurrent map write** — panics at runtime; use `sync.Map` or `sync.RWMutex`.
-`go test -race` catches this. [[z-go-safety]] has the nil-map and concurrent-write
-prevention patterns.
+**Concurrent map access.** Unsynchronized reads and writes can terminate the process with a fatal runtime error. Protect the map or give it one owner. The race detector reports races only on executed paths. [Race detector](https://go.dev/doc/articles/race_detector)
 
-**Error swallowing** — never use `_` for errors; propagate with
-`fmt.Errorf("do thing: %w", err)`. [[z-go-errors]] covers the wrapping and
-handling rules this violates.
+**Missing errors.** Check each error at its owner. Wrap it with `%w` when callers need its identity. See [[z-go-errors]].
 
-**defer in a loop** — defers accumulate until the function returns, not the
-iteration. Wrap the body in a closure or extract a helper. [[z-go-safety]]
-has the general defer-discipline rule.
+**Deferred cleanup.** A deferred call runs when the containing function returns. Give each iteration a function scope when cleanup must occur before the next iteration.
 
 ## Race conditions and deadlocks
 
@@ -110,34 +67,43 @@ For a running service with an accessible diagnostic endpoint:
 curl 'http://localhost:6060/debug/pprof/goroutine?debug=2'
 ```
 
-Go's default `SIGABRT` handling dumps stacks and terminates the process.
-Use `kill -SIGABRT <pid>` only when that disruption is authorized; it is not
-a live-inspection substitute for pprof.
+The default `SIGABRT` handler prints stacks and terminates the process. Use it only with authorization to terminate the process.
 
-Deadlock signatures: `all goroutines are asleep`, cyclic lock acquisition,
-channel send/recv with no other side, WaitGroup counter goes negative.
+For a deadlock, inspect cycles in lock acquisition and blocked channel operations. A negative `sync.WaitGroup` counter causes a panic.
 
 ## pprof quick reference
 
-Enable endpoint (dev/staging only — add auth in prod):
+Use an existing private diagnostic listener. For a local service, register these handlers on a dedicated mux. Importing `net/http/pprof` also registers routes on `http.DefaultServeMux`. Give the public server its own mux.
+
 ```go
-import _ "net/http/pprof"
-go http.ListenAndServe(":6060", nil)
+func serveProfiles() error {
+    mux := http.NewServeMux()
+    mux.HandleFunc("GET /debug/pprof/", pprof.Index)
+    mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
+    server := &http.Server{
+        Addr:              "127.0.0.1:6060",
+        Handler:           mux,
+        ReadHeaderTimeout: 5 * time.Second,
+    }
+    return server.ListenAndServe()
+}
 ```
+
+The route patterns require Go 1.22 or later. Handle the returned server error in the caller. [HTTP profiling](https://pkg.go.dev/net/http/pprof)
 
 Capture profiles:
 ```sh
 # CPU (30s)
-go tool pprof -http=:8080 http://localhost:6060/debug/pprof/profile?seconds=30
+go tool pprof -http=127.0.0.1:8080 'http://127.0.0.1:6060/debug/pprof/profile?seconds=30'
 
 # Heap
-go tool pprof -http=:8080 http://localhost:6060/debug/pprof/heap
+go tool pprof -http=127.0.0.1:8080 http://127.0.0.1:6060/debug/pprof/heap
 
 # Goroutines
-go tool pprof -http=:8080 http://localhost:6060/debug/pprof/goroutine
+go tool pprof -http=127.0.0.1:8080 http://127.0.0.1:6060/debug/pprof/goroutine
 
-# Mutex contention (requires runtime.SetMutexProfileFraction(1))
-go tool pprof -http=:8080 http://localhost:6060/debug/pprof/mutex
+# Enable mutex sampling with a positive runtime.SetMutexProfileFraction value.
+go tool pprof -http=127.0.0.1:8080 http://127.0.0.1:6060/debug/pprof/mutex
 ```
 
 Compare heap snapshots to isolate a leak:
@@ -149,7 +115,7 @@ go tool pprof -base base.pb.gz current.pb.gz
 
 ```sh
 dlv test ./internal/mypackage -- -test.run TestMyCase
-dlv attach <pid>
+dlv attach "${TARGET_PID:?set TARGET_PID to the process ID}"
 ```
 
 Useful commands: `b main.go:42`, `c`, `n`, `s`, `p myVar`, `goroutines`,
@@ -168,20 +134,14 @@ Escape analysis (find unintended heap allocations):
 go build -gcflags="-m=2" ./... 2>&1 | grep "escapes to heap"
 ```
 
-## Test-driven debugging
+## Check the fix
 
-Default to a regression test before the fix at the agreed seam. Preserve an approved tests-after flow. Either way, prove the test fails against the unfixed code and passes after the fix.
-Flaky test? `-count=100 -race` amplifies; `goleak.VerifyNone(t)` for leaks.
+- Run the agreed regression check against the original build and the build with the fix. Require the expected failure and success.
+- Repeat intermittent cases within the project's test budget.
+- Capture profiles only through an authorized diagnostics interface.
+- Trace unexpected nil values and panics to their source before changing error handling.
 
-## Production & hygiene
-
-- Use `slog` in prod — never `fmt.Println`. Check logs before attaching a profiler.
-- pprof behind auth only (mTLS / internal network). Capture at the moment of the symptom.
-- Set `GOTRACEBACK=all` in the systemd unit or pod spec, not in code.
-- Never `recover` panics you don't understand; never disable `-race` to pass tests.
-- Never scatter nil guards — find why nil appears.
-
-## Verify
+### Project checks
 
 ```sh
 timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./...

@@ -1,12 +1,11 @@
 ---
 name: z-go-env-v11
-description: Parse environment configuration in Go with caarlos0/env v11 — generics, env.Options, struct tags, custom parsers, and injecting a custom env source for hermetic tests. Use when adding env-driven config, choosing required vs notEmpty, injecting env.Options.Environment, or parsing durations/slices/enums. Triggers on "caarlos0/env", "env.Parse", "ParseAsWithOptions", "envDefault", "env tag", "config from env", "notEmpty".
+description: "Parse environment configuration with caarlos0/env v11. Use for struct tags, missing or empty values, custom parsers, isolated tests, and .env.example checks."
 ---
 
 # caarlos0/env v11
 
-Bind environment variables to a config struct. `env/v11` does parsing and presence
-checks; keep business rules and enum membership in a separate `Validate()`.
+Parse environment values into a configuration struct. Check business constraints and enum membership separately.
 
 ## Parse entry points
 
@@ -25,7 +24,7 @@ already hold a struct (e.g. partially pre-filled).
 
 ## Inject a custom source (the test seam)
 
-Pass `env.Options{Environment: map[string]string}` to replace `os.Environ()` in tests. Preserve key presence separately from its string value; do not enumerate struct tags with a custom reflection walker, which can miss prefixes, pointer fields, and library options.
+Pass a map in `env.Options.Environment` for isolated tests. Keep key presence separate from the empty string. Use the library to resolve nested fields and prefixes.
 
 ```go
 func loadConfig(values map[string]string) (Config, error) {
@@ -33,12 +32,11 @@ func loadConfig(values map[string]string) (Config, error) {
 }
 ```
 
-Use a non-nil map for hermetic tests, including an empty one. At the composition root, either use normal `env.ParseAs` or supply a complete environment map. Preserve an existing approved lookup seam, but translate it without losing prefix or presence semantics.
+Use a non-nil map for isolated tests. Include an empty map to exercise missing variables without reading the process environment.
 
-## Empty vs unset (the load-bearing gotcha)
+## Missing and empty values
 
-env decides "set" by map comma-ok (`value, ok := environment[key]`), so a key present
-with value `""` is **SET**, not unset:
+The parser distinguishes a missing key from a present empty string.
 
 | Environment state    | `,required` (no `envDefault`) | `,required` + nonempty `envDefault` | `,notEmpty` |
 |----------------------|-------------------------------|--------------------------------------|--------------|
@@ -46,24 +44,21 @@ with value `""` is **SET**, not unset:
 | key present, `""`    | **passes**                    | passes (default applied)             | error        |
 | key present, value   | passes                        | passes                               | passes       |
 
-`envDefault` is applied before the `required` and `notEmpty` checks, so `required` with a
-nonempty `envDefault` does not fail when the key is absent; `notEmpty` then inspects the
-defaulted value. Consequence: `,required` alone does **not** reject an empty secret. To
-require non-empty, use `,notEmpty`. Do not put a secret in `envDefault` when explicit
-operator input is required. Keep explicit empty values in injected maps so tests exercise
-the same semantics as production.
+The parser applies `envDefault` before checking `required` or `notEmpty`. A nonempty default can satisfy either constraint.
+
+Use `notEmpty` without a secret default when the operator must supply a nonempty value. Test missing, empty, and populated inputs separately.
 
 ## Struct tags
 
-- `env:"NAME"` — variable name; first comma-flag list follows.
+- `env:"NAME"` names the variable. Add supported options after a comma.
 - `envDefault:"v"` — value when the key is absent (or present-empty).
 - `envSeparator:";"` — slice item separator. Default is `,` — **omit it for comma**.
 - `envKeyValSeparator:"="` — map key/value separator. Default is `:`.
 - `envPrefix:"DB_"` — on a nested struct field, prefixes all its keys.
 
-Comma flags inside `env:"…"`: `required` (must be set), `notEmpty` (set and non-empty),
-`expand` (`$VAR`/`${VAR}` expansion), `file` (value is a path; read the file's contents),
-`init` (allocate nil pointers), `unset` (clear the var after reading).
+Use `required` for presence and `notEmpty` for a nonempty value. Match defaults to the contract above.
+
+Use `expand` for variable expansion, `file` for file contents, `init` for nil pointers, and `unset` to clear a variable after reading.
 
 ## Types
 
@@ -86,16 +81,14 @@ env.ParseAsWithOptions[Config](env.Options{
 
 ## Other options
 
-- `RequiredIfNoDef: true` — make every field without a default required. **Do not** use it
-  when some keys are legitimately optional (e.g. keyless local providers); keep those
-  tag-light and validate conditionally instead.
+- Use `RequiredIfNoDef` only when every field without a default needs a value. Check conditional requirements after parsing.
 - `Prefix` — global prefix for all keys. `OnSet` — hook per set value. `TagName` /
   `DefaultValueTagName` / `PrefixTagName` — rename the tags. `UseFieldNameByDefault` — derive
   the key from the field name when `env:""` is missing.
 
 ## Validation is separate
 
-env parses; it does not enforce ranges, cross-field rules, provider switches, or enum sets.
+Check ranges, relationships, provider settings, and allowed values after parsing.
 Parse constrained values as a string alias (`type AuthMode string`) and check membership in a
 `Validate()` pass that runs after `Parse`. Thread `getenv` into `Validate` if it needs to read
 flags not represented as struct fields.
@@ -108,9 +101,9 @@ non-zero without opening ports.
 Every `env:"NAME"` key in the config struct MUST appear in a committed `.env.example` as
 `NAME=<safe-default-or-empty>`, each with a `# required` or `# optional` comment. Secrets
 (`DATABASE_URL` and friends) get an empty value plus `# required` — never a real secret.
-`.env` itself stays gitignored; `.env.example` is the committed template.
+Ignore `.env` in Git. Commit the example template.
 
-Verify seam — one Go helper owns it:
+Read the expected keys with the library.
 
 ```go
 params, err := env.GetFieldParamsWithOptions(&Config{}, env.Options{ /* production Options */ })
@@ -129,23 +122,17 @@ sort.Strings(keys)
 // print every missing key, exit nonzero on any
 ```
 
-The helper must exit nonzero on an extraction error and on any missing key; `comm`-style
-empty output alone is not the gate. Caveats: `env:"-"` fields come back with
-`Ignored == true` and must be skipped; slice-of-struct element keys are discovered only
-when the production `Options.Environment` is supplied — without it they are out of scope
-for this check.
+Make the helper fail on extraction errors or missing keys. Skip fields with `Ignored == true`. Supply the production `Options.Environment` to discover slice element keys that depend on the environment.
 
 ## direnv auto-inject
 
-Commit a `.envrc` containing exactly one line:
+Use this directive when the project uses direnv.
 
 ```sh
 dotenv
 ```
 
-No `layout go`, no secrets. Local runs pick up `.env` automatically; CI ignores `.envrc` and
-uses real env. The `[[z-go-makefile]]` `-include .env` seam is the non-direnv fallback, not
-the default.
+Keep secrets out of `.envrc`. Supply CI variables through the CI environment. For a Makefile fallback, see [[z-go-makefile]].
 
 ## Do not
 
@@ -155,7 +142,7 @@ the default.
 - Use `RequiredIfNoDef` when any key may be intentionally empty.
 - Put enum membership or range checks in tags — they belong in `Validate()`.
 
-## Verify
+## Checks
 
 ```sh
 go build ./... && timeout 5m go test -parallel 4 -p 2 -short -timeout 2m ./internal/config/...

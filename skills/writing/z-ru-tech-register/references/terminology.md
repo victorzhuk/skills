@@ -106,7 +106,7 @@ Product names Latin: `Kubernetes`, `Docker`, `Helm`, `Proxmox`, `Traefik`, `PgBo
 | уведомление в Роскомнадзор | `[CYR]` | |
 | 149-ФЗ | `[CYR]` | |
 | ОРИ / реестр ОРИ | `[CYR]` | организатор распространения информации |
-| 236-ФЗ / приземление | `[CYR]` | platform landing; triggers >500k daily RU users |
+| 236-ФЗ / приземление | `[CYR]` | colloquial name for the law |
 | 436-ФЗ / возрастная маркировка | `[CYR]` | age rating |
 | 54-ФЗ | `[CYR]` | |
 | касса / онлайн-касса / ККТ | `[CYR]` | |

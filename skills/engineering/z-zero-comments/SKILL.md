@@ -1,6 +1,6 @@
 ---
 name: z-zero-comments
-description: Comment discipline — a comment explaining WHAT code does means the name is wrong; rename or restructure instead. Use when writing new code, reviewing a diff for comment noise, or deciding whether a comment belongs. Triggers on "add a comment explaining", "// creates a new", "// checks if", "// initialize the". Doc comments for exported APIs follow the language convention — this skill governs implementation comments only.
+description: "Review comments that repeat the code. Preserve rationale, invariants, edge cases, public contracts, and required markers. Use [[z-clean-output]] for irrelevant attribution."
 ---
 
 # Zero comments unless why
@@ -9,10 +9,10 @@ Delete a comment that restates what the next line does. Keep only comments that 
 
 ## Core rules
 
-- If a comment explains WHAT code does, the fix is a better name, not a better comment.
-- Allowed: why a decision was made, an invariant the reader can't derive from the code, a counterintuitive edge case, a migration hazard, a hazard around removing something.
-- Allowed regardless of the rule above: required doc comments for exported symbols and packages, `// Output:` / `// Unordered output:` markers, generated-file markers required by tooling, and comments in `.env.example`/config/migration files that document an operator-facing contract.
-- Preserve context in existing comments. An explicit comment-cleanup request or approved edit scope is sufficient authorization; ask only when a comment’s purpose requires a new decision.
+- Replace a comment that repeats an operation with a clearer name or structure when the contract permits it.
+- Keep the reason for a decision, a hidden invariant, a counterintuitive edge case, or a migration hazard.
+- Preserve required public documentation, example-output markers, generated-file markers, and operator-facing contracts in configuration or migrations.
+- Ask about an existing comment only when its purpose requires a new decision.
 
 ## Examples
 
@@ -29,7 +29,7 @@ if repo.Exists(id) {
 func GetUserByID(id string) (*User, error)
 ```
 
-**Good — the name already says it; no comment needed:**
+**After removing redundant comments**
 
 ```go
 user := NewUser(name)
@@ -51,10 +51,10 @@ if limit == 0 {
 
 ## Do not
 
-- Write a comment and leave the name generic (`doStuff`, `handle`) — fix the name first; the comment is very often no longer needed after that.
+- Use a comment to compensate for an unclear name. Rename the symbol when the contract permits it.
 - Add a comment above every function restating its signature in prose.
-- Comment out dead code "just in case" — delete it; version control remembers.
+- Keep dead code in comments for a hypothetical future use.
 
 ## Verify
 
-    rg -n '^\s*//' --type go   # scan comments in a diff; each one should explain why, not what
+Review comment changes in both staged and unstaged diffs. Inspect new files separately. Preserve required markers and public contracts.

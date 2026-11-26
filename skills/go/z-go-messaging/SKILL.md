@@ -1,11 +1,11 @@
 ---
 name: z-go-messaging
-description: At-least-once messaging for Go on Kafka, RabbitMQ, or NATS — idempotent-consumer dedup, the transactional outbox, consumer-group rebalancing, and dead-letter queues. Use when wiring a consumer/producer, an outbox relay, or DLQ routing. Triggers on "at-least-once", "idempotent consumer", "transactional outbox", "consumer group", "dead-letter queue", "JetStream". Does not cover transaction wiring or goroutines; see [[z-go-database]] and [[z-go-concurrency]].
+description: "Implement idempotent Go consumers, transactional outboxes, and redelivery handling for Kafka, RabbitMQ, or JetStream. Use [[z-go-database]] for transaction mechanics."
 ---
 
 # Go messaging
 
-The moment a consumer handler touches anything outside the broker's own transactional boundary — a Postgres write, an HTTP call, an email — delivery is at-least-once, full stop. Kafka's exactly-once semantics (idempotent producer + transactions) only hold for a consume-transform-produce loop that never leaves Kafka. RabbitMQ and NATS core have no exactly-once mode at all. Design every consumer as if redelivery will happen, because it will: broker crashes, rebalances, client restarts, and network partitions all trigger reprocessing of already-handled messages.
+Define the delivery and acknowledgement contract at each boundary. A broker transaction cannot make an independent external effect atomic.
 
 ## Idempotent consumers
 
@@ -13,12 +13,11 @@ Two ways to make a handler safe under redelivery, in order of preference:
 
 | Strategy | When | Cost |
 |---|---|---|
-| Idempotent-by-construction | Repeating the write produces the same result; an upsert that increments a counter does not qualify | No extra dedup table |
+| Idempotent write | Repeating the update produces the same result. Incrementing a counter changes it again. | No extra deduplication table |
 | Dedup table keyed by message ID | Non-idempotent counters, appends, or multi-statement effects in the same database transaction | One extra row + index per message |
 
-Dedup table pattern — the dedup INSERT and the business write share one transaction, so either both land or neither does:
-
-External HTTP, email, or payment calls are outside this transaction. Use an outbox for durable dispatch and downstream idempotency for repeated calls.
+Commit the deduplication record and business write in the same transaction.
+For an external payment, email, or HTTP request, use a durable handoff and a downstream idempotency contract.
 
 ```go
 tx, err := pool.Begin(ctx)
@@ -42,17 +41,15 @@ if err := applyBalanceChange(ctx, tx, msg); err != nil {
 return tx.Commit(ctx)
 ```
 
-Full transaction/rollback boilerplate (panic-safe defer, isolation level): see [[z-go-database]]. Only ack the message after this transaction commits — see commit-after-process below.
+Acknowledge a message after its effect commits. See [[z-go-database]] for rollback and isolation.
 
 ## Transactional outbox
 
-This is the one rule that makes the pattern work, and where it most often breaks: **the outbox INSERT must run in the exact same Postgres transaction as the business write.** Never publish to the broker from inside that transaction — a broker call cannot roll back with the database, so a "publish, then commit" or "commit, then publish with no fallback" order both have a window where one side succeeds and the other doesn't.
+Commit the business write and the outbox insert in the same database transaction. A broker cannot roll back a publication with that transaction.
 
-The flow:
-
-1. **Business transaction** — one commit writes the domain row(s) and an `outbox` row (event type, payload, headers, `created_at`, `published_at NULL`).
-2. **Relay** (separate process or goroutine, polling or CDC) — reads unpublished outbox rows, publishes each to the broker, then marks it published. Publish happens strictly after the business transaction has committed.
-3. **Crash recovery** — if the relay dies between publish and mark-published, it republishes that row on restart. The outbox makes publishing at-least-once, not exactly-once: it guarantees the message is never lost, and the idempotent-consumer pattern above is what absorbs the resulting duplicate. Neither pattern alone is enough; they close the loop together.
+1. Store the domain change and an unpublished event with its type, payload, headers, and creation time.
+2. After commit, the relay publishes the event and marks its row as published.
+3. On restart, retry unpublished rows. A crash after publication can produce a duplicate. Use an idempotent consumer.
 
 ```go
 tx, err := pool.Begin(ctx)
@@ -74,7 +71,7 @@ if _, err := tx.Exec(ctx,
 return tx.Commit(ctx)
 ```
 
-Relay poll, `FOR UPDATE SKIP LOCKED` so multiple relay instances don't double-publish the same row. The lock only holds for the life of the transaction that took it — run the select and the publish loop inside one explicit `Begin`/`Commit`, never as a bare `pool.Query` (an unwrapped statement is its own implicit transaction and releases the row locks the instant it finishes, before `producer.Publish` even runs):
+Select rows with `FOR UPDATE SKIP LOCKED` in an explicit relay transaction. Keep the transaction open through publication and the status update. A standalone query releases its locks too early.
 
 ```go
 tx, err := pool.Begin(ctx)
@@ -124,19 +121,20 @@ for _, r := range batch {
 return tx.Commit(ctx)
 ```
 
-Holding the transaction open across the publish loop keeps the row locks (and the connection) held for as long as the broker calls take — fine at a `LIMIT` of 100, shrink the batch if publish latency makes that too long a hold. A polling relay (100ms–1s interval) is the default. Reach for CDC (Debezium or logical replication tailing the outbox table) only once poll latency is a proven problem — it removes the poll interval at the cost of a CDC pipeline to run and monitor.
+The relay retains its connection and row locks during the broker calls. Bound publish time and batch size against database capacity.
+If lock duration is excessive, design a recoverable claim or lease before releasing the transaction.
 
 ## Consumer-group semantics
 
 | Broker | Grouping unit | Ordering guarantee | Rebalance trigger |
 |---|---|---|---|
 | Kafka | Consumer group spread across partitions | Per-partition only — never across partitions, never per-topic | Member join/leave, partition count change |
-| RabbitMQ | Competing consumers on one queue | None, unless a single active consumer or a consistent-hash exchange pins a key to one queue | Consumer disconnect, queue failover |
-| NATS JetStream | Durable consumer, work-queue policy | Per-subject with a single ordered consumer; a shared work-queue consumer gives none | Consumer/durable restart |
+| RabbitMQ | Competing consumers on one queue | Parallel delivery and redelivery can reorder processing | Consumer disconnect, queue failover |
+| NATS JetStream | Durable consumer with work-queue retention | Shared workers can finish out of order | Consumer restart |
 
-**Commit-after-process, never before.** Ack or commit only after the handler returns success. Interval-based auto-commit/auto-ack trades this away for convenience — a crash between "received" and "processed" loses the message even though the offset was already committed. Treat auto-commit as an opt-in for loss-tolerant, already-idempotent paths, not the default.
+Acknowledge only after successful processing. A crash after an early acknowledgement can lose the business effect. For Kafka, commit only through the highest contiguous processed offset in each partition.
 
-**Graceful shutdown drains before it disconnects.** On `SIGTERM` (Kubernetes sends this, then waits `terminationGracePeriodSeconds` before `SIGKILL`): stop pulling new messages first, let in-flight handlers finish under a bounded drain timeout, commit/ack their results, then close the client. A rebalance or pod kill that yanks the connection before drain either loses in-flight work or forces redelivery — which is exactly why idempotency is a prerequisite for this pattern, not an afterthought.
+On shutdown, stop fetching new messages. Drain current handlers within the shutdown deadline. Acknowledge completed work before closing the client. Leave unfinished work eligible for redelivery.
 
 ## Poison messages
 
@@ -144,44 +142,45 @@ Bound retries with backoff, then dead-letter — never loop forever on a message
 
 | Broker | Native support | Pattern |
 |---|---|---|
-| Kafka | None | Track attempt count in a header or side table; retry with backoff (in-process, or a delayed retry topic); after N attempts, produce to `<topic>.dlq` with original headers + failure reason, then commit past the offset so later valid records on that partition aren't blocked |
-| RabbitMQ | Native dead-lettering | Set `x-dead-letter-exchange` (+ optional routing key) on the queue; `Nack(false, false)` or exceeding `x-message-ttl`/a delivery-count limit routes the message to the DLX automatically |
-| NATS JetStream | `MaxDeliver` on the consumer config | Once exceeded, the message stops redelivering; wire an advisory-subject handler to move it into your own DLQ if you need the payload preserved |
+| Kafka | Application retry policy | Track attempts with backoff. After the limit, durably publish the failure before advancing the offset. |
+| RabbitMQ | Dead-letter exchange | Configure the exchange and routing. Reject without requeue, or use the queue’s expiry or delivery limit. |
+| NATS JetStream | `MaxDeliver` | Handle the delivery-limit advisory if the application needs a separate dead-letter stream. |
 
 ## Producer keys and ordering
 
 | Broker | What the key controls | No key |
 |---|---|---|
-| Kafka | `hash(key) % partitions` (unkeyed records go round-robin/sticky-random) | No ordering guarantee across messages |
-| RabbitMQ | Routing key → queue binding, not partitioning | Still delivered correctly; ordering only holds with a single consumer on that queue |
-| NATS | Subject hierarchy, not a key field | No partitioning concept; ordering is per-subject with a single ordered consumer |
+| Kafka | The configured partitioner maps keyed messages to partitions | Ordering applies within each partition |
+| RabbitMQ | A binding routes a message to one or more queues | Multiple workers can complete out of order |
+| NATS | Subjects select subscriptions and streams | Check the specific consumer’s delivery and ordering settings |
 
-Changing a Kafka topic's partition count changes `hash(key) % partitions` for every key on that topic — don't repartition a topic whose consumers depend on historical per-key ordering.
+Changing the Kafka partition count can move a key to a different partition. Check historical ordering requirements before repartitioning.
 
 ## Do not
 
-- Assume Kafka's exactly-once semantics extend past the broker boundary — any external write (DB, HTTP, email) inside the handler makes it at-least-once regardless of producer/consumer transaction config.
-- Publish to the broker from inside the business database transaction — the two systems can't commit atomically together; use the outbox.
+- Assume broker transactions guarantee a single write to an external database or service.
+- Publish to a broker inside the business database transaction.
 - Skip the outbox and publish directly after commit with no fallback — a crash in that gap silently drops the message.
 - Ack or commit an offset before the handler's work is durably applied.
 - Let a poison message retry unbounded — bound it, then DLQ it.
 - Ignore the producer key when message order matters to a consumer.
 - Close a consumer/channel on shutdown without draining in-flight work first.
 
-## Verify
+## Verification
 
 ```sh
 timeout 15m go test -parallel 4 -p 2 -race -timeout 10m ./internal/consumer/... ./internal/outbox/...
 ```
 
-- Idempotency: replay the same message ID twice through the handler in a test; assert the business effect applied exactly once.
-- Outbox: kill the relay (or fail the publish call) between insert and publish in a test; assert the row is still published on the next poll and the business write was never lost.
-- Poison path: force N handler failures then assert the message lands on the DLQ/DLX and stops redelivering.
-- Shutdown: send the drain signal mid-batch in a test harness; assert in-flight messages finish and commit before the client closes.
+- Deliver the same ID twice. Check that the business effect occurs once.
+- Interrupt the relay before publication. Check that the committed row remains available.
+- Interrupt it after publication and before marking delivery. Check that a retry preserves the downstream effect.
+- Exhaust the retry limit. Check the broker-specific poison-message outcome.
+- Request shutdown during a batch. Check acknowledgements and pending work against the drain contract.
 
 ## Reference
 
-- `references/brokers.md` — client choice per broker (franz-go vs segmentio/kafka-go, amqp091-go, nats.go/JetStream) and minimal consume-loop shapes.
+Use [broker patterns](references/brokers.md) for client choices and consume loops.
 
 ## See also
 

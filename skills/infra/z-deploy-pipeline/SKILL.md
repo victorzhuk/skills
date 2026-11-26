@@ -1,15 +1,13 @@
 ---
 name: z-deploy-pipeline
-description: GitHub Actions delivery pipelines — environments with protection rules, OIDC over long-lived secrets, buildx build/push with layer cache, deploy patterns (helm --atomic --wait, ssh+compose pull/up), concurrency, rollback. Use when wiring a deploy workflow. Go CI [[z-go-ci]]; charts [[z-k8s-deploy]]; server [[z-selfhost-deploy]].
+description: "Configure GitHub Actions deployments with environments, OIDC, image builds, concurrency, and rollback. Use [[z-go-ci]] for Go checks and [[z-k8s-deploy]] for charts."
 ---
 
-# Deploy Pipeline
+# Deployment workflows
 
-A deploy workflow earns trust the same way the artifact it ships does: it can't run twice at once, it holds no standing credential worth stealing, and every failure mode has a stated way back.
+## Protect the target
 
-## Environments and protection rules
-
-A GitHub Actions `environment:` applies the protection rules actually configured for that environment. The field alone does not require approval:
+Select the deployment environment. Configure its required reviewers and branch restrictions. An `environment:` field applies the rules configured for that environment.
 
 ```yaml
 jobs:
@@ -18,11 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 ```
 
-Configure required reviewers and deployment branch restrictions on the environment itself (repo Settings → Environments). A production environment with no protection rule is a secret with a workflow trigger instead of a login form.
-
-## OIDC federation
-
-Long-lived cloud credentials sitting in repository secrets are a standing liability — anyone with write access to the secret, or a leaked log, gets them indefinitely. OIDC federation trades that for a short-lived token minted per run:
+Request only the permissions needed by the deploy job. Restrict the federated role's issuer, audience, repository, and subject.
 
 ```yaml
 permissions:
@@ -36,9 +30,10 @@ steps:
       aws-region: us-east-1
 ```
 
-GitHub issues a signed JWT for the run; the provider validates it and exchanges it for temporary credentials. Restrict the trust policy to the expected issuer, audience, repository, and subject/environment. `id-token: write` permits token issuance; it does not itself limit the cloud role. Replace example identifiers with verified deployment values.
+`id-token: write` permits token issuance. The cloud trust policy decides which role the workflow can assume.
+Use the verified role and region. Keep tokens, secret values, and transformed secrets out of logs.
 
-## Image build and push
+## Build the image
 
 ```yaml
 - uses: docker/setup-buildx-action@v3
@@ -51,27 +46,40 @@ GitHub issues a signed JWT for the run; the provider validates it and exchanges 
     cache-to: type=gha,mode=max
 ```
 
-Check the builder driver, containerd image-store setting, and BuildKit/Buildx versions for cache-backend support. The setup action is one way to provision a compatible builder. `mode=max` also exports intermediate-stage cache; verify actual cache hits in the build log.
+Use the project's approved action versions. Configure registry authentication and push permissions before a push.
+Check cache support in the selected builder and exporter. `mode=max` can export intermediate-stage cache.
+Check cache hits in the build log. Record the resulting image digest.
 
-## Deploy job patterns
+## Deploy and recover
 
-**Kubernetes via Helm:**
+Review the rendered change and artifact before deployment. Bind approval to the exact digest or saved plan.
+
+**Helm 3**
 
 ```sh
 helm upgrade --install app ./chart --atomic --wait --timeout 5m
 ```
 
-`--atomic` rolls the release back automatically on a failed upgrade (it implies `--wait`). Helm 4 renames this flag to `--rollback-on-failure` for `upgrade` and drops atomic install entirely for a fresh `install` — check the Helm major version in use before copying this verbatim.
+**Helm 4**
 
-**VPS via Compose:**
+```sh
+helm upgrade --install app ./chart --rollback-on-failure --timeout 5m
+```
+
+A failed upgrade can restore the previous release. A failed first install has no previous revision to restore.
+On Helm 4, `helm install --rollback-on-failure` uninstalls a failed first install. Check the installed major before choosing flags.
+For a manual rollback, select a known revision with `helm rollback app <previous-revision>`. [Helm install](https://helm.sh/docs/helm/helm_install/)
+
+**Docker Compose**
 
 ```sh
 ssh deploy@host "cd /srv/app && docker compose pull && docker compose up -d --wait"
 ```
 
-Pull-then-up keeps the window between "new image available" and "container running" as short as possible; `--wait` blocks until the healthcheck (from [[z-selfhost-deploy]]) reports healthy before the job reports success.
+Use the intended Compose project and pinned image. Configure a healthcheck for services whose readiness matters.
+To recover, redeploy the known working digest and compatible configuration. Check database compatibility before rollback.
 
-## Concurrency groups
+## Serialize deployments
 
 ```yaml
 concurrency:
@@ -79,30 +87,12 @@ concurrency:
   cancel-in-progress: false
 ```
 
-Use a group identifying the actual deployment target, shared by every workflow/ref that can deploy there; the name above is illustrative. `cancel-in-progress: false` protects the running deployment. Under the default concurrency behavior, a newer pending job replaces an older pending job; it is not a durable FIFO queue. Check current GitHub queue options if every deployment must run.
+Share the concurrency group across workflows that deploy the same target.
+Protect a running production deployment from cancellation. Under the default policy, a newer pending job can replace an older pending job.
+Check queue settings if every deployment must run.
 
-## Rollback path
+## Check deployment and recovery
 
-State the rollback per pattern before you need it, not while paging:
-
-- **Helm** — `helm rollback app <previous-revision>`, or rely on `--atomic` catching the failure automatically during the same run.
-- **VPS/Compose** — redeploy the previous image tag (`docker compose pull && docker compose up -d` with the prior tag pinned), since Compose has no revision history of its own to roll back to.
-
-## Secrets hygiene
-
-Scope secrets to the environment and grant minimal token permissions. Do not print secrets or transformed secret values; log masking is a backstop. Review the exact immutable image digest or saved plan that the approved job will deploy.
-
-## Do not
-
-- Run a deploy job without an `environment:` gate on anything that reaches production.
-- Store a long-lived cloud access key in a secret when the provider supports OIDC.
-- Set `cancel-in-progress: true` on a deploy concurrency group — a cancelled mid-deploy leaves state half-applied.
-- Skip the plan/dry-run job before an apply — the human approving the environment gate should see what's about to happen, not just that a workflow started.
-- Assume cache configuration works without checking the selected builder and build log.
-
-## Verify
-
-```sh
-actionlint .github/workflows/*.yml
-# a dry-run/plan job (terraform plan, helm upgrade --dry-run, or an equivalent) runs and its output is visible before the apply job gates on approval
-```
+1. Run `actionlint .github/workflows/*.yml`. Inspect the rendered plan and the active environment rules.
+2. Check the deployed revision or digest and exercise the intended service route.
+3. Exercise the recovery procedure in the project's test environment. See [[z-selfhost-deploy]] for host checks.

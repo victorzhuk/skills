@@ -1,12 +1,6 @@
 ---
 name: z-go-style
-description: >
-  Go code style — declarations, control flow, function design, and file organization.
-  Use when writing or reviewing Go code for clarity, structure, or formatting. Triggers
-  on "var vs :=", "guard clause", "early return", "reduce nesting", "if-init", "switch
-  over if-else", "function signature", "naked return", "composite literal", "iota",
-  "blank identifier", "pointer to interface". Does not cover naming conventions
-  (see [[z-go-naming]]) or error flow (see [[z-go-errors]]).
+description: "Review Go declarations, control flow, function signatures, and package layout. Use for guard clauses, zero values, boolean expressions, and formatting. See [[z-go-naming]] for identifiers."
 ---
 
 # Go Style
@@ -16,28 +10,28 @@ description: >
 | Topic | Rule |
 |---|---|
 | Zero-value local | `var x T` |
-| Non-zero local | `x := val` |
-| Struct literal | Always field names; omit zero fields |
-| iota start | Plain `iota` from 0 with a real state at zero (default); `iota + 1` only when zero-as-invalid genuinely matters |
-| `any` | Default spelling; `any` and `interface{}` are identical aliases |
+| Initialized local | Use `:=` when the type is clear |
+| Struct literal | Use field names. Omit zero fields where appropriate. |
+| `iota` start | Use zero for a valid state or reserve it for an invalid value. |
+| `any` | Alias for `interface{}` |
 | if-init | Use when var is only needed for the check |
-| Guard clause | Handle error/edge first; happy path unindented |
+| Guard clause | Handle errors and edge cases before the main path |
 | Drop else | When if body ends with return/break/continue |
-| Named booleans | Extract 3+ operands into named vars |
+| Complex condition | Name a domain predicate when it clarifies the decision |
 | switch vs if-else | Use switch when comparing same var multiple times |
 | Labeled break | `break Label` to exit loop from inside switch |
 | Signature wrapping | All params on own lines + trailing comma |
 | Configuration params | Ordinary params first. Choose config structs or options from actual callers. See [[z-go-interfaces]] |
 | Pointer to interface | Almost never needed — pass interface value |
-| Printf variants | End in `f`; use `%q` for strings in errors |
+| Printf variants | Use the `f` suffix. Quote string values with `%q` when needed. |
 | File order | type → constructor → exported → unexported → utils |
-| Unexport aggressively | Exporting is a commitment; unexport by default |
+| Visibility | Export only names that callers need |
 
 ---
 
 ## Declarations
 
-`var` signals intent: "this starts at zero." `:=` means "non-zero value here."
+Use `var x T` for an explicit zero value. Short declarations can also assign zero values.
 
 ```go
 var count int
@@ -46,7 +40,7 @@ name := "default"
 var buf bytes.Buffer
 ```
 
-Group related declarations; separate unrelated blocks:
+Group related declarations. Keep unrelated blocks separate.
 
 ```go
 const (
@@ -71,7 +65,7 @@ m := map[string]int{"a": 1}
 var m map[string]int
 ```
 
-Preallocate when size is known; never preallocate speculatively.
+Preallocate when the expected size or a measurement justifies the capacity.
 
 Backtick strings for regex, SQL, JSON, multi-line text — avoid `\"` escaping.
 
@@ -112,7 +106,7 @@ If you need the variable after the block, declare it outside with `var`.
 
 `:=` in an inner scope shadows, not reassigns — declare `var cancel func()` outside and use `=` to assign.
 
-### Named booleans for complex conditions
+### Name a domain predicate
 
 ```go
 isAdmin  := user.Role == RoleAdmin
@@ -199,7 +193,7 @@ func (f *Foo) internal() { ... }
 func helper() { ... }
 ```
 
-Unexport by default — exporting is a commitment. Dot imports never in library code. Blank imports (`_ "pkg"`) only in `main` and test packages.
+Export names that callers need. Reserve dot imports for conventions that require them. Use blank imports for required registration side effects.
 
 ---
 
@@ -208,14 +202,18 @@ Unexport by default — exporting is a commitment. Dot imports never in library 
 - Claim an external signature or arbitrary JSON requires `interface{}` spelling: `any` is the same type. Preserve surrounding style when editing existing code.
 - Preallocate speculatively (`make([]T, 0, 1000)` when common case is 10 items).
 - Add `else` after a returning `if`.
-- Put 3+ boolean operands inline — extract to named vars.
+- Extract a boolean only to meet an operand-count rule. Keep the domain decision readable.
 - Pass pointer to interface.
 - Return an interface from a constructor without a concrete caller need. Prefer concrete types. See exceptions in [[z-go-interfaces]].
 - Shadow built-in identifiers.
 - Add `/* name */` comments to clarify params — fix the type instead.
 
-## Verify
+## Verification
 
 ```sh
-gofmt -l . && go vet ./... && golangci-lint run
+gofmt -l .
+go vet ./...
+golangci-lint run
 ```
+
+Require empty output from `gofmt -l`. The command can list unformatted files and exit successfully.

@@ -1,6 +1,6 @@
 ---
 name: z-qa-performance
-description: "Load and throughput testing with the project’s runner. Use for load tests, latency thresholds, API throughput, or SLA validation. Choose user-count or arrival-rate workloads, gate business checks, and bound generated traffic. Single-request contracts belong to [[z-qa-api]]; page rendering performance belongs to [[z-web-performance]]."
+description: "Design and run a bounded load test. Use for traffic models, latency percentiles, throughput, k6 thresholds, or Locust business failures. See [[z-web-performance]] for browser rendering."
 ---
 
 # Load and throughput testing
@@ -9,7 +9,7 @@ Choose the workload and success contract before choosing a tool. Reuse the proje
 
 ## Establish the experiment
 
-Record target, authorization, expected traffic, test data, duration, concurrency/rate limits, and cleanup. Derive latency/error thresholds from the service's requirements or an explicit experiment; example numbers are not universal SLAs.
+Record the target, authorization, traffic, data, duration, concurrency, and cleanup plan. Derive latency and error thresholds from service requirements or the stated experiment.
 
 Use existing k6 or Locust scripts when appropriate. Do not reject another established tool based on unrelated project history.
 
@@ -23,13 +23,13 @@ Use existing k6 or Locust scripts when appropriate. Do not reject another establ
 
 A single arrival-rate workload already warrants a named scenario. Closed models reduce offered load as responses slow, which can hide overload. For open models, bound allocated VUs and inspect `dropped_iterations`.
 
-Use think time when modeling users. Do not add sleep to an arrival-rate executor merely to control rate; the executor schedules arrivals.
+Model user think time only when it belongs to the journey. An arrival-rate executor already schedules iteration starts.
 
 ## Gate business checks
 
-Failed k6 `check()` calls alone do not fail the process. Add a threshold for the checks metric or aggregate every business failure consistently.
+Define a threshold for business checks. A failed k6 `check()` alone does not set a failing exit status.
 
-This illustrative smoke contract requires HTTP 200 and a JSON status of `ok`. Replace the URL and contract with the verified service behavior:
+This example requires HTTP 200 and a JSON `status` of `ok`. Set the URL and pass criteria for the service under test.
 
 ```javascript
 import http from 'k6/http';
@@ -60,29 +60,29 @@ export default function () {
 }
 ```
 
-For a multi-branch journey, gate assertions from every branch. A request returning 200 when creation requires 201 is a business failure even if the HTTP failure metric accepts it.
+Assert each branch's business outcome. If creation requires HTTP 201, HTTP 200 must fail the check.
 
 Separate endpoint latency using tags or metrics when an aggregate can hide a slow critical operation. Check adequate sample counts before interpreting p99.
 
 ## Execution
 
 - Run through the repository wrapper with a whole-process deadline, workload duration, request timeouts, and concurrency/rate caps.
-- Verify the target is authorized for the chosen load. Do not infer production permission from access.
-- Validate required environment variables before generating traffic.
+- Check that the caller authorized this target and load. Access alone does not authorize production traffic.
+- Check required environment variables before sending traffic.
 - Keep credentials out of CLI arguments and output where the existing secret mechanism permits it.
-- Retain the runner's exit status and summary; do not replace it with a parser's success.
-- Use the installed version's summary schema. Prefer its supported summary mechanism, such as `handleSummary`, and verify fields before parsing.
+- Retain the runner's exit status and summary when parsing output.
+- Use the installed version's summary schema. Prefer its supported summary mechanism, such as `handleSummary`, and check fields before parsing.
 
 For non-HTTP workloads, inspect protocol/client support before selecting a tool. Locust's custom `User` and client request events can measure worker/queue operations. Set runtime and user/rate caps, use a monotonic clock, and record actual payload bytes if size matters.
 
-Locust's failure status policy must match the intended threshold. Use its supported exit-code configuration or an `events.quitting` listener; console/CSV output alone is not a pass/fail assertion.
+Set the Locust exit policy to reflect the required failure threshold. Use the installed exit-code settings or an `events.quitting` listener. Inspect exit status alongside the report.
 
-## Verify
+## Check the run
 
-- Healthy fixture passes; wrong success status, invalid body, and failed business checks fail.
+- The healthy case passes. A wrong status, invalid body, or failed business assertion fails the run.
 - All journeys contribute to the intended failure gate.
-- The run reaches the planned offered load; dropped work and generator saturation are reported.
-- Thresholds, effective limits, sample counts, exit status, and cleanup outcome are recorded.
+- Report achieved load, dropped work, and generator saturation.
+- Record thresholds, effective limits, sample counts, exit status, and cleanup outcome.
 
 ## References
 

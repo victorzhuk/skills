@@ -1,21 +1,21 @@
 ---
 name: z-go-dockerfile
-description: Multi-stage Dockerfile authoring for Go services — a deps layer cached separately from source, BuildKit cache mounts, CGO_ENABLED=0 static builds, and the scratch vs distroless vs alpine call. Use when writing a service Dockerfile, picking a base image, or explaining why a container has no shell. Triggers on "Dockerfile", "multi-stage build", "distroless", "CGO_ENABLED=0". Build/push pipeline is [[z-go-ci]]; local parity [[z-go-makefile]].
+description: "Build container images for Go services. Use for multi-stage Dockerfiles, BuildKit caches, cross-compilation, version metadata, runtime assets, and local Compose."
 ---
 
 # Go Dockerfile
 
-Multi-stage build: a `deps` stage that caches modules, a `build` stage that compiles a static binary, and a minimal final stage that only carries the binary. Every layer earns its place — no shell, no package manager, no root user in the shipped image unless a specific need demands it.
+Separate module downloads, compilation, and runtime files into build stages. Select the runtime image from the binary's dependencies.
 
 ## Final image choice
 
 | Base | Certs & tzdata | Shell / exec debugging | Reach for it when |
 |---|---|---|---|
-| `gcr.io/distroless/static-debian13:nonroot` | bundled (ca-certificates + tzdata) | none in `:nonroot`; swap to the `:debug` tag (busybox shell) to triage | **default** for a `CGO_ENABLED=0` Go binary |
-| `scratch` | none — `COPY` both from the builder yourself | none, ever — no `:debug` variant exists | absolute minimal footprint is a hard requirement and you're fine hand-rolling certs/tzdata |
-| `alpine` | `apk add --no-cache ca-certificates tzdata` (neither ships by default) | `ash` shell + `apk` built in | you need a shell for an entrypoint script, `kubectl exec` triage, or a musl-linked CGO build |
+| Distroless static nonroot | Includes CA roots and zone data | No shell in the nonroot runtime image | Static Go binaries |
+| `scratch` | Supply the assets the program needs | No shell | Minimal static runtime |
+| Alpine | Inspect the selected tag and installed packages | Includes a shell | Shell scripts or compatible musl-linked binaries |
 
-`distroless/static` is the sane default: it already carries what `scratch` forces you to reinvent, and it's smaller than `alpine` with a strictly smaller attack surface (no shell, no package manager). Reach for `scratch` only when a security policy mandates zero non-binary content, and for `alpine` only when something in the running container genuinely needs a shell.
+Inspect the actual base tag, architecture, libraries, and image size. A smaller compressed image alone does not establish a security property.
 
 ## Reference Dockerfile
 
@@ -45,28 +45,28 @@ USER 65532:65532
 ENTRYPOINT ["/app"]
 ```
 
-Numeric UID, not the `nonroot` name: a Pod with `securityContext.runAsNonRoot: true` fails to start against a string `USER` — Kubernetes can't verify non-root status from a name, only a number, and `65532` is the exact UID the `:nonroot` tag already sets up.
+Use a numeric nonzero UID when Kubernetes must enforce `runAsNonRoot` from image metadata. A Pod security context can also specify the UID.
 
-`go.mod`/`go.sum` land in their own `COPY` before the rest of the source, so `go mod download` only reruns when dependencies actually change — editing a `.go` file never invalidates that layer.
+Copy `go.mod` and `go.sum` before source files. This lets the builder reuse the dependency step after source-only edits.
 
 ## BuildKit cache mounts
 
-`--mount=type=cache,target=...` needs the `# syntax=docker/dockerfile:1` directive on line one; without it the mount flag is silently unsupported. Two mounts cover the two Go caches:
+Use a BuildKit frontend that supports `RUN --mount`. The syntax directive selects the Dockerfile frontend. The example mounts both Go caches.
 
 - `/go/pkg/mod` — `GOMODCACHE`, the default under the official `golang` image's `GOPATH=/go`.
 - `/root/.cache/go-build` — `GOCACHE`, the compiler's build-artifact cache (builder stage runs as root, hence `/root`).
 
-These caches persist across builds on the same daemon/builder — a cold CI runner still pays the full cost, but a warm local Docker daemon or a CI cache-mount backend (e.g. `--cache-from`/`--cache-to` in `docker buildx build`) turns a `go build` layer into an incremental one. This is the default accelerator, not optional hardening: skip it and every source-touching rebuild redownloads and recompiles the entire module graph.
+Cache mounts depend on the chosen builder and preservation mechanism. Check a cold build and a repeated build in CI.
 
 ## Version stamping
 
-`-X main.Version / main.CommitHash / main.BuildDate` mirror the `-ldflags` convention in [[z-go-makefile]] — same three variable names in package `main`, so a local `make build` and the image produced by this Dockerfile report identical version strings. Pass all three at build time: `docker build --build-arg VERSION=$(git describe --tags --always --dirty) --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) .`; the pipeline step that computes and passes them belongs in [[z-go-ci]].
+Match linker variable names to the binary and the local build. Exercise the version output in the final image. See [[z-go-makefile]].
 
-`-s -w` strips the symbol table and DWARF debug info — smaller binary, but `dlv` can't symbolicate it. If a container image genuinely needs live `delve` debugging, build a second, unstripped target for that image; don't drop `-s -w` from the production build to accommodate a debugging session that happens rarely.
+Use `-s -w` to strip linker symbol and debug information. Build a separate unstripped target when the debugger needs those symbols.
 
 ## ca-certificates and tzdata on scratch
 
-`scratch` starts from nothing: no `/etc/ssl/certs`, no `/usr/share/zoneinfo`, no `/etc/passwd`. Any outbound TLS call or `time.LoadLocation` fails without an explicit copy from the builder:
+Supply trusted roots for TLS peers and zone data for named locations when the binary needs them. Test representative calls in the final image.
 
 ```dockerfile
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
@@ -77,7 +77,7 @@ COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
 
 ## Healthcheck reality
 
-Docker's `HEALTHCHECK CMD` instruction needs a shell or an exec-able binary in the image, and it's meaningless in Kubernetes — the kubelet drives `livenessProbe`/`readinessProbe`/`startupProbe` from the Pod spec and never reads the image's `HEALTHCHECK` metadata. Define probes there (`httpGet`, `grpc`, or `exec` against a tiny health binary), not in the Dockerfile. A Dockerfile `HEALTHCHECK` only matters for `docker run`/Compose/Swarm, and on `scratch`/`distroless:nonroot` there's no shell for the shell form anyway.
+Use exec-form health checks with a binary present in the image. Configure Kubernetes probes separately.
 
 ## .dockerignore essentials
 
@@ -93,7 +93,7 @@ testdata/
 compose.override.yml
 ```
 
-Don't ignore `vendor/` if the module actually vendors dependencies — the build stage needs it. Ignoring `.git` matters most: without it, every commit invalidates Docker's build-context cache even when no tracked file changed.
+Keep `vendor/` in the context for vendored builds. Exclude `.git` unless the build explicitly needs its metadata.
 
 ## Multi-arch
 
@@ -106,8 +106,7 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/app ./cmd/app
 ```
 
-`--platform=$BUILDPLATFORM` pins the builder stage to the host's own architecture — Go then cross-compiles natively via `GOOS`/`GOARCH` with no QEMU emulation of the build step. Drop that pin and `buildx --platform linux/arm64` on an amd64 host emulates the entire builder under QEMU instead. The `docker buildx build --platform linux/amd64,linux/arm64` invocation and the CI job that runs it belong in [[z-go-ci]]; this Dockerfile only needs the platform pin and the two `ARG`s to be cross-compile-ready.
-
+Use `BUILDPLATFORM` for the builder and target arguments for the output binary. CGO can require a target C toolchain and matching runtime libraries.
 
 ## Local Compose stack
 
@@ -150,29 +149,23 @@ services:
       retries: 5
 ```
 
-Expose the `9090` management port only on explicit opt-in, in a companion file named `compose.mgmt.yml` — do NOT call it `compose.override.yml`, that exact name auto-loads and would publish `9090` on every plain `up`:
+Publish the management listener only in an explicitly selected local Compose override.
 
 ```yaml
 services:
   app:
-    ports: ["9090:9090"]
+    ports: ["127.0.0.1:9090:9090"]
 ```
 
-A plain `docker compose up` keeps `9090` private — no host access; `docker compose -f compose.yml -f compose.mgmt.yml up` adds it. An optional `otel` profile adds an `otel-collector` service for local trace inspection. The `build.args` names (`VERSION`/`GIT_COMMIT`/`BUILD_DATE`) mirror the stamping vars in [[z-go-makefile]].
+Use `docker compose -f compose.yml -f compose.mgmt.yml up` for loopback access. The default file should publish only intended application ports.
 
-Production Compose is not this file: it uses the [[z-selfhost-deploy]] patterns — pinned image tag, no `build:`, `restart: unless-stopped`. This compose is local dev only.
+Use [[z-selfhost-deploy]] for production Compose, including immutable artifacts and the deployment's restart policy.
 
-Container healthcheck: prefer the app's own subcommand — `test: ["CMD", "/app", "healthcheck"]` — or fall back to `wget -qO- http://localhost:8080/healthz` (see [[z-go-observability]]). Minimal images (`scratch`, `distroless:nonroot`) ship no `curl` and usually no `wget`; a shell-form `HEALTHCHECK` fails outright there.
+Prefer the binary's health subcommand for shell-free images. Use `wget` only when the image contains it. See [[z-go-observability]].
 
-## Do not
+## Runtime checks
 
-- Copy the full source tree before `go mod download` — it collapses the deps-cache layer into the source layer, so every code change re-downloads every module.
-- Ship `alpine` or a full `golang` image to production because a shell "might be useful someday" — that's exactly the attack surface `distroless` removes.
-- Add a Dockerfile `HEALTHCHECK` as a substitute for a Kubernetes probe — the kubelet never reads it.
-- Run the final stage as root — `distroless/static-debian13:nonroot` and an explicit `USER nonroot:nonroot`/numeric UID exist precisely so you don't have to.
-- Strip `-s -w` from every build "just in case delve is needed" — keep it in prod, build a separate debug target for the rare session that needs symbols.
-
-## Verify
+Inspect the final image's UID, assets, and libraries. Keep a debug artifact when the production build strips symbols.
 
 ```sh
 DOCKER_BUILDKIT=1 docker build -t app:local .

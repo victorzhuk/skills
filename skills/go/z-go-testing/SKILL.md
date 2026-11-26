@@ -1,11 +1,11 @@
 ---
 name: z-go-testing
-description: Go testing patterns — table-driven tests, testify assert/require/mock/suite, parallelism, goleak, fuzzing, TDD baby steps. Use when writing, reviewing, or auditing Go tests, or fixing flaky, order-dependent, or over-asserting tests. Triggers on "table-driven", "t.Parallel", "testify", "goleak", "red-green-refactor". Database/HTTP harnesses are [[z-go-database]]; test-depth choice [[z-testing-strategy]].
+description: "Write Go tests with table cases, testify, parallel subtests, fuzzing, or synctest. Use [[z-testing-strategy]] to choose test depth and [[z-go-database]] for database fixtures."
 ---
 
 # Go Testing
 
-Assumes test depth is already decided — see [[z-testing-strategy]] for MVP vs regression mode and whether a change needs a BDD contract first.
+Use the agreed test depth and behavior contract. See [[z-testing-strategy]].
 
 ## Structure
 
@@ -21,7 +21,9 @@ Naming: `TestFoo`, `TestFoo_Method`, `BenchmarkFoo`, `ExampleFoo`, `FuzzFoo`.
 
 ## Table-driven tests
 
-Always name cases; build the table incrementally in TDD — one case per cycle. Under a zapply red stage the plan's behavior contract is already closed — write the full contract table up front there. Loop-variable capture (`tt := tt`) is redundant for loop variables declared with `:=` under Go 1.22+ language semantics; assignments with `=` still reuse variables. Check the owning module's version, not just the toolchain; see [[z-go-modernize]].
+Name each case. Add one case per TDD cycle. For a fixed contract, write all agreed cases in the red stage.
+
+Go 1.22 language semantics give each iteration its own variables when declared with `:=`. Assignment with `=` still reuses variables. Check the owning module's Go version before removing `tt := tt`. See [[z-go-modernize]].
 
 ```go
 func TestCalculatePrice(t *testing.T) {
@@ -49,17 +51,17 @@ func TestCalculatePrice(t *testing.T) {
 }
 ```
 
-Call `t.Parallel()` on the top-level when it shares no mutable global; add it to subtests only when they are truly independent. Per-iteration variables and shallow fixture copies do not isolate nested slices, maps, or pointers; see [[z-go-safety]].
+Use `t.Parallel()` only in independent tests. Isolate mutable nested slices, maps, and pointers before starting parallel subtests. See [[z-go-safety]].
 
-`t.Context()` (Go 1.24+) is canceled immediately before cleanup callbacks. It does not inherit `t.Deadline()`; derive a deadline explicitly when the tested operation needs one. Cleanup can join workers that stop on that context. Migrate touched tests when useful; `context.Background()` in untouched tests alone is not a reason to expand scope. See [testing.T.Context](https://pkg.go.dev/testing#T.Context).
+Go 1.24 added `t.Context()`. The test cancels it before cleanup callbacks run. Derive a deadline explicitly when the operation needs one. Use cleanup to join workers after cancellation. [testing.T.Context](https://pkg.go.dev/testing#T.Context)
 
 ## testify: assert vs require
 
 Testify is the house convention for these examples. Preserve the target repository's established assertion style.
 
-`require` calls `t.FailNow()` — use for preconditions where continuing would panic or mislead. `assert` records failure and continues — use for independent verifications. Argument order: always `(expected, actual)`.
+Use `require` for a precondition. Use `assert` for an independent check. Pass the expected value first.
 
-Call `require`, `t.FailNow`, `t.Fatal`, and `t.Fatalf` only from the goroutine running the test or subtest. Collect worker and HTTP handler errors, then assert in the test goroutine. Alternatively, call `t.Error` or `t.Errorf` and return explicitly from the worker or handler. Complete required synchronization before the test ends.
+Call `require`, `t.FailNow`, `t.Fatal`, and `t.Fatalf` from the test goroutine. Return worker errors there, or call `t.Errorf` before exiting the worker. Wait for workers before the test ends.
 
 ## testify: key assertions
 
@@ -76,7 +78,7 @@ is.Eventually(func() bool { ... }, 5*time.Second, 100*time.Millisecond)
 
 Mark helpers with `t.Helper()` so failures point at the call site.
 
-Default to a hand-rolled fake struct that directly implements the interface being stubbed — a func field per method, set per test case:
+Use a small fake when a function field can implement the dependency.
 
 ```go
 type fakeUserRepo struct {
@@ -97,30 +99,36 @@ func TestService_GetUser(t *testing.T) {
 }
 ```
 
-Reach for testify's `mock.Mock` when you specifically need `.On()`/expectation-matching semantics — call-count assertions, argument matchers, or verifying a call never happened. Embed `mock.Mock`, return values via `m.Called()`, always verify with `AssertExpectations(t)`. Matchers: `mock.Anything`, `mock.AnythingOfType("string")`, `mock.MatchedBy(func)`. Modifiers: `.Once()`, `.Times(n)`, `.Maybe()`.
+Use `mock.Mock` when behavior depends on a call count, a matched argument, or an omitted call. Set expectations with `On`. Retrieve return values with `Called`. Check the expectations after exercising the subject.
 
 ```go
 type MockUserRepo struct{ mock.Mock }
 
 func (m *MockUserRepo) Find(ctx context.Context, id int64) (*User, error) {
     args := m.Called(ctx, id)
+    if args.Get(0) == nil {
+        return nil, args.Error(1)
+    }
     return args.Get(0).(*User), args.Error(1)
 }
 
 repo := new(MockUserRepo)
 repo.On("Find", mock.Anything, int64(42)).Return(&User{Name: "alice"}, nil)
+got, err := NewUserService(repo).GetUser(t.Context(), 42)
+require.NoError(t, err)
+assert.Equal(t, "alice", got.Name)
 repo.AssertExpectations(t)
 ```
 
 ## testify/suite
 
-Optional, rarely needed here — `suite.Suite` (`SetupTest`/`TearDownTest` lifecycle) has no established usage in this codebase. Reach for it only if a test file needs shared per-test setup/teardown state that a table-driven test or a plain helper function can't express cleanly; otherwise skip it.
+Use `suite.Suite` when tests need shared setup and teardown. Prefer a plain helper for a single fixture.
 
 ## Goroutine leaks and fuzzing
 
-Use `goleak.VerifyTestMain(m)` for packages with parallel tests. Per-test `defer goleak.VerifyNone(t)` is only appropriate for serial tests with a controlled goroutine baseline; concurrent tests can otherwise look like leaks. See [goleak's parallel-test limitation](https://github.com/uber-go/goleak).
+Use `goleak.VerifyTestMain(m)` for packages with parallel tests. Reserve `goleak.VerifyNone(t)` for serial tests with a known baseline. [goleak](https://github.com/uber-go/goleak)
 
-Fuzz with corpus seeds; the invariant goes inside `f.Fuzz`:
+Add seeds to the fuzz corpus. Assert the invariant inside `f.Fuzz`.
 
 ```go
 func FuzzReverse(f *testing.F) {
@@ -133,33 +141,26 @@ func FuzzReverse(f *testing.F) {
 
 ## Deterministic time (Go 1.25+)
 
-Use `testing/synctest` when tests are flaky due to timing — time advances only when all goroutines block. Do not use the Go 1.24 `synctest.Run` API in 1.25+ code; use `synctest.Test` and `synctest.Wait` instead.
+Use `synctest.Test` for concurrent code that depends on Go timers. Fake time advances when every goroutine in the test bubble is durably blocked. External I/O can prevent this. Call `synctest.Wait` to wait for other bubble goroutines to block. The Go 1.24 experimental API used `synctest.Run`. [Package documentation](https://pkg.go.dev/testing/synctest)
 
-## TDD: red-green-refactor
+## Red, green, refactor
 
-Each cycle ≤ 2 minutes. If stuck, the step is too big — revert to last green. Under a zapply seal — the caller's sealed contract tests — never revert or rewrite sealed `_test.go` files; stuck is an escalation.
+1. Write a test that fails for the intended behavior. For sealed contract tests, require an assertion failure or the agreed stub panic.
+2. Implement the smallest behavior that satisfies the test.
+3. Refactor while the checks pass.
 
-1. **Red** — write one failing test (compilation failure counts; under a sealed red stage it does not — red means an assertion failure or stub panic, and a compile error is your bug)
-2. **Green** — minimal code to pass (fake it: return a constant first)
-3. **Refactor** — clean up while tests stay green
-
-When faking to real, take the smallest jump: constant → variable → conditional → iteration.
-
-**Slice vertically.** Grow a feature one tracer-bullet slice at a time — each
-slice cuts through every layer (transport → use case → domain → repo) and is
-independently demoable — rather than building a whole layer before the next. A
-slice you can't cover with one end-to-end test is too wide; narrow it.
+Keep each change independently testable through the required layers. When a sealed test fails unexpectedly, report it without changing the agreed contract.
 
 ## Quick Reference
 
-Prefer the project wrapper. Standalone runs need a whole-process deadline, a per-test-binary timeout, and explicit package/test worker caps. Keep fixed bounds separate from optional selectors; see [[z-go-makefile]] and [[z-testing-strategy]]. Preserve approved caller-emitted commands.
+Use the project wrapper or the caller's specified command. For standalone runs, bound elapsed time, each test binary, and both worker counts. Keep fixed bounds separate from selectors. See [[z-go-makefile]].
 
 | Command | Purpose |
 |---|---|
 | `timeout 5m go test -parallel 4 -p 2 -timeout 2m ./...` | all tests |
 | `timeout 5m go test -parallel 4 -p 2 -timeout 2m -run TestName/subtest ./...` | specific subtest |
-| `timeout 5m go test -parallel 4 -p 2 -timeout 5m -race ./...` | race detection — when concurrency is in play; budget for its measured overhead |
-| `timeout 5m go test -parallel 4 -p 2 -race -timeout 5m -count=1 ./...` | disable caching when fresh execution is needed, especially service-backed integration tests; otherwise preserve the project's cached fast target |
+| `timeout 5m go test -parallel 4 -p 2 -timeout 5m -race ./...` | detect races on exercised paths |
+| `timeout 5m go test -parallel 4 -p 2 -race -timeout 5m -count=1 ./...` | run without cached test results |
 | `timeout 15m go test -parallel 4 -p 2 -timeout 10m -tags=integration ./...` | integration build tag |
 | `timeout 15m go test -parallel 4 -p 2 -timeout 10m -bench=. -benchmem ./...` | benchmarks |
 | `timeout 15m go test -parallel 4 -p 2 -timeout 10m -fuzz=FuzzName -fuzztime 30s ./path/to/package` | fuzzing — `-fuzztime` or it never stops |
@@ -167,19 +168,19 @@ Prefer the project wrapper. Standalone runs need a whole-process deadline, a per
 
 ## Do not
 
-- Reach for `context.Background()` in new or touched test code — prefer `t.Context()` there; don't rewrite untouched tests as a drive-by migration.
+- Rewrite untouched tests solely to adopt `t.Context()`.
 - Add `t.Parallel()` to subtests that share a fixture or depend on order.
 - Assert on whole structs when one field is the contract — assert the field.
-- Use `assert` for guards where a nil dereference follows on failure. Use `require` in the test goroutine, or explicitly return from a worker after reporting failure.
+- Continue after a failed precondition when the next assertion would panic.
 - Forget `AssertExpectations(t)` on mocks — unverified expectations silently pass.
 - Use `is.Equal(ErrNotFound, err)` for wrapped errors — use `is.ErrorIs`.
 - Add `//go:build test` tags unless the project explicitly builds with `-tags test`.
 - Write comments restating what an assertion already says.
 
-## Verify
+## Verification
 
 ```sh
 timeout 5m go test -parallel 4 -p 2 -timeout 5m -race ./...
 ```
 
-Under a zapply dispatch, verify with the chunk's literal verify command instead — touched packages named literally, `-race` only when the chunk touched concurrency; `-race ./...` belongs to the caller's merge-gate floor.
+When the caller supplies a verification command, run it as specified. Retain its package scope and race settings.

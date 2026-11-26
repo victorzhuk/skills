@@ -1,15 +1,17 @@
 # WCAG 2.2 Quick Reference
 
-## Success criteria by level
+## Selected success criteria by level
+
+Use the [normative standard](https://www.w3.org/TR/WCAG22/) for all criteria, definitions, and exceptions.
 
 ### Level A (minimum)
 
 | Criterion | Description |
 |-----------|-------------|
-| **1.1.1** Non-text Content | All images, icons have text alternatives |
-| **1.2.1** Audio-only/Video-only | Provide transcript or audio description |
-| **1.2.2** Captions | Video with audio has captions |
-| **1.2.3** Audio Description | Video has audio description |
+| **1.1.1** Non-text Content | Give informative content an equivalent text alternative. Hide decorative content from assistive technology. |
+| **1.2.1** Audio-only/Video-only | Provide the applicable alternative for prerecorded audio-only or video-only content |
+| **1.2.2** Captions | Caption prerecorded audio in synchronized media |
+| **1.2.3** Audio Description or Media Alternative | Provide audio description or a time-based media alternative for prerecorded synchronized media |
 | **1.3.1** Info and Relationships | Information conveyed through presentation is available programmatically |
 | **1.3.2** Meaningful Sequence | Reading order is logical |
 | **1.3.3** Sensory Characteristics | Instructions don't rely solely on shape, color, size, location, orientation, or sound |
@@ -40,15 +42,15 @@
 
 | Criterion | Description |
 |-----------|-------------|
-| **1.2.4** Captions (Live) | Live audio has captions |
-| **1.2.5** Audio Description | Pre-recorded video has audio description |
+| **1.2.4** Captions (Live) | Caption live audio in synchronized media |
+| **1.2.5** Audio Description | Provide audio description for prerecorded video in synchronized media |
 | **1.3.4** Orientation | Content doesn't restrict orientation |
 | **1.3.5** Identify Input Purpose | Input purpose can be programmatically determined |
 | **1.4.3** Contrast (Minimum) | 4.5:1 for normal text, 3:1 for large text |
 | **1.4.4** Resize Text | Text can be resized to 200% without loss of functionality |
 | **1.4.5** Images of Text | Text used instead of images of text |
 | **1.4.10** Reflow | Content reflows at 320px width without horizontal scroll |
-| **1.4.11** Non-text Contrast | UI components have 3:1 contrast |
+| **1.4.11** Non-text Contrast | Required visual information for controls, states, and meaningful graphics has 3:1 contrast against adjacent colors |
 | **1.4.12** Text Spacing | Content adapts to text spacing changes |
 | **1.4.13** Content on Hover/Focus | Additional content is dismissible, hoverable, persistent |
 | **2.4.5** Multiple Ways | Multiple ways to find pages |
@@ -143,7 +145,7 @@
 <div aria-live="polite">Status update here</div>
 
 <!-- Assertive (interrupts immediately) -->
-<div aria-live="assertive" role="alert">Error message here</div>
+<div role="alert">Error message here</div>
 
 <!-- Status (polite, implicit) -->
 <div role="status">Loading complete</div>
@@ -159,6 +161,7 @@
 | NVDA | Screen reader (Windows) | [nvaccess.org](https://www.nvaccess.org/) |
 | VoiceOver | Screen reader (Mac) | Built into macOS |
 | Colour Contrast Analyser | Desktop app | [tpgi.com](https://www.tpgi.com/color-contrast-checker/) |
+
 ## WCAG 2.2 additions
 
 | Criterion | Level | Check |
@@ -166,8 +169,8 @@
 | 2.4.11 Focus Not Obscured (Minimum) | AA | Focus is not entirely hidden by author-created content |
 | 2.4.12 Focus Not Obscured (Enhanced) | AAA | No part of the focused component is hidden |
 | 2.4.13 Focus Appearance | AAA | Meet focus-indicator area and contrast requirements |
-| 2.5.7 Dragging Movements | AA | Provide a single-pointer alternative unless dragging is essential |
-| 2.5.8 Target Size (Minimum) | AA | At least 24 CSS px, or a specified spacing/equivalent/inline/essential exception |
+| 2.5.7 Dragging Movements | AA | Provide a single-pointer alternative unless dragging is essential or the user agent provides unmodified functionality |
+| 2.5.8 Target Size (Minimum) | AA | At least 24 by 24 CSS px, unless the spacing, equivalent, inline, user agent control, or essential exception applies |
 | 3.2.6 Consistent Help | A | Repeated help mechanisms keep consistent relative order |
 | 3.3.7 Redundant Entry | A | Reuse previously entered information where required |
 | 3.3.8 Accessible Authentication (Minimum) | AA | Avoid cognitive-function tests unless a defined alternative or exception applies |

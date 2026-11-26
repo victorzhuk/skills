@@ -1,6 +1,6 @@
 ---
 name: z-qa-spec-writer
-description: "Discover the existing test framework and generate requested compilable scaffolding. Use for test stubs, framework detection, or skipped tests. Readable acceptance scenarios belong to [[z-bdd]], test plans to [[z-qa-analyst]]. Skipped scaffolding is not acceptance proof."
+description: "Create requested test scaffolding in the project's framework. Use for skipped stubs, framework discovery, or test collection. See [[z-bdd]] for acceptance scenarios and [[z-tdd]] for executable regression tests."
 ---
 
 # Test scaffolding
@@ -9,17 +9,17 @@ Generate skipped scaffolding only when requested. Executable regression tests an
 
 ## Discover the dialect
 
-Read the project runner, dependency manifest, test configuration, and one to three relevant tests. Match imports, assertions, names, fixtures, and module style.
+Inspect the runner, manifest, configuration, and relevant tests. Match their imports, assertions, fixtures, naming, and module conventions.
 
-Detect the actual frameworks, including Jest, Vitest, Playwright, stdlib Go, testify, Ginkgo, or pytest when declared. Do not assume one from another project's history.
+Identify the declared framework before choosing a skip or todo mechanism.
 
-Map requested scenarios to existing test interfaces. Several source files may be covered by one integration test; do not create one stub file per implementation file by default.
+Map each requested scenario to an existing test interface. One integration test can cover several source files.
 
 ## Write the stubs
 
 - Reuse the project's skip/todo mechanism.
 - Name each test for the behavior from the approved plan.
-- Keep skipped bodies minimal and compilable; do not add meaningless assertions to consume imports.
+- Keep skipped bodies compilable. Remove unused imports.
 - Use only existing fixtures or clearly identified scaffolding placeholders.
 - Preserve acceptance IDs only when they already exist.
 - Record an owner/reason for deferred coverage according to project convention.
@@ -42,14 +42,14 @@ it.todo('rejects an expired token');
 
 Do not treat these examples as framework installation instructions.
 
-## Verify the artifact
+## Check the artifact
 
 Use the repository's test-compilation or collection target.
 
-- **Go:** `go build` ignores `_test.go`. Use a bounded `go test -c` for each target package, with explicit build parallelism and outputs in the project's binary directory. A `go test -run '^$'` alternative still executes init/TestMain.
-- **TypeScript:** run the project's typecheck that includes the new test files, then the runner's collection or skipped-test check.
-- **Python:** `py_compile` checks syntax only. Use bounded pytest collection to resolve imports and fixtures; collection can execute module setup.
-- Confirm the requested stubs report skip/todo, not pass or fail. Report intentionally unimplemented coverage as a gap.
+- **Go.** Use bounded `go test -c` on each target package with explicit build parallelism and an output directory. `go build` ignores test files. A run with `-run '^$'` can still execute package initialization and `TestMain`.
+- **TypeScript.** Run the project typecheck with the new test files in scope. Then run test collection or the skipped tests.
+- **Python.** Use bounded pytest collection to check imports and test discovery. Collection can execute module code. Run the selected tests to exercise fixture setup when applicable.
+- Check that every requested stub reports skip or todo. Record its unimplemented coverage as a gap.
 
 Honor [[z-testing-strategy]] and literal dispatched command contracts. Do not call skipped stubs completed behavior tests.
 

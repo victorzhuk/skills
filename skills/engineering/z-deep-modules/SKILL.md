@@ -1,6 +1,6 @@
 ---
 name: z-deep-modules
-description: Deep-module design vocabulary — depth as leverage at the interface, seams, adapters, the deletion test, interface-is-the-test-surface. Use when designing or reviewing a module's interface or deciding where a seam goes. Triggers on "deep module", "shallow module", "seam", "deletion test". Bounded contexts — [[z-domain-modeling]]; premature abstraction — [[z-no-over-engineering]]; Go mechanics — [[z-go-interfaces]].
+description: "Design or review module interfaces, seams, and adapters. Use the deletion test to evaluate depth. See [[z-domain-modeling]] for bounded contexts and [[z-go-interfaces]] for Go types."
 ---
 
 # Deep modules
@@ -32,7 +32,7 @@ A polymorphic seam needs a concrete reason: runtime variation, an external depen
 
 ## Test the behavior
 
-Use the lowest public interface that proves the contract without hiding integration risk. Internal tests can serve invariants that are not externally distinguishable; avoid coupling assertions to incidental call order or private layout.
+Use the lowest public interface that proves the contract without hiding integration risk. Use internal tests for otherwise unobservable invariants. Avoid assertions about incidental implementation details.
 
 Substitute dependencies only where the test needs control. Do not mock the module under test.
 

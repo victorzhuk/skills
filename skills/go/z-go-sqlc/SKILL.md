@@ -1,31 +1,18 @@
 ---
 name: z-go-sqlc
-description: Use when writing or reviewing Go database access that should be type-safe — generating Go from SQL with sqlc, authoring sqlc.yaml, structuring queries/schema, and wiring sqlc output into the repository layer. Prefer over hand-written query builders (squirrel/goqu) for static SQL.
+description: "Generate Go database methods from SQL and schema files with sqlc. Use for sqlc.yaml, query annotations, static queries, and generated repository adapters. See [[z-go-database]] for runtime behavior."
 ---
 
 # Go SQL with sqlc
 
-sqlc generates type-safe Go from plain SQL. You write the queries; sqlc compiles them
-against your schema and emits structs and methods. The query is checked at generate
-time, not discovered at runtime — no reflection, no string building, no `interface{}`.
+Use sqlc for fixed query shapes in projects that generate Go database access from SQL.
 
-## When to use
+## Choose the query shape
 
-- **Default for static SQL.** Any query whose shape is fixed at compile time.
-- **Reviewing repository code** that hand-builds SQL with a query builder or string
-  concatenation — recommend sqlc instead.
-
-Do **not** reach for a query builder (squirrel, goqu) for static SQL. They trade
-compile-time safety for runtime assembly and add a dependency this stack avoids.
-
-### The dynamic-query exception
-
-Genuinely dynamic SQL (variable WHERE clauses, optional filters, dynamic column sets)
-is the one case sqlc does not cover. Even then, prefer enumerating the finite set of
-queries as separate sqlc entries first — most "dynamic" needs are a handful of fixed
-shapes. Only when the shape is truly open-ended (e.g. a search builder) drop to
-`pgx` with hand-written parameterized SQL, kept narrow and isolated. Never concatenate
-user input.
+Inspect the project's database engine, driver, generator configuration, and schema source.
+Represent a small set of query shapes with named queries when that keeps SQL readable.
+For open-ended queries, bind values as parameters. Allowlist dynamic identifiers that the driver cannot bind.
+Keep query-specific code at the database boundary.
 
 ## Workflow
 
@@ -71,7 +58,7 @@ SELECT id, email FROM users WHERE active = true ORDER BY created_at DESC;
 INSERT INTO users (email) VALUES ($1);
 ```
 
-Generated methods are called with a `pgx` connection/pool and typed params:
+Call the generated methods with a `pgx` connection or pool and the generated parameter types.
 
 ```go
 q := sqlc.New(pool)
@@ -80,25 +67,16 @@ user, err := q.GetUser(ctx, id) // user is sqlc.User, err is real or nil
 
 ## Fit with the repository layer
 
-The repository layer lives at `{concept}/{impl}/` and returns **domain
-entities**, never database models. sqlc output is a database model — keep it behind the
-boundary:
+Keep generated query types within the database adapter when the domain has an independent contract.
+Use the project's existing package layout. Convert database rows to domain values at that boundary.
+Use the same schema source for the generator and database deployment.
 
-- Generated `sqlc.Queries` (naming follows your `package:` choice) is a private
-  dependency of the repo `impl`.
-- `repo.go` methods call generated queries, then convert the generated struct →
-  domain entity. The boundary rule is what matters: generated structs must
-  never leak past the repository interface. The conversion mechanic is a free
-  choice — inline in each repo method, a shared `convert.go` helper, or a
-  dedicated `mappers.go` are all equally valid.
-- Schema/migrations feed both the database and sqlc's type-checking.
+## Verification
 
-This preserves the inward dependency rule: SQL generation is an infrastructure detail
-the domain never sees.
+Regenerate with the project's pinned binary. Check the generated diff for the affected query.
+Build the calling package. Exercise representative values, absent rows, and applicable SQL constraints against the supported database.
 
 ## Related
 
-- [[z-go-database]] — `database/sql`, `sqlx`, raw `pgx`; sqlc complements these by
-  generating the access code instead of hand-writing it.
-- [[z-go-codegen-patterns]] — treat `sqlc generate` like any codegen step: commit
-  generated files, regenerate in CI, golden-test if you wrap the output.
+- [[z-go-database]] covers the database drivers that sqlc targets.
+- [[z-go-codegen-patterns]] covers generator pins and reproducible output.

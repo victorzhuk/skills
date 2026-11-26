@@ -1,6 +1,6 @@
 ---
 name: z-merge-conflicts
-description: "Resolve merge, rebase, or cherry-pick conflicts by intent. Use for \"merge conflict\", \"rebase conflict\", \"both modified\", or \"conflict markers\". Read both sides, preserve unrelated work, stage only intended resolutions, and verify before continuing the authorized operation."
+description: "Resolve Git merge, rebase, or cherry-pick conflicts. Preserve unrelated work, stage the intended resolutions, and verify the result before continuing."
 ---
 
 # Merge conflicts
@@ -11,10 +11,10 @@ Resolve by intent and preserve unrelated work.
 
 1. Identify the merge, rebase, or cherry-pick and its current commit. Record conflicting paths and pre-existing staged and unstaged changes.
 2. Read each side's commits and relevant PRs or tickets. Explain why each change exists.
-3. Preserve both intents where possible. Resolve incompatible behavior using the caller's stated goal; escalate a decision the evidence cannot settle.
-4. Run applicable project checks through its wrappers and resource limits. Fix what the resolution broke.
+3. Preserve both intents when compatible. Use the caller's stated goal to resolve differences. Escalate a choice that the evidence cannot settle.
+4. Run the applicable project commands through their wrappers with the required limits. Fix failures from the resolution.
 5. Stage resolved paths explicitly. Inspect the entire staged diff against the initial state. Do not incorporate unrelated staged work into a commit.
-6. Continue the actual operation within the caller's authorization. Use the correct merge, rebase, or cherry-pick continuation and report remaining conflicts.
+6. Continue the actual operation within the caller's authorization. Use the continuation for the active operation. Report any remaining conflicts.
 
 ## Do not
 
@@ -24,11 +24,11 @@ Resolve by intent and preserve unrelated work.
 - Abort merely to avoid resolving a conflict. Explicit user cancellation can authorize aborting after preserving recoverable work.
 - Treat marker-like test fixtures as unresolved conflicts without inspection.
 
-## Verify
+## Inspect the resolution
 
 - `git diff --name-only --diff-filter=U` has no unresolved paths.
 - Changed files contain no unintended conflict markers.
 - Staged changes include only intended resolutions and already-authorized work.
-- Project checks pass and `git status` confirms the intended operation completed.
+- The project commands pass and `git status` shows the intended operation completed.
 
-see [[z-verify-before-done]], [[z-testing-strategy]]
+Use [[z-verify-before-done]] for evidence and [[z-testing-strategy]] for test scope.

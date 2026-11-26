@@ -1,66 +1,32 @@
 ---
 name: z-concise-human-docs
-description: Write and edit documentation, comments, guides, runbooks, specs, and explanatory prose in a concise human style. Use whenever writing or rewriting docs/comments in any language. Does not cover publishable prose or voice cleanup; see [[z-fuck-slop]].
+description: "Write or edit guides, specifications, runbooks, and code comments for clarity. Preserve technical terms, conditions, and the document's language. See [[z-fuck-slop]] for publication style."
 ---
 
-# Concise human docs
+# Write and edit technical documentation
 
-Write documentation and comments in a short, direct, human style in any language: Russian, English, or the language already used by the file.
+## Preserve the contract
 
-The style is factual and compressed. It avoids inflated explanations, tutorial tone, and second sentences that only explain the first sentence again.
+Read the source material and any existing passage. Identify the reader, action, conditions, exceptions, and expected result.
+Preserve the document's language and established technical terms. Keep commands, flags, configuration keys, status names, and quoted output exact.
 
-## Core rules
+## Edit the prose
 
-- Preserve the document language. If the file is Russian, write Russian. If English, write English. If mixed, keep established technical names and write prose in the dominant language.
-- Prefer one precise sentence over two explanatory sentences.
-- Prefer facts over advice. State what happens, where, and under which condition.
-- Cut filler: "легко", "просто", "важно", "поэтому", "следствие простое", "it is important", "simply", "note that", "as a result".
-- Avoid motivational or tutorial phrasing. Do not explain obvious consequences.
-- Do not write "human-sounding" slang. Keep it dry, but not bureaucratic.
-- Keep technical names as-is when they connect to code, API, flags, statuses, or configs.
-- Do not translate domain terms if translation makes the text less searchable.
-- Use short paragraphs. Split dense docs with tables or bullets, not with long narration.
-- For implementation comments, write WHY, invariant, edge case, or non-obvious constraint. Apply [[z-zero-comments]] within the authorized edit scope; preserve required API docs, example output markers, generated-file markers, and operator-facing config or migration contracts.
+1. Put the action or observable result first.
+2. Use one instruction per sentence. Keep an exception next to the rule it qualifies.
+3. Remove repeated explanations, promotional adjectives, and statements that add no decision or fact.
+4. Keep reasons that affect safety, interpretation, or the reader's choice.
+5. Use a table for alternatives and a numbered list for ordered steps.
+6. Preserve uncertainty. Replace a qualified claim with a rule only when the evidence establishes deterministic behavior.
 
-## Style pass
+For example, “The user can see inconsistent behavior when the cache is stale” names the condition and outcome.
+Russian example before editing — «После создания заказа нельзя ломать оплату только потому, что seller/product позже скрыли».
 
-Before finalizing docs or comments, run this pass:
+After editing — «После создания заказа оплата не зависит от текущей публичной видимости seller/product».
 
-1. Remove the second sentence if it only justifies the first.
-2. Replace "может / should / should not" with the actual rule when the behavior is deterministic.
-3. Replace "because / поэтому / для этого" explanations with a shorter condition-result form.
-4. Remove adjectives that do not change behavior: "главный", "важный", "простой", "фактический", "полноценный" unless the contrast is needed.
-5. Check every paragraph for one job. If it has setup, rule, and exception in one paragraph, split or table it.
-6. Keep examples only when they clarify a real decision. Remove generic examples.
+For implementation comments, follow [[z-zero-comments]]. Preserve public contracts, tool markers, and operator guidance.
 
-## Patterns
+## Check the result
 
-Bad:
-`Модерация размазана по трем сервисам, но роли у них разные. Если смешать эти роли, легко начать чинить баг не там.`
-
-Good:
-`Модерация распределена между office, client и admin; у каждого сервиса своя зона ответственности.`
-
-Bad:
-`This is important because otherwise the user may see inconsistent behavior.`
-
-Good:
-`The user can see inconsistent behavior when the cache is stale.`
-
-Bad:
-`После создания заказа нельзя ломать оплату только потому, что seller/product позже скрыли. Поэтому часть кода читает данные без публичного фильтра.`
-
-Good:
-`После создания заказа оплата не зависит от текущей публичной видимости seller/product.`
-
-## Comments
-
-Apply the same implementation-comment discipline and exceptions to examples inside docs and runbooks. See [[z-zero-comments]] for the full rule and examples.
-
-## Verify
-
-- Text is shorter after editing unless new facts were added.
-- No sentence exists only to explain that the previous sentence matters.
-- The reader can identify the rule, condition, and consequence without reading around filler.
-- Technical terms stay searchable.
-- Implementation comments add context; required documentation and tooling markers remain intact.
+Compare the revised text with the source. Check every condition, exception, consequence, and technical name.
+Check that a reader can perform the task using the revised text. Keep words that resolve ambiguity.

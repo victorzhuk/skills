@@ -1,47 +1,47 @@
 ---
 name: z-go-mcp-server
-description: MCP (Model Context Protocol) server authoring in Go — SDK choice, transport selection, stdio discipline, tool design, and testing. Use when building or extending a Go MCP server — modelcontextprotocol/go-sdk vs mark3labs/mcp-go, stdio vs streamable HTTP, agent-actionable tool/error descriptions. Does not cover consuming/calling LLMs from Go; see [[z-go-llm-streaming]]. Does not cover context propagation; see [[z-go-context]].
+description: "Build a Go Model Context Protocol server. Use for SDK selection, stdio or HTTP transports, tool schemas, authorization, errors, and client tests. See [[z-go-llm-streaming]] for LLM clients."
 ---
 
 # Go MCP server
 
-Build MCP servers with the official SDK by default. Treat every tool as a workflow contract for the calling model, not a REST mirror.
+Design each tool around a task the client can complete with its granted permissions.
 
 ## SDK choice
 
-Use `modelcontextprotocol/go-sdk` for new servers unless an existing SDK or a required capability determines the choice. Preserve working `mark3labs/mcp-go` integrations. Check each selected release's Go floor, protocol support and compatibility policy; SDK maturity does not establish support for every new protocol revision.
-
-Before changing a server, record the pinned SDK version, supported protocol revisions, client versions and transports. Verify that matrix with client/server tests. Examples below use the official SDK's session API and require a compatible pinned release; they are not proof of 2026-07-28 support.
+Record the Go version, pinned SDK, protocol revisions, transports, and client versions.
+Preserve a working SDK when it supports the required capabilities. The examples use the official SDK's session API.
 
 ## Transport choice
 
 | Transport | Use when | Avoid when |
 |---|---|---|
-| stdio (`mcp.StdioTransport`) | Local subprocess launched by one client — CLI tools, editor/agent integrations. verify the client supports the selected revision | Multiple concurrent clients, or the server runs remotely |
+| stdio (`mcp.StdioTransport`) | One client starts a local subprocess. Check support for the selected revision. | Multiple concurrent clients, or the server runs remotely |
 | Streamable HTTP (`mcp.NewStreamableHTTPHandler`) | Remote server, multiple concurrent sessions, runs behind a load balancer or in Kubernetes | A single local subprocess covers the need — HTTP adds authentication and origin-validation requirements |
-| SSE-only (the 2024-11-05 transport) | Never for a new server | Always — superseded by streamable HTTP in spec 2025-03-26; keep it only to serve clients stuck on the old transport |
+| Legacy SSE | Required by an existing client | New integrations that support Streamable HTTP |
 
-As checked on 2026-10-13, the [current protocol is 2026-07-28](https://modelcontextprotocol.io/docs/2026-07-28/learn/versioning). Its core is stateless: requests carry protocol-version metadata and servers support discovery. Earlier revisions use `initialize` and may use `Mcp-Session-Id`; preserve that lifecycle only for the revisions your SDK/client pair supports. Do not infer SDK support from the protocol publication date.
-
-For HTTP, validate Origin and Host according to the selected transport revision, authenticate callers, and authorize each tool. Check the pinned SDK's defaults rather than assuming it covers these controls. A generic browser cross-origin helper is not a substitute for the protocol's Origin policy.
+Select the lifecycle by negotiated protocol revision.
+The [2026-07-28 specification](https://modelcontextprotocol.io/docs/2026-07-28/learn/versioning) specifies discovery and per-request protocol metadata.
+Earlier revisions use `initialize` and may use `Mcp-Session-Id`. Test the revision your SDK and client actually support.
+Check HTTP Origin and Host handling against that revision. Authenticate the caller and authorize each operation.
 
 ## Security boundary
 
 - Derive caller and tenant identity from verified authentication. Authorize the requested action and resource on every call, including read-only tools.
-- For OAuth, validate issuer, audience, expiry, and required scopes. Accept only tokens issued for this MCP server. Never forward its bearer token to an upstream API; use separately scoped downstream credentials.
-- Validate tool arguments in code, including ranges, paths, URLs, and ownership. Schema descriptions, tool annotations, and model confidence are not permission checks.
+- For OAuth, check issuer, audience, expiry, and scopes. Accept tokens for this server. Use separate credentials for upstream APIs.
+- Check tool arguments in code, including ranges, paths, URLs, and ownership. Schema descriptions, tool annotations, and model confidence are not permission checks.
 - Treat returned documents, upstream errors, and tool metadata as untrusted content. Keep result data separate from trusted instructions. Do not accept model-supplied approval flags as authorization.
-- For consequential actions, verify the caller's approval policy at execution time and bind any approval to the exact operation and arguments. Preserve existing valid authorization.
+- For consequential actions, check the caller's approval policy at execution time and bind any approval to the exact operation and arguments. Preserve existing valid authorization.
 - Limit request/result bytes, execution time, concurrency, and downstream work. Apply [[z-go-http-client]] destination controls to tools that fetch URLs.
-- Run stdio servers with only the filesystem, network, and credential access they need. Stdio avoids a listening endpoint; it does not sandbox the process.
+- Restrict the stdio process to the files, network, and credentials it needs. Stdio provides no process isolation.
 
 Use [[z-security-hardening]] for shared prompt-injection defenses and [MCP security guidance](https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices) for the selected protocol's authorization requirements.
 
-This server-side streamable-HTTP SSE is internal transport plumbing, not an app-level streaming feature — for hand-rolled SSE to a browser client, see [[z-go-llm-streaming]].
+Use [[z-go-llm-streaming]] for application-level SSE output.
 
-## stdio discipline
+## Keep stdio protocol output clean
 
-Stdout carries protocol JSON-RPC only. Anything else on stdout — a stray `fmt.Println`, a dependency that logs to stdout by default, a panic trace — corrupts the stream and the client can't parse it.
+Reserve stdout for JSON-RPC. Send application diagnostics to stderr. Check dependency logging before starting a stdio server.
 
 - Build `slog` on `os.Stderr` explicitly: `slog.New(slog.NewJSONHandler(os.Stderr, nil))`. Don't rely on a package default you haven't checked.
 - Route or silence any third-party logger that defaults to stdout.
@@ -52,10 +52,10 @@ Stdout carries protocol JSON-RPC only. Anything else on stdout — a stray `fmt.
 The model is the caller. Design tools it can pick correctly and recover from when it picks wrong.
 
 - **Name as `service_verb_noun`**: `excursions_search`, `excursions_get_booking`, not `search` or `getData`. A consistent prefix lets an agent juggling several MCP servers disambiguate at a glance.
-- **Shape tools around a workflow, not an endpoint.** A tool mirroring `GET /bookings/{id}/legs` 1:1 forces three round trips for one task; a tool returning "booking + legs + cancellation window" together is a better contract. When unsure, favor coverage over cleverness — an under-fitted workflow tool blocks real tasks.
+- Give each tool a task-sized result. Include the fields clients need without exposing unrelated resources.
 - **Write the description for the model, not a teammate**: what it does, every parameter's meaning and constraints, one example call. Skip adjectives that don't change behavior.
-- **Paginate and filter server-side.** Never hand back a raw ClickHouse result set or full Postgres row — cap page size, project only the fields the task needs, summarize the rest.
-- **Eval against real tasks before shipping**: write 5-10 realistic, independently verifiable prompts a user would give an agent, run them against the server, and fix whichever tool the model picks wrong or misuses.
+- Filter and paginate results on the server. Return only the fields and rows the task needs.
+- Try representative requests and invalid arguments. Check tool selection and the visible result for each.
 
 ## Input schemas from Go structs
 
@@ -82,11 +82,10 @@ mcp.AddTool(server, &mcp.Tool{
 })
 ```
 
-`json` tags name the fields; `jsonschema` tags supply the description the model reads — write that string by the same rule as the tool description above.
+Use `json` tags for field names. Use `jsonschema` tags for descriptions.
+Enforce limits and resource ownership in the handler. Pass the normalized limit to the query. Check both schema and runtime behavior.
 
-The description does not enforce `Limit`; the handler does. Pass the normalized limit to the query and cap the returned page. Choose the maximum from the tool contract, then test the generated schema and runtime behavior. Validate resource ownership separately from input shape.
-
-Register tools before serving requests. Verify discovery/listing for each supported revision; older session-based clients may derive capabilities during initialization.
+Register tools before serving requests. Test discovery for each supported revision. Older clients can derive capabilities during initialization.
 
 ## Errors the agent can act on
 
@@ -97,12 +96,12 @@ MCP splits failures into two channels — pick the right one:
 | Protocol error (JSON-RPC `error`) | Unknown tool, malformed request, server fault — not something the model can fix by retrying | Only the raw `Server.AddTool(ToolHandler)` path sends this when it returns `error` |
 | Tool execution error (`isError: true` in the result) | Bad input, upstream API failure, business-rule violation — the model can retry with different arguments | `mcp.AddTool`'s generic handler packs a returned Go `error` here automatically |
 
-Prefer the generic `mcp.AddTool` path so ordinary failures land as tool errors. Return a safe error code and concise recovery guidance. Do not echo raw upstream errors, tokens, or arbitrary user text as instructions; the model receives that content.
+Use `mcp.AddTool` for ordinary tool errors. Return a safe error code and a recovery action. Keep raw upstream errors, tokens, and user instructions out of error messages.
 
 ## Cancellation and shutdown
 
-- Tool handlers get the call's `context.Context`; a client cancellation notification cancels it. Check `ctx.Err()` in any loop and return early — don't leave a detached goroutine running past a cancelled call.
-- stdio: `ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)`, `defer stop()`, then `server.Run(ctx, &mcp.StdioTransport{})`. `Run` blocks until the client disconnects or `ctx` is cancelled, and closes the session either way.
+- Pass the call context to downstream work. Exit loops on cancellation. Join workers before the call returns.
+- stdio: `ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)`, `defer stop()`, then `server.Run(ctx, &mcp.StdioTransport{})`. `Run` blocks until the client disconnects or its context ends, and closes the session either way.
 - Streamable HTTP: `mcp.NewStreamableHTTPHandler` is a plain `http.Handler` — wrap it in `http.Server` and drain with `srv.Shutdown(ctx)` like any other HTTP service.
 
 ## Testing
@@ -127,26 +126,26 @@ result, err := session.CallTool(ctx, &mcp.CallToolParams{
 })
 ```
 
-This exercises the pinned SDK's connection lifecycle, schema validation, and dispatch — no mocking the protocol layer. Assert on `result.IsError` and `result.Content`, the same shape the model receives. One test per tool's happy path, one per validation failure that should surface as a tool error.
+Check the actual client result, including `IsError` and content. Distinguish tool failures from protocol failures for the pinned revision.
 
-Reach for golden JSON-RPC frame fixtures only for cross-SDK wire-compatibility regression tests; the in-memory client above already exercises real serialization, so it stays the default for ordinary handler tests.
+Use the in-memory client for handler tests. Reserve JSON-RPC frame fixtures for wire compatibility across SDKs.
 
 ## Do not
 
 - Ship a tool whose only documentation is its name — the model has nothing else to pick with.
-- Mirror every REST or gRPC endpoint 1:1 "for completeness" — collapse the common workflow into one tool, add the rest only when a real task needs them.
+- Duplicate each REST or gRPC endpoint as a tool. Expose the operations the workflow needs.
 - Return a bad-input failure through the raw `ToolHandler` protocol-error path — the model reads a protocol error as unfixable and gives up instead of retrying.
 - Write anything but JSON-RPC frames to stdout in a stdio server, including via a dependency's default logger.
 - Build a new server on the 2024-11-05 SSE-only transport.
-- Expose a remote server before implementing the selected protocol/client authentication contract and per-tool authorization. Keep local stdio setup scoped to its launching user.
+- Expose a remote server before implementing the selected protocol/client authentication contract and per-tool authorization. Keep local stdio setup scoped to the user who started the process.
 
-## Verify
+## Verification
 
 ```sh
 go build ./...
 timeout 5m go test -parallel 4 -p 2 -timeout 2m ./... -run TestMCP -v
 ```
 
-Verify the pinned SDK/client protocol matrix: current-revision discovery and per-request version handling where supported, legacy initialization only for legacy revisions, expected tool schemas, cancellation, malformed input, and HTTP authorization/origin rejection. Record any unsupported revision instead of claiming conformance.
+Test discovery, version negotiation, and tool schemas for each supported SDK and protocol revision. Exercise cancellation, malformed input, and HTTP Origin rejection. Record unsupported revisions.
 
-Test wrong-audience and expired tokens, cross-tenant resource access, invalid limits, forbidden fetch destinations, and missing or changed approvals. Assert that rejected calls never reach the protected dependency. Include malicious tool-result text; authorization must hold even if the model follows it.
+Reject wrong-audience or expired tokens, cross-tenant reads, invalid limits, forbidden destinations, and missing approvals. Assert that rejected requests never call the protected dependency. Test authorization even when a tool result contains hostile instructions.

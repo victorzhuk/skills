@@ -1,6 +1,6 @@
 ---
 name: z-go-cobra-patterns
-description: Cobra command-tree patterns for Go CLIs — command shape, RunE vs Run, PersistentPreRunE hooks, args validators, flag binding, JSON/human output, and signal handling. Use when adding Cobra commands or RunE handlers, or reviewing a command package for anti-patterns. Triggers on "cobra.Command", "RunE", "PersistentPreRunE", "SilenceUsage", "AddCommand", "ValidArgsFunction". Does not cover HTTP middleware or env-var parsing; see [[z-go-context]], [[z-go-env-v11]].
+description: "Build Go CLI command trees with Cobra. Use for RunE, flags, validation, hooks, completion, output, and command tests. See [[z-go-entrypoint]] for process lifecycle."
 ---
 
 # Cobra Command Patterns
@@ -10,7 +10,7 @@ lives here.
 
 ## Package shape
 
-One package per command group under `internal/cli/<group>/`: `root.go` (parent, attaches subcommands), one file per subcommand. Subcommands import the adapter/usecase packages they need directly and construct them inline — no provider interface, no injected dependency struct.
+Keep related commands in one package. Attach subcommands to the parent. Follow existing constructor and dependency conventions.
 
 File split for a 3+ subcommand group, local flag structs, output helpers, package tests, and shared persistent flags: [references/command-layout.md](references/command-layout.md).
 
@@ -40,11 +40,11 @@ func newShowCmd() *cobra.Command {
 }
 ```
 
-`NewCmd` public; subcommand constructors private. This direct-import wiring is the default — no `contract.go`, no provider interface, no injected dependency.
+Export the group constructor when another package calls it. Keep internal subcommand constructors private.
 
 ## Provider interface — test-seam option
 
-Add a narrow provider interface only when a command needs a fake to stand in for an expensive or flaky real dependency in tests. Define it in the command package (consumer side), not in the use-case layer:
+Define a small consumer interface when a test or runtime needs a substitute for the real dependency.
 
 ```go
 type CustomerProvider interface {
@@ -58,19 +58,21 @@ func NewCmd(p CustomerProvider) *cobra.Command {
 }
 ```
 
-Reach for this only once a real test needs the seam — most command groups never do.
+Avoid a provider interface that exposes dependencies the command never uses.
 
 ## Root command setup
 
-Always set `SilenceUsage: true` (no usage wall on runtime errors) and `SilenceErrors: true` (let `main` format) on root.
+Set `SilenceErrors` if `main` prints command errors. Use `SilenceUsage` when runtime failures should omit usage text.
 
 ## Hook chain
 
-Order: `PersistentPreRunE → PreRunE → RunE → PostRunE → PersistentPostRunE`. Always use `*E` variants. `PersistentPreRunE` on root runs before every subcommand. A child `PersistentPreRunE` **replaces** the parent's — call it explicitly if you need both.
+Choose error-returning hooks when setup or cleanup can fail. By default, a child's persistent hook replaces its ancestor's hook.
+
+Check `cobra.EnableTraverseRunHooks` before calling parent hooks manually. With traversal enabled, Cobra executes hooks along the command path. [Cobra commands](https://cobra.dev/docs/how-to-guides/working-with-commands/)
 
 ## RunE pattern
 
-`RunE`: read args/flags → call use case → render → return wrapped error. Delegate to a named `runX` function.
+In `RunE`, reject invalid inputs before invoking the use case. Write the result and return any error.
 
 ```go
 func newShowCmd() *cobra.Command {
@@ -103,11 +105,11 @@ With the provider test-seam (above), `runShow` takes a `CustomerProvider` parame
 
 ## Args validators
 
-Declare `Args` on the command — never `len(args)` in `RunE`. Builtins: `NoArgs`, `ExactArgs(n)`, `MinimumNArgs(n)`, `MaximumNArgs(n)`, `RangeArgs(min,max)`, `OnlyValidArgs`, `MatchAll(v1,v2,...)`. Custom: `func(cmd *cobra.Command, args []string) error`.
+Declare argument validation with `Args`. Use built-in validators or a function matching `func(*cobra.Command, []string) error`.
 
 ## Flags
 
-Private options struct per command (`type showOpts struct { jsonOut bool }`). Never package-level mutable vars — breaks concurrent tests.
+Bind flags to a command-owned options struct. Global flag state can leak between tests.
 
 ```go
 rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
@@ -118,7 +120,7 @@ cmd.MarkFlagsMutuallyExclusive("json", "yaml")
 
 ## Output
 
-Always write via `cmd.OutOrStdout()` / `cmd.ErrOrStderr()` — tests can't redirect `os.Stdout`. Split renderers: `writeCustomerJSON(w, c)` and `writeCustomerHuman(w, c)`. Detect TTY: `(fi.Mode() & os.ModeCharDevice) == 0` → piped → default JSON. Diagnostics to stderr; program output to stdout.
+Write results to `cmd.OutOrStdout()` and diagnostics to `cmd.ErrOrStderr()`. Preserve explicit output flags when selecting a default format.
 
 ## Shell completions
 
@@ -134,31 +136,9 @@ rootCmd.ExecuteContext(ctx)
 
 ## Testing commands
 
-Fresh command tree per test — Cobra accumulates flag state across `Execute()` calls. Call `root.SetOut(buf)` + `root.SetArgs(...)`, then `root.Execute()`. With direct-import wiring, fake at the use case or repository the command constructs; with the provider test-seam, wire a `fakeProvider` instead.
+Create a fresh command tree per test. Set its arguments and output streams. Check stdout, stderr, and the returned error.
 
-## Quick Reference
-
-| Pattern | Rule |
-|---|---|
-| Package per group | `internal/cli/<group>/` + `root.go`; direct imports by default |
-| Provider interface | Test-seam only, consumer-side, narrow |
-| Constructors | `NewCmd()` public, `new<Sub>Cmd` private |
-| Root | `SilenceUsage: true`, `SilenceErrors: true` |
-| Hook chain | PersistentPreRunE replaces parent — call explicitly |
-| `RunE` shape | parse → call → render → return; delegate to `runX` |
-| Args | builtins / `MatchAll`; never `len(args)` in RunE |
-| Flags | Private options struct |
-| Output | `cmd.OutOrStdout()`; JSON + human split |
-| Error wrapping | `"<verb> <noun>: %w"`, lowercase |
-| Exit codes | 0 success · 1 runtime · 2 usage; never `os.Exit` in RunE |
-| Testing | Fresh tree per test; `SetOut`/`SetArgs` |
-| Signal | `signal.NotifyContext` → `ExecuteContext` |
-
-## Do not
-
-Never `Run` (can't return errors), `len(args)` in RunE, `os.Stdout`/`os.Stderr` directly, package-level flag vars, reuse a command across tests, `os.Exit` in RunE, or business logic in RunE.
-
-## Verify
+## Checks
 
 ```sh
 go build ./... && timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./internal/cli/...

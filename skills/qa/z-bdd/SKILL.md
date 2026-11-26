@@ -1,72 +1,43 @@
 ---
 name: z-bdd
-description: "BDD acceptance contracts for humans and agents across UI, API, and CLI products. Use for Gherkin, Given-When-Then, E2E acceptance, or scenario evidence. Define repeatable scenarios with explicit assertions and required outcomes. Test selection belongs to [[z-testing-strategy]]. Go harness wiring belongs to [[z-go-bdd]]."
+description: "Define BDD acceptance scenarios for a UI, API, or CLI. Use for Given-When-Then, E2E acceptance, or scenario evidence. See [[z-testing-strategy]] for test selection and [[z-go-bdd]] for Go harnesses."
 ---
 
-# Behavior contracts
+# Specify observable behavior
 
-Define the behavior before implementation. Prove it with repeatable scenarios at the product's public boundary.
+## Agree on a scenario
 
-## Agree the contract
+Read the requirement, project vocabulary, and existing acceptance scenarios. Resolve ambiguous outcomes before implementation.
+Reuse existing requirement identifiers and the project's readable scenario format. Gherkin does not require a new test framework.
 
-Read the request, existing requirements, domain language, and acceptance scenarios. Resolve ambiguous outcomes before implementation.
+For each scenario, record the requirement, actor, initial state, controlled fixtures, action, and observable outcome.
+Specify the public boundary, dependencies, risk, and required execution scope.
+Use domain terms in the scenario. Put selectors, API calls, and fixture setup in the executable adapter.
 
-Make scenarios authoritative for acceptance. Link existing requirement records instead of maintaining competing copies of the same behavior.
-Preserve existing requirement identifiers. Do not require a tracker or invent ticket IDs.
+## Choose the boundary
 
-Use Gherkin when the project needs a shared readable format. Preserve an equivalent existing scenario format when it serves that contract.
-Do not install a framework merely to obtain Given-When-Then syntax.
-
-Each scenario defines:
-
-- The behavior and its requirement source.
-- The actor, initial state, and controlled fixtures.
-- One action under test and explicit observable outcomes.
-- The public boundary and dependencies exercised.
-- Its risk and required execution scope.
-
-Use domain language in step text. Keep selectors, function names, and fixture plumbing in the executable adapters.
-Keep setup minimal. Isolate scenario state and bound polling and dependency startup.
-
-## Choose the product boundary
-
-| Product | Acceptance boundary |
+| Product | Exercise |
 |---|---|
-| Web UI | Browser against the running application |
-| API or service | Running service through its public protocol |
-| CLI | Built executable with controlled inputs and environment |
+| Web UI | Open the running application in a browser. |
+| API or service | Call the running service through its public protocol. |
+| CLI | Run the built executable with controlled arguments and environment. |
 
-Use the real application path and required first-party dependencies. Record external substitutes and the behavior they cannot prove.
-An in-process handler or use-case test may support acceptance. It does not prove a running service's full path.
-Use [[z-testing-strategy]] to select additional tests for named residual risks.
+Include required first-party dependencies. Record what each external substitute leaves untested.
+An in-process handler test covers only part of a running-service journey. Use [[z-testing-strategy]] for residual risks.
 
-## Execute repeatably
+## Execute the contract
 
-Keep maintained scenarios and explicit assertions runnable through the project's existing runner.
-Agents may execute scenarios, inspect failures, and explore additional cases. Exploratory judgment does not replace regression assertions.
-Capture new discoveries as candidate scenarios. Change acceptance criteria only when the requirement changes through the agreed review process.
+1. Record the selected scenarios before the run. Isolate state and bound setup and polling.
+2. Derive expected results from the requirement or an independent example.
+3. Exercise each assertion through the project runner. Check that changed assertions detect the intended failure.
+4. Preserve approved test order, fixtures, and expected behavior when repairing test infrastructure.
+5. Record discoveries as candidate scenarios. Change acceptance criteria through the agreed requirement process.
 
-Derive expected values from requirements or independent examples. Never weaken assertions, skip required scenarios, or change fixtures to hide a failure.
-Repair locators or infrastructure only when the intended behavior and assertions remain unchanged.
-Verify that each new or changed assertion detects its intended failure. Follow the approved test-first or tests-after flow.
+## Report the verdict
 
-## Gate on evidence
+Compare selected scenarios with observed results. Pass only when every required scenario ran and met every assertion.
+A failure, skip, pending step, missing result, blocker, or flake prevents acceptance. Report retry passes through [[z-qa-debugger]].
+Identify the next diagnostic action for a blocked run. Exploratory observations alone cannot establish repeatable acceptance.
 
-Record selected scenarios before execution. Compare that selection with the observed results so an empty or incomplete run cannot pass.
-
-PASS requires every required scenario and assertion to pass. Required failures, skips, pending steps, missing results, blocked execution, and flakes prevent PASS.
-A retry-pass remains flaky. Diagnose it using [[z-qa-debugger]] rather than silently treating it as stable.
-An environment failure means incomplete acceptance. Report the blocker and the next useful diagnostic action.
-
-Reuse the project's report format. Record the revision, scenario reference, boundary, command, outcome, and evidence location.
-Record relevant environment and fixture identity so another run can reproduce the conditions. Redact credentials and private fixture data.
-Include relevant traces or logs without secrets. Keep run evidence separate from the authoritative scenarios.
-
-## Verify
-
-- Every changed behavior maps to a readable scenario and explicit assertions.
-- Required scenarios executed at the declared boundary with controlled state.
-- Results match the selected scope and the tested revision.
-- Missing proof, substitutes, and named residual risks remain visible.
-
-See [[z-testing-strategy]], [[z-go-bdd]], [[z-qa-browser]], [[z-qa-api]], [[z-qa-analyst]].
+Record the revision, scenario, boundary, command, environment, fixture identity, outcome, and evidence location.
+Redact private data. Store execution evidence separately from the authoritative scenarios.

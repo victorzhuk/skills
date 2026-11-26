@@ -6,32 +6,33 @@ General engineering process, changelog, architecture, repository tooling, skill 
 
 Model- or user-reachable via skill name and trigger phrasing.
 
-- **[z-algo-core](./z-algo-core/SKILL.md)** — DS/algorithm selection judgment for production code, not competitive tricks — hash map for membership/dedup, slice+sort beats a tree until proven, heap for top-k, two-pointer/sliding-window for scans, BFS/DFS/topo-sort for dependency shapes.
-- **[z-changelog](./z-changelog/SKILL.md)** — Maintain a Keep a Changelog 1.1.0 CHANGELOG.md — [Unreleased] upkeep, the six change types, the release cut, YANKED, the SemVer note, and the three real project styles…
-- **[z-clean-output](./z-clean-output/SKILL.md)** — Omit irrelevant authorship and process commentary. Preserve genuine generated-file markers, required licenses and provenance, and relevant tool and model names.
-- **[z-cloudevents](./z-cloudevents/SKILL.md)** — CloudEvents envelopes and protocol mappings. Use for event identity, structured or binary HTTP mode, data_base64, or event schema evolution. Payload validation belongs to [[z-json-schema]]. Go delivery patterns belong to [[z-go-messaging]].
-- **[z-codegraph](./z-codegraph/SKILL.md)** — Use an existing CodeGraph integration for call graphs, impact analysis, affected tests, or route discovery; discover host tools and verify index freshness.
-- **[z-creating-flow-doc](./z-creating-flow-doc/SKILL.md)** — Document an operation, RPC, cron, or query using local conventions, Mermaid by default, and paired diagrams only when required.
-- **[z-deep-modules](./z-deep-modules/SKILL.md)** — Deep-module design vocabulary — depth as leverage at the interface, seams, adapters, the deletion test, interface-is-the-test-surface.
-- **[z-domain-modeling](./z-domain-modeling/SKILL.md)** — Build and maintain a domain model — ubiquitous language, bounded contexts, aggregates and invariants.
-- **[z-git-guardrails](./z-git-guardrails/SKILL.md)** — Install a best-effort Claude Code filter for literal destructive Git commands; preserve the host permission boundary.
-- **[z-json-schema](./z-json-schema/SKILL.md)** — JSON Schema contracts for configuration and payload validation. Use for schema authoring, dialect migration, $ref resolution, or compatibility analysis. Covers required fields, composition, formats, and validator behavior. Web entity markup belongs to [[z-schema-org]].
-- **[z-lean-fix](./z-lean-fix/SKILL.md)** — Lean fixes for review findings, bug reports and broken builds — the smallest diff that removes the defect at its root, nothing more.
-- **[z-lint](./z-lint/SKILL.md)** — Check lint and formatting with installed project tools; default to report-only and include tracked and untracked files in scope.
-- **[z-memory-hygiene](./z-memory-hygiene/SKILL.md)** — Store and review durable memory through the active host's supported backend and scope; avoid duplicate and stale entries.
-- **[z-merge-conflicts](./z-merge-conflicts/SKILL.md)** — Resolve merge, rebase, or cherry-pick conflicts by intent; preserve unrelated work, stage intended resolutions, and verify the authorized operation.
-- **[z-no-ai-style-code](./z-no-ai-style-code/SKILL.md)** — Write like a senior maintainer of this project, not a tutorial — natural short names, concise error context, structure matching the surrounding code's idiom.
-- **[z-no-over-engineering](./z-no-over-engineering/SKILL.md)** — YAGNI for new types, abstractions, and PR scope review. Use for "interface for testing", "just in case", "future flexibility", or "extensible". Reject speculative interfaces, DTOs, splits, and configuration layers. Established architecture belongs to [[z-go-clean-arch-di]] and [[z-go-interfaces]].
-- **[z-npm-publish](./z-npm-publish/SKILL.md)** — Publish a Node/TypeScript package to npm via GitHub Actions with OIDC trusted publishing and provenance.
-- **[z-obsidian-cli](./z-obsidian-cli/SKILL.md)** — Capture, read, and search Obsidian notes through the installed official CLI or a verified filesystem fallback; resolve vault identity first.
-- **[z-open-graph](./z-open-graph/SKILL.md)** — Open Graph metadata for shared-link previews. Use for og tags, preview images, crawler access, stale previews, or duplicate metadata. Covers protocol fields and platform verification. Entity markup belongs to [[z-schema-org]].
-- **[z-schema-org](./z-schema-org/SKILL.md)** — Schema.org structured data for web content. Use for JSON-LD, Microdata, RDFa, rich results, or structured-data validation. Covers entity types, stable identifiers, truthful markup, and consumer requirements. JSON payload validation belongs to [[z-json-schema]].
-- **[z-security-hardening](./z-security-hardening/SKILL.md)** — Security hardening for untrusted input, authorization, secrets, LLM agents, retrieval, and tool execution.
-- **[z-session-handoff](./z-session-handoff/SKILL.md)** — Compact the current conversation into a handoff document a fresh agent can resume from — goal, current state, decisions with their why, next steps, gotchas, suggested skills — referencing artifacts by path, secrets redacted.
-- **[z-skill-mastery](./z-skill-mastery/SKILL.md)** — Author, refactor, and review agent skills in this repo's house style.
-- **[z-systematic-debugging](./z-systematic-debugging/SKILL.md)** — Root-cause-first debugging loop — no fixes before a feedback loop exists and the cause is understood. Build a tight red-capable repro, minimize it, rank falsifiable hypotheses…
-- **[z-tdd](./z-tdd/SKILL.md)** — Red-green loop discipline that produces tests worth keeping — tests at pre-agreed seams through public interfaces, expected values from an independent source of truth, one vertical slice per cycle.
-- **[z-testing-strategy](./z-testing-strategy/SKILL.md)** — Use E2E acceptance as the primary gate; select new lower-layer tests for named residual risks and preserve existing guarantees.
-- **[z-verify-before-done](./z-verify-before-done/SKILL.md)** — Evidence before completion claims, commits, PRs, or reliance on subagent reports. Use for "done", "fixed", "should work now", "tests pass", or "looks correct". Require fresh verification output and bug reproduction. Test depth belongs to [[z-testing-strategy]]. Debugging belongs to [[z-systematic-debugging]].
-- **[z-worktrunk](./z-worktrunk/SKILL.md)** — Manage Git worktrees with the Worktrunk `wt` CLI — switch, create, list, merge, remove, hooks, config, and the worktree-path template; one worktree per parallel agent.
-- **[z-zero-comments](./z-zero-comments/SKILL.md)** — Comment discipline — a comment explaining WHAT code does means the name is wrong; rename or restructure instead.
+- **[z-algo-core](./z-algo-core/SKILL.md)** — Choose a data structure for lookup, ordering, top-k queries, or graph traversal.
+- **[z-changelog](./z-changelog/SKILL.md)** — Maintain CHANGELOG.md, add a changeset, or prepare release notes.
+- **[z-clean-output](./z-clean-output/SKILL.md)** — Remove irrelevant authorship or process commentary from code, docs, configuration, and commits.
+- **[z-cloudevents](./z-cloudevents/SKILL.md)** — Encode and validate CloudEvents envelopes, required attributes, and transport bindings.
+- **[z-codegraph](./z-codegraph/SKILL.md)** — Query an existing CodeGraph index for callers, affected tests, routes, or change impact.
+- **[z-creating-flow-doc](./z-creating-flow-doc/SKILL.md)** — Document one operation, RPC, scheduled job, or query.
+- **[z-deep-modules](./z-deep-modules/SKILL.md)** — Design or review module interfaces, seams, and adapters.
+- **[z-domain-modeling](./z-domain-modeling/SKILL.md)** — Define domain terms, bounded contexts, aggregate boundaries, and invariants.
+- **[z-git-guardrails](./z-git-guardrails/SKILL.md)** — Install and test a Claude Code hook that filters literal destructive Git commands.
+- **[z-json-schema](./z-json-schema/SKILL.md)** — Write JSON Schema contracts and check dialect support, composition, and compatibility.
+- **[z-just](./z-just/SKILL.md)** — List, inspect, run, and write justfile recipes with dependencies and shell-safe arguments.
+- **[z-lean-fix](./z-lean-fix/SKILL.md)** — Fix a confirmed defect or review finding at its cause.
+- **[z-lint](./z-lint/SKILL.md)** — Check lint and formatting for the requested files, including untracked files.
+- **[z-memory-hygiene](./z-memory-hygiene/SKILL.md)** — Store and update durable preferences, corrections, and project decisions in the active memory backend.
+- **[z-merge-conflicts](./z-merge-conflicts/SKILL.md)** — Resolve Git merge, rebase, or cherry-pick conflicts.
+- **[z-no-ai-style-code](./z-no-ai-style-code/SKILL.md)** — Review naming, error context, and code structure against nearby project code.
+- **[z-no-over-engineering](./z-no-over-engineering/SKILL.md)** — Apply YAGNI when choosing dependencies, interfaces, configuration, or PR scope.
+- **[z-npm-publish](./z-npm-publish/SKILL.md)** — Publish npm packages through GitHub Actions with trusted publishing and OIDC.
+- **[z-obsidian-cli](./z-obsidian-cli/SKILL.md)** — Resolve the vault before reading, searching, or writing Obsidian notes.
+- **[z-open-graph](./z-open-graph/SKILL.md)** — Implement Open Graph metadata for shared-link previews.
+- **[z-schema-org](./z-schema-org/SKILL.md)** — Describe web entities with Schema.org and check eligibility for the target consumer.
+- **[z-security-hardening](./z-security-hardening/SKILL.md)** — Review authorization, secrets, retrieval, and tool execution at trust boundaries.
+- **[z-session-handoff](./z-session-handoff/SKILL.md)** — Prepare a session handoff with the goal, verified state, decisions, evidence, and next action.
+- **[z-skill-mastery](./z-skill-mastery/SKILL.md)** — Author, refactor, or review SKILL.md files.
+- **[z-systematic-debugging](./z-systematic-debugging/SKILL.md)** — Reproduce the failure, isolate the cause, and test the fix against the original symptom.
+- **[z-tdd](./z-tdd/SKILL.md)** — Use red-green-refactor to implement behavior through a public interface.
+- **[z-testing-strategy](./z-testing-strategy/SKILL.md)** — Select acceptance tests and regression checks from the change's risks.
+- **[z-verify-before-done](./z-verify-before-done/SKILL.md)** — Verify claims about a fix, build, test, or completed requirement.
+- **[z-worktrunk](./z-worktrunk/SKILL.md)** — Create, switch, merge, and remove Git worktrees with the Worktrunk CLI.
+- **[z-zero-comments](./z-zero-comments/SKILL.md)** — Review comments that repeat the code.

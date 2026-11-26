@@ -1,112 +1,66 @@
 ---
 name: z-testing-strategy
-description: "Choose acceptance scope and residual-risk tests before changing observable behavior. Default to readable BDD contracts and repeatable E2E acceptance. Use for test strategy, regression scope, or unit/integration exceptions. Owns test resource limits. Scenario contracts belong to [[z-bdd]], test mechanics to language skills."
+description: "Select acceptance and regression tests from the change's risks. Use for E2E scope, lower-level tests, runner limits, and evidence. Use [[z-bdd]] for readable scenarios."
 ---
 
-# Testing strategy
+# Select tests for a change
 
-Use readable behavior contracts and repeatable E2E acceptance as the primary quality gate. Add lower-layer tests for named residual risks.
+## Preserve the agreed scope
 
-## Preserve the agreed contract
+Read requirements, existing tests, and the caller's verification contract. Preserve agreed interfaces, test order, and required evidence.
+When the test flow is open, propose contract-first acceptance through the product's public interface.
+Use [[z-bdd]] for readable scenarios. An existing runner can execute them without a new framework.
 
-Use the caller's approved testing mode, flow, seams, and verification scope. An approved tests-after flow remains valid. Do not reopen those decisions because a skill loaded. Under zapply, the dispatch supplies this contract; report missing decisions to the driver.
+## Choose the depth
 
-Without an agreed flow, propose contract-first acceptance through the public product boundary. Confirm genuinely unresolved behavior or boundary decisions.
-
-## Classify the work
-
-Observable behavior includes API/CLI responses, business rules, permissions, money, retries, state transitions, persistence, external effects, and user-visible errors.
-
-Mechanical edits, generated code, trivial mappings, and internal refactors may need existing checks rather than new tests. Read existing coverage before adding a test.
-
-| Work | Default depth |
+| Change | Proof |
 |---|---|
-| MVP or greenfield | Main journey and principal rejection through the product boundary |
-| Feature in an existing service | Changed acceptance scenarios plus existing regression guarantees |
-| Bug fix | Reproduction test that fails without the fix |
-| Refactor | Passing characterization coverage before moving behavior |
-| Auth, money, permissions, data loss | Existing-service depth even in an MVP |
+| MVP or new product | Exercise the main journey and principal rejection through the public boundary. Record deferred risks. |
+| Existing service | Cover changed behavior and preserve established regression guarantees. Include relevant compatibility, state, retry, and migration cases. |
+| Bug fix | Reproduce the original failure. Repeat the same input through the same interface after the fix. |
+| Internal refactor | Establish passing characterization coverage before changing structure. |
+| Money, permissions, or possible data loss | Apply existing-service depth, including in an MVP. |
+| Mechanical or generated edit | Identify which existing tests or tools cover the change before adding tests. |
 
-### MVP
-
-- Test the main behavior, its principal rejection, and relevant auth/money/data-loss rules.
-- Exercise the running product through its public boundary: browser, service protocol, or CLI executable.
-- Add unit or integration tests only for named risks that acceptance cannot prove reliably or economically.
-- Skip getters, DTOs, framework boilerplate, and logic-free mappers.
-- Name deferred risks; do not imply untested boundaries are verified.
-
-### Existing service
-
-- Read existing tests and identify guarantees callers already depend on.
-- Default to a failing behavior test before a feature or fix. Characterization tests for an unchanged refactor should pass first.
-- Preserve existing tests and required checks. This policy changes new test selection, not established guarantees.
-- Map touched validation, permissions, transactions, state, retries, compatibility, and migrations to acceptance or named residual-risk checks.
-- Follow an already-approved tests-after flow when supplied. Still prove a regression test fails without the fix.
-- Run the targeted check and the relevant repository suite. Under zapply, run only the dispatched checks; the caller owns the merge floor.
+For a UI, exercise the browser. For a service, use its running protocol. For a CLI, use the executable.
+Preserve required build, lint, type, race, and security gates. Use the project's targeted and merge gates within the caller's scope.
 
 ## Select additional tests
 
-Use [[z-bdd]] for the readable contract, public boundary, repeatable execution, and acceptance evidence.
-E2E does not require a browser for API or CLI products. Exercise the product's actual public interface.
-Keep required build, lint, type, and security checks alongside acceptance.
+Add a lower-level test when you can name a residual risk that E2E cannot prove reliably or economically.
 
-Before adding a unit or integration test, name the risk and why E2E cannot prove it reliably or economically.
-Then choose the smallest useful interface for that risk. Typical exceptions include:
-
-| Residual risk | Candidate check |
+| Residual risk | Candidate test |
 |---|---|
-| Many algorithm or pricing edge cases | Domain table or property test |
-| Transaction isolation, migrations, or data integrity | Real storage integration test |
-| Concurrency, cancellation, or rare fault ordering | Focused deterministic test |
-| Provider failure or compatibility unavailable in E2E | Adapter contract or integration test |
-| Security boundary not adequately exercised by acceptance | Focused permission or validation test |
+| Numerous pricing or algorithm edge cases | Table or property test with independent expected results |
+| Isolation, migrations, or persistent integrity | Integration test against the actual store |
+| Cancellation or rare ordering | Deterministic concurrency test |
+| Provider failure unavailable through E2E | Adapter contract test |
+| Security boundary outside the exercised journey | Focused permission or validation test |
 
-Criticality calls for adequate proof, not automatic duplication at every layer. Do not add tests to meet a quota or file count.
-Several implementation files may share one tested interface. Preserve existing regression coverage when changing the default for new work.
+Use the smallest interface that exposes the risk. Preserve existing tests. File counts and coverage percentages cannot establish missing behavior.
 
-Without a BDD harness, use readable scenarios mapped to the existing runner. Adding a dependency remains a separate tooling decision.
+## Bound execution
 
-## Recover within the approved scope
+Inspect project wrappers first. Bound the entire process, including setup, build, execution, and shutdown.
+Use a per-test or per-binary timeout where supported. Cap worker and build concurrency separately.
 
-Record recovery limits with the verification plan. Use existing retry, time, and environment-repair limits when the project supplies them.
-Continue recoverable investigation and repairs within the approved contract, authority, and recorded limits.
-Ask when the contract or authority must change, or when recovery exhausts its recorded limits.
-Do not weaken assertions or omit required scenarios to recover. A retry-pass remains flaky and cannot clear acceptance.
-
-## Resource limits
-
-Distinguish three controls:
-
-- A **process deadline** bounds setup, builds, execution, and shutdown.
-- A **test timeout** identifies an individual hung test or test binary.
-- **Parallel limits** bound packages, workers, tests, and build jobs where applicable.
-
-Inspect repository wrappers and effective settings first. Use existing limits. For ordinary runs lacking them, apply temporary invocation bounds; persistent runner edits are a separate tooling change.
-
-| Runner | Test control | Parallel control |
+| Runner | Timeout or duration | Concurrency |
 |---|---|---|
-| Go | `-timeout 2m` unit or `10m` integration, per binary; fuzzing also needs `-fuzztime` | `-p` for packages/build jobs; `-parallel` for parallel tests/fuzz workers |
-| Cargo | External process deadline; no built-in test timeout | `--jobs` for builds; `-- --test-threads` for tests |
-| Vitest | Installed-version `testTimeout` and hook timeouts | `maxWorkers`, for example `50%` |
-| Playwright | Test/hook timeouts and `globalTimeout` for the run | `workers`, for example `2` |
-| pytest | `--timeout` only with pytest-timeout installed | Bound xdist `-n` if enabled; ordinary pytest is serial |
+| Go | `-timeout` per binary, plus `-fuzztime` for fuzzing | `-p` for packages and builds, `-parallel` for parallel tests and fuzz workers |
+| Cargo | Use an outer process deadline | `--jobs` for builds, `-- --test-threads` for standard tests |
+| Vitest | Installed version's test and hook timeouts | `maxWorkers` |
+| Playwright | Test and hook timeouts, plus suite `globalTimeout` | `workers` |
+| pytest | `--timeout` requires pytest-timeout | Cap xdist workers when enabled. Ordinary pytest runs serially. |
 
-Use a host deadline or an available `timeout` wrapper for the whole invocation. Allow enough time for expected setup and cleanup. Per-test timeouts do not bound dependency downloads or compilation. Choose explicit worker values appropriate to the machine and record the effective limits.
+Use temporary bounds for an ordinary invocation when wrappers lack them. Record the effective values.
+For an exact dispatched command, apply the caller's prescribed lifecycle. Report missing required limits without silently rewriting the command.
 
-**Kernel-emitted commands are contracts.** Execute literal commands through the driver's prescribed lifecycle. Do not add flags, deadlines, or workers silently. Report a required but missing limit to the workflow owner.
+## Recover and report
 
-## Do not
+Set recovery limits before running tests. Investigate failures and apply fixes within the agreed scope.
+Escalate an exhausted limit or a necessary change in scope, authority, or contract.
+Preserve assertions and record every retry. A retry pass remains flaky.
+Report the selected depth, test flow, boundary, command, limits, result, and residual risks. If existing tests suffice, state which risks they cover.
+A required failure, skip, pending step, missing result, flake, or timeout prevents acceptance.
 
-- Chase coverage percentages through boilerplate tests.
-- Mock the unit under test or recompute expected values with its implementation.
-- Treat MVP scope as permission to omit high-risk rules.
-- Leave flaky/skipped tests without a reason and owner.
-- Rewrite a dispatched command to satisfy a generic example.
-
-## Verify
-
-Report testing mode, approved flow, acceptance boundary, command, effective limits, observed result, and named residual risks.
-A timeout means incomplete verification. Required missing, skipped, pending, blocked, or flaky scenarios cannot pass acceptance.
-If no new behavior test was warranted, explain why.
-
-see [[z-bdd]], [[z-tdd]], [[z-go-testing]], [[z-go-bdd]], [[z-verify-before-done]]
+See [[z-tdd]], [[z-go-testing]], [[z-go-bdd]], and [[z-verify-before-done]].

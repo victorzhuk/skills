@@ -1,50 +1,30 @@
 ---
 name: z-design-brief
-description: Turns a grilled idea into a design brief by walking through each screen one at a time — what it shows, what a user can act on, how screens connect — then writes docs/design/{slug}-brief.md. Use when an idea from [[z-grill-with-docs]] has a UI surface. Triggers on "design brief", "what should this look like", "walk through the screens". Skip for backend/CLI-only ideas. Does not build the design system; see [[z-design-handoff]].
+description: "Write a design brief for a UI. Describe screens, actions, states, and navigation. Use [[z-design-handoff]] for visual design. Skip this procedure for backend-only or CLI work."
 ---
 
-# Design brief
+# Write a design brief
 
-Walk the idea's UI one screen at a time — what it shows, what the user can click or act on, what states each element has, how screens connect — then write the brief to `docs/design/<slug>-brief.md`. Same interview discipline as [[z-grill-with-docs]]: one question per turn, option cases with a marked recommended answer. Use the host's available question tool for structured choices within its supported schema; fall back to concise prose when unavailable.
+## Map the screens
 
-## Screen inventory
+1. Read the approved idea. Reuse the existing screen inventory or derive one from the primary journey.
+2. Trace the primary user journey from its entry point to its outcome.
+3. Add missing entry, settings, authentication, and recovery screens where needed. Include deep links and back navigation.
+4. Resolve missing decisions one screen at a time. Use the question format in [[z-grill-with-docs]].
 
-List every screen the idea implies — including the auth, empty, error, and settings screens briefs usually forget. Reuse an already-approved inventory. Resolve missing or changed screens before descending into them; use multi-select only when the host question tool supports it.
+## Describe each screen
 
-## Per screen
+| Field | Record |
+|---|---|
+| Purpose | The task the user can complete. |
+| Shows | Content, its source, and its loading and empty states. |
+| Actions | Each control's label, effect, destination, and failure behavior. |
+| States | Applicable disabled, loading, error, hover, and focus states. |
+| Transitions | Entry points, destinations, back behavior, and shared offline or error handling. |
 
-Resolve in order, one screen at a time; finish a screen before opening the next.
+Distinguish a state of an existing screen from a separate destination. Describe content hierarchy. Leave visual tokens to [[z-design-handoff]].
 
-- **Purpose** — the one job this screen does; if it has two, it may be two screens.
-- **Shows** — data and content, where it comes from, what empty and loading look like.
-- **Actions** — every clickable or actionable element; for each: label, effect, destination, failure behavior.
-- **States** — per element: default, disabled, loading, error; hover/focus where it matters.
-- **Transitions** — what leads here, where each action leads, what back does.
+## Deliver the brief
 
-## Flow and navigation
-
-- Entry points (navigation, deep links, notifications) and the default landing screen.
-- The primary path through the screens — name it. Secondary paths after.
-- Global error/empty/offline handling that individual screens inherit.
-
-## Write the brief
-
-Write `docs/design/<slug>-brief.md` from [assets/brief.template.md](assets/brief.template.md): Overview, Screens (one section each), Flow, Open questions. The brief records what each screen does and contains — not how it looks. If the user asks to just see it, print the brief in the conversation instead of writing the file.
-
-## Do not
-
-- Pick colors, spacing, typography, motion, or component libraries — that is the design system's job; see [[z-design-handoff]].
-- Skip screens because they are "obvious" — empty and error states are where briefs fail.
-- Write the brief before every screen in the inventory is walked.
-- Describe layout pixel-precisely; name regions and hierarchy, not coordinates.
-- Continue past the brief unprompted — [[z-design-handoff]], the PRD, and any implementation start only when the user asks.
-
-## Verify
-
-    fd -e md . docs/design/    # brief exists
-
-- Every screen in the inventory has Purpose/Shows/Actions/States/Transitions resolved.
-- Every action names its failure behavior.
-- Open questions are listed, not silently dropped.
-
-see [[z-grill-with-docs]], [[z-design-handoff]]
+Use [the brief template](assets/brief.template.md) at `docs/design/<slug>-brief.md`. Return the brief in chat when requested.
+Trace each action through the inventory. Check its destination and failure outcome. List unresolved questions explicitly.

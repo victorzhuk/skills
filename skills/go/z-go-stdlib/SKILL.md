@@ -1,30 +1,19 @@
 ---
 name: z-go-stdlib
-description: >
-  Stdlib-first discovery — verify the Go standard library or golang.org/x
-  already has it (`go doc`, task→package map) before writing any helper or
-  adding a dependency. Triggers on "write a helper", "utils package", "is
-  there a stdlib function". Old→new migration: [[z-go-modernize]]; pkg.go.dev
-  queries: [[z-go-pkg]].
+description: "Find standard-library APIs for Go tasks. Check symbols against the project's minimum Go version before adding a helper or dependency. See [[z-go-pkg]] for published module metadata."
 ---
 
 # Stdlib First
 
-Assume the standard library already has it until `go doc` proves otherwise.
-Every hand-rolled helper is a liability: untested, unnamed, invisible to the
-next reader who already knows the stdlib name.
+Identify the required behavior and supported Go versions before selecting a package.
 
 ## Lookup workflow
 
-1. `go doc <pkg>` for the package index; `go doc <pkg>.<Symbol>` for one API.
-2. `go doc -all <pkg> | rg -i <term>` when the symbol name is unknown.
-3. Search across std: pkg.go.dev via [[z-go-pkg]], or the coverage map below.
-4. Nothing in std → check `golang.org/x` (`x/sync`, `x/time`, `x/text`,
-   `x/crypto`, `x/exp`).
-5. Only then a third-party dependency — and justify it (see gate below).
-
-Never quote an API from memory into code — signatures drift between releases.
-Verify with `go doc` at the version in `go.mod`.
+1. Inspect `go doc <pkg>` or `go doc <pkg>.<Symbol>` on the selected toolchain.
+2. Search `go doc -all <pkg>` when the name is unknown.
+3. Check the API's introduction version and behavior against the project's supported minimum.
+4. Inspect existing project helpers and dependencies for missing behavior.
+5. Consider the relevant `golang.org/x` module or another dependency if it covers a remaining requirement.
 
 ## Coverage map — task → package
 
@@ -56,15 +45,15 @@ Verify with `go doc` at the version in `go.mod`.
 | IP addresses as values | `net/netip` | 1.18 |
 | URL path building | `url.JoinPath` | 1.19 |
 | Copy a URL / query values | `url.URL.Clone`, `url.Values.Clone` | 1.27 |
-| JSON in new code | `encoding/json/v2`; token-level `encoding/json/jsontext` | 1.27 |
+| JSON in new code | `encoding/json/v2` and token-level `encoding/json/jsontext` | 1.27 |
 | HTTP test server without sockets | `httptest.NewTestServer` (in-memory net) | 1.27 |
 | Safe file access under a dir | `os.Root` | 1.24 |
 | Walk a tree | `fs.WalkDir`, `filepath.WalkDir` | 1.16 |
 | Read/write whole file | `os.ReadFile`, `os.WriteFile` | 1.16 |
-| Multi-error, error matching | `errors.Join`, `Is`, `As`; flow in [[z-go-errors]] | 1.20 |
-| Timeout/cancel plumbing | `context` (`AfterFunc`, `WithoutCancel` 1.21); see [[z-go-context]] | — |
+| Error matching and joining | `errors.Is` and `As` (1.13), `Join` (1.20). See [[z-go-errors]]. | 1.13 / 1.20 |
+| Cancellation | `context`. For `AfterFunc` and `WithoutCancel` see [[z-go-context]]. | 1.21 for these additions |
 | Elapsed time, date math | `time.Since`, `AddDate`, `time.DateOnly` et al. | — |
-| Priority queue / top-k | `container/heap`; choice judgment in [[z-algo-core]] | — |
+| Priority queue / top-k | `container/heap`. See [[z-algo-core]]. | — |
 | Intern high-cardinality strings | `unique.Make` | 1.23 |
 | Custom iterators | `iter.Seq`, `iter.Seq2` | 1.23 |
 | Fast non-crypto hashing | `hash/maphash` (`Comparable` 1.24) | — |
@@ -78,8 +67,8 @@ Verify with `go doc` at the version in `go.mod`.
 | `stringInSlice(s, list)` | `slices.Contains(list, s)` |
 | `keys(m)` + sort | `slices.Sorted(maps.Keys(m))` |
 | `coalesce(v, def)` | `cmp.Or(v, def)` |
-| `min`/`max`/`abs` int helpers | `min`, `max` builtins; int `abs` — write it, none in std |
-| custom `Set[T]` type | `map[T]struct{}`; no stdlib set — that is the idiom |
+| Integer `min`, `max`, or `abs` helpers | Use the `min` and `max` builtins. Implement integer absolute value when required. |
+| Custom set type | `map[T]struct{}` |
 | `reverseSlice` | `slices.Reverse` |
 | `chunkSlice(s, n)` | `slices.Chunk(s, n)` |
 | `fmt.Sprintf("%d", n)` | `strconv.Itoa(n)` — no reflection, far cheaper |
@@ -89,29 +78,16 @@ Verify with `go doc` at the version in `go.mod`.
 | retry/backoff loop | none in std — small local loop first, library only if jitter/policy needed |
 | `github.com/google/uuid` import | std `uuid` (1.27) covers v4/v7 generate + parse |
 
-## Dependency gate
+## Select a dependency
 
-Before `go get`:
+Compare the required semantics, maintenance cost, supported versions, and API stability.
+Use a local helper for small project-specific behavior. Reuse a maintained package when it owns a substantial contract.
+Check the minimum Go version of an external module before adding it. See [[z-go-modernize]] for version changes.
 
-- Stdlib or `x/` covers ~80% of the need → use it; a little copying is better
-  than a little dependency.
-- Still needed → check health via [[z-go-pkg]] (imported-by count,
-  vulnerabilities, last release), then add and state why in the plan/PR.
-- Never import a kitchen-sink util library (`lo`, `funk`, `go-funk`) to save
-  a for-loop.
-
-## Do not
-
-- Ship a `utils`/`helpers` package containing anything from the tables above.
-- Use `golang.org/x/exp/slices|maps` when `go.mod` ≥ 1.21 — std owns them now.
-- Guess signatures from memory — `go doc` first.
-- Apply an API above a version the `go.mod` directive allows; bump first or
-  pick the older tool ([[z-go-modernize]] owns the upgrade path).
-
-## Verify
+## Verification
 
 ```sh
-go doc <pkg>.<Symbol>        # signature matches usage
+go doc os.OpenRoot           # example API signature
 go vet ./...
 govulncheck ./...            # after any new dependency
 ```

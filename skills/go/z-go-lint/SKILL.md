@@ -1,12 +1,6 @@
 ---
 name: z-go-lint
-description: >
-  Configure and run golangci-lint, suppress warnings correctly, fix common lint
-  findings, and integrate linting into CI/pre-commit hooks — legacy-codebase
-  adoption and code-review pre-checks included. Triggers on "golangci-lint",
-  "nolint", "go vet", "staticcheck", "revive", "gosec". Does not cover style
-  rules linters enforce; see [[z-go-naming]], [[z-go-safety]]. Does not cover
-  CI pipeline setup; see [[z-go-ci]].
+description: "Configure golangci-lint or investigate Go lint findings. Use for v2 settings, review scope, nolint directives, and approved fixes. See [[z-go-ci]] for workflow configuration."
 ---
 
 # Go Lint
@@ -22,12 +16,11 @@ golangci-lint linters              # list all available linters
 golangci-lint migrate              # convert v1 config to v2
 ```
 
-Use the project's own target when it exists: `make lint` / `task lint`.
+Use the repository's lint target when available.
 
 ## .golangci.yml essentials
 
-v2 config declares a schema `version`, replaces `disable-all: true` with `linters.default: none`,
-and splits formatters (`gofmt`, `gofumpt`, `goimports`, `gci`) into their own top-level section:
+Check the binary's major version. In v2, declare the schema version and configure formatters separately from linters.
 
 ```yaml
 version: "2"
@@ -58,17 +51,15 @@ formatters:
     - goimports
 
 issues:
-  new-from-rev: HEAD~1   # legacy codebases: lint only changed code
+  new-from-rev: HEAD~1   # Example for a single-commit review. Select the actual review base.
 ```
 
-Pin the version in CI; never rely on "latest" from CI runners.
+Pin the CI binary version. For generated code, check the Go marker and the matching exclusion settings.
+Use `linters.exclusions.paths` and `formatters.exclusions.paths` for explicit path patterns.
 
-Generated code (sqlc, protoc, mockgen, ogen output) doesn't need lint findings acted on — the v2 replacement for the old `issues.exclude-files`/`issues.exclude-dirs` keys is `linters.exclusions.generated` (`strict`/`lax`/`disable`, default `strict`, detected via the `// Code generated ... DO NOT EDIT.` header) plus `linters.exclusions.paths` / `formatters.exclusions.paths` for explicit patterns outside that convention (`zz_generated\..+\.go$`, vendored dirs).
+## Select a starting configuration
 
-## Bootstrap baseline (drop this in on day 0)
-
-Every new repo ships this file from the first commit; the Minimal-vs-Strict tier split below is
-for later tightening, never a reason to omit the file at bootstrap:
+For new configurations, start with checks that fit the project. Preserve working settings when adding a check.
 
 ```yaml
 version: "2"
@@ -102,9 +93,7 @@ formatters:
 
 ## Choose the project's lint scope
 
-Pick the tier that matches the project's risk profile. Keep the bootstrap
-`nolintlint` settings in either tier; extend its enabled list rather than replacing
-the whole `linters` mapping.
+Extend the existing linter list. Preserve the project's suppression policy.
 
 **Minimal** — use these entries in `linters.enable` with the bootstrap settings:
 
@@ -132,8 +121,7 @@ the whole `linters` mapping.
 - ginkgolinter
 ```
 
-Start minimal on a new service; move to strict once the codebase has enough tests and
-conventions in place for `cyclop`/`goconst`/`errorlint` findings to be signal, not noise.
+Add stricter checks when they detect relevant defects and the project can maintain the results.
 
 ## nolint directives
 
@@ -182,16 +170,16 @@ The linter name tells you the rule. Add `--verbose` for timing and context.
 
 | Problem | Fix |
 |---|---|
-| "deadline exceeded" | Set `run.timeout: 5m` in config |
-| Too many issues on legacy code | `issues.new-from-rev: HEAD~1` |
-| Linter not found | Check `golangci-lint linters`; may need a newer binary |
-| Two linters conflict | Disable the weaker one with a comment why |
-| v1 config errors after upgrade | `golangci-lint migrate` |
-| Slow on large repo | Reduce `run.concurrency` or exclude paths under `linters.exclusions.paths` |
+| Deadline exceeded | Identify the slow stage before changing the project deadline. |
+| Legacy backlog | Compare against the actual review base. Include all requested new work. |
+| Linter unavailable | Check the installed binary's list of linters. |
+| Conflicting rules | Find the intended policy before changing configuration. |
+| v1 configuration | Inspect the migration output before using the v2 configuration. |
+| Slow on a large repository | Measure package loading and analyzer times before tuning concurrency. |
 
-## Authorized repair pass
+## Authorized fixes
 
-Legacy codebase adoption and other repair migrations run only when the caller explicitly
+Legacy codebase adoption and other broad fixes run only when the caller explicitly
 authorizes them. Auto-fixable first, then by category:
 
 1. Auto-fixable: `golangci-lint run --fix ./...`
@@ -208,19 +196,17 @@ Run before reviewing a diff:
 gofmt -l . && go vet ./... && golangci-lint run ./...
 ```
 
-Report findings during review. Apply repairs only within caller-authorized scope, per [[z-lint]]. Mechanical issues distract from logical ones — surface them in the report.
-
-Under a zapply chunk, scope the sweep to the touched packages — repo-wide runs, `--fix`, and full lint belong to the caller's merge-gate floor, and never run `--fix` over `_test.go` files the caller has sealed as contract tests.
+Report findings in the review scope. Apply fixes only when requested. Preserve caller-selected checks and test contracts. See [[z-lint]].
 
 ## Do not
 
 - Use bare `//nolint` — always name the linter.
 - Suppress security linters (`gosec`, `bodyclose`, `sqlclosecheck`) without a written reason.
 - Run `golangci-lint` without a `.golangci.yml` — defaults change across versions.
-- Rely on auto-fix for security or error-handling findings — verify each one.
+- Rely on auto-fix for security or error-handling findings — check each one.
 - Add `nolintlint` to the disabled list — it guards the rest.
 
-## Verify
+## Verification
 
 ```sh
 golangci-lint run ./... && go vet ./...

@@ -1,41 +1,24 @@
 ---
 name: z-codegraph
-description: "Use an existing CodeGraph integration for call graphs, impact analysis, affected tests, or route discovery. Discover installed tools and index freshness; follow host LSP precedence and verify current source. Do not initialize indexes without user authorization."
+description: "Query an existing CodeGraph index for callers, affected tests, routes, or change impact. Check index coverage and freshness against current source."
 ---
 
-# CodeGraph
+# Query CodeGraph
 
-Use an existing CodeGraph index when the installed integration can answer the structural question.
+## Locate the index
 
-## Discover access
+Identify the repository, available integration, and index root. Check CLI commands with installed help or inspect the host tool schema.
+Follow the host's code-intelligence precedence. Use LSP for definitions, references, and implementations when that is the primary route.
+Initialize an index only with the user’s authorization. When graph access fails, use the existing file search.
 
-1. Find the task's repository and inspect whether it has a CodeGraph index.
-2. Discover available host tools and installed CLI help. An index directory alone does not prove that a server, binary, or watcher works.
-3. Follow the host's code-intelligence precedence. Use LSP for definitions, references, and implementations when that is its primary route.
-4. Use CodeGraph for supported graph exploration, impact analysis, or affected-test discovery.
-5. Use native text/file tools for exact searches and current-source verification.
+## Answer a structural question
 
-Do not initialize an index unless the user requests or approves it. Do not activate another indexing backend automatically as a fallback.
+1. Start with a known symbol, route, or file. Query callers, dependencies, or affected tests as needed.
+2. Inspect index status and pending files. Synchronize only when supported and authorized for the selected root.
+3. Compare graph results with current source. Dynamic dispatch and runtime registration can hide edges.
+4. Read changed files directly. For an absent edge, identify what source or runtime evidence supports that conclusion.
 
-## Query narrowly
+## Check the answer
 
-Start with a known symbol, route, file, or question. Read the tool's current schema before calling it. Inspect returned source and graph limitations; dynamic dispatch and runtime registration may be incomplete.
-
-If only CLI access is available, discover its supported verbs and flags with local help. Do not assume commands from another CodeGraph distribution apply.
-
-## Check freshness
-
-Read stale or pending files directly. Inspect status through the installed interface. Synchronize only when supported and needed within the authorized scope; do not assume a daemon is active.
-
-For impact or affected-test output, confirm relevant callers and tests against current source before treating absence from the graph as evidence of no dependency.
-
-## Do not
-
-- Treat an index directory as proof of available tools or current data.
-- Override host LSP routing because this skill loaded.
-- Initialize a broad root, dependency cache, or unrelated repository.
-- Use graph results as external library documentation.
-
-## Verify
-
-Report repository, access method, freshness limits, and source evidence supporting the answer. If unavailable, use the host's existing fallback rather than installing tools.
+Report the repository, access method, relevant code locations, and freshness limits.
+Use library documentation for external APIs. A local index describes only its indexed source.

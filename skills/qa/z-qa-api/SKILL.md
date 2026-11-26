@@ -1,6 +1,6 @@
 ---
 name: z-qa-api
-description: "API acceptance through a running service, with focused Go handler and dependency tests for residual risks. Use for API journeys, REST contracts, authentication, handler tests, or integration fixtures. Shared acceptance contracts belong to [[z-bdd]], browser flows to [[z-qa-browser]]."
+description: "Test API journeys through a running service. Use for REST contracts, authentication, Go handlers, or dependency fixtures. See [[z-bdd]] for acceptance and [[z-qa-browser]] for browser journeys."
 ---
 
 # API testing
@@ -11,7 +11,7 @@ Add handler or dependency integration tests only for named residual risks per [[
 
 ## Handler contracts
 
-Use `net/http/httptest` with the repository's assertion library. Verify status, relevant headers, response shape, and caller-visible error behavior.
+Use `net/http/httptest` with the repository's assertion library. Check status, relevant headers, response shape, and caller-visible error behavior.
 
 Cover authentication and resource authorization separately. A 200 response alone does not establish correct data or permissions.
 
@@ -40,11 +40,11 @@ func TestIntegrationStore(t *testing.T) {
 - Register cleanup immediately after each successful allocation. Close clients before terminating containers.
 - Isolate records or transactions across tests. Do not share mutable test state accidentally.
 - Keep Ryuk enabled by default. Disable it only for a documented CI limitation with an alternative cleanup mechanism.
-- Confirm both short mode without external services and the actual integration target.
+- Run short mode without external services. Then run the actual integration target with its dependencies.
 
 ## Live smoke checks
 
-Use the project's established HTTP client. Require a verified target; use test credentials and controlled fixtures.
+Select the intended test service. Use its established HTTP client, test credentials, and controlled fixtures.
 
 For a service whose documented healthy response is HTTP 200 with `{"status":"ok"}`, this shell example checks both transport and body:
 
@@ -58,21 +58,21 @@ body=${response%$'\n'*}
 printf '%s' "$body" | jq -e '.status == "ok"' >/dev/null
 ```
 
-Set `HEALTH_URL` from the verified target. This Bash/Zsh example requires exactly HTTP 200; `--fail` alone accepts other successful responses. Match the actual service contract. Do not use substring matching: `unhealthy` contains `healthy`.
+Set `HEALTH_URL` from the verified target. This Bash example expects status 200 and the documented JSON value. A substring check would also match `unhealthy`.
 
 A declarative tool such as Hurl is appropriate when already adopted. Do not add it merely to replace working repository tests.
 
 ## Do not
 
-- Treat a received HTTP error response as request success.
+- Count an unexpected status as a pass. A rejection test must assert its expected error response.
 - Ignore errors during fixture setup.
 - Disable cleanup globally to hide a container startup failure.
 - Copy real tokens, credentials, or sensitive responses into committed fixtures.
 - Assume all Go services provision dependencies in the same way.
 
-## Verify
+## Check the results
 
-Run the repository's bounded handler and integration targets. Confirm a failing status, invalid body, unauthorized request, and unavailable dependency fail their intended checks. Report scope and unavailable external checks.
+Run the repository's bounded handler and integration targets. Exercise an unexpected status, invalid body, unauthorized request, and unavailable dependency. Assert the expected result in each case. Report scope and unavailable external checks.
 
 [TestMain](https://pkg.go.dev/testing#hdr-Main), [Testcontainers cleanup](https://golang.testcontainers.org/features/garbage_collector/).
 

@@ -1,6 +1,6 @@
 ---
 name: z-cloudevents
-description: CloudEvents envelopes and protocol mappings. Use for event identity, structured or binary HTTP mode, data_base64, or event schema evolution. Payload validation belongs to [[z-json-schema]]. Go delivery patterns belong to [[z-go-messaging]].
+description: "Encode and verify CloudEvents. Use for event identity, structured or binary HTTP, data_base64, and schema evolution. See [[z-json-schema]] for payloads and [[z-go-messaging]] for delivery."
 ---
 
 # CloudEvents
@@ -54,13 +54,12 @@ Separate the event envelope, payload contract, and transport binding. Use the re
 
 - Change `dataschema` when the payload contract changes incompatibly. Agree on event-type versioning with consumers.
 - Verify the envelope and payload independently. A valid envelope does not establish payload validity or publisher authenticity.
-- Keep retry, ordering, acknowledgement, and transactional guarantees in the transport and application contract.
+- Define retries, ordering, acknowledgments, and exactly-once guarantees in the transport and application contract.
 - Apply the smallest payload and metadata limits across the actual route.
 - Resolve schema URIs through trusted, pinned resources. Do not automatically fetch arbitrary received URIs.
 
 ## Do not
 
-- Treat CloudEvents as an exactly-once delivery mechanism.
 - Use `id` as an entity identifier, partition key, or global deduplication key without verifying the contract.
 - Rewrite event identity during a transport-only conversion.
 - Copy credentials or sensitive payload fields into routable context metadata.

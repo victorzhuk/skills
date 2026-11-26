@@ -6,4 +6,4 @@ Python tooling baseline and framework routing for FastAPI, Django, Flask, and da
 
 Model- or user-reachable via skill name and trigger phrasing.
 
-- **[z-py-core](./z-py-core/SKILL.md)** — Python tooling and idiom baseline — uv for env/deps, ruff lint+format, mypy strict-leaning, pytest, pydantic v2 at the boundary. Routes to references for FastAPI, Django, Flask, or data (polars/pandas) work.
+- **[z-py-core](./z-py-core/SKILL.md)** — Maintain Python packages with uv, Ruff, mypy, pytest, and Pydantic.

@@ -1,6 +1,6 @@
 ---
 name: z-go-codegen-patterns
-description: Use when authoring Go code generators, scaffold tools, AST manipulation, template-based codegen, golden-file tests, or YAML-driven generation pipelines. Also use when debugging generated output (wrong file content, injection failures, template rendering errors, YAML parse errors). Does not cover quality of the generated code itself; see [[z-go-style]] and [[z-go-testing]].
+description: "Write Go generators and scaffolding tools. Use for AST edits, templates, YAML configuration, deterministic output, and golden tests. See [[z-go-ogen]] for OpenAPI transport generation."
 ---
 
 # Go Code Generation Patterns
@@ -18,7 +18,7 @@ Code generators produce Go source files from templates, AST manipulation, or a c
 
 ## AST Over String Edit
 
-Never build generated Go source with `strings.Replace` or template string concatenation — it's fragile and breaks on formatting changes:
+Parse Go files before modifying declarations or imports. String substitution can match comments or unrelated tokens.
 
 ```go
 // Bad — fragile, breaks on formatting changes
@@ -39,9 +39,9 @@ if err := format.Node(&buf, fset, f); err != nil {
 }
 ```
 
-Default toolchain: stdlib `go/parser` + `golang.org/x/tools/go/ast/astutil` — `astutil.AddNamedImport`, `astutil.Apply` for cursor-based traversal. Reach for `github.com/dave/dst` (`dstutil.Apply`) only when the edit must preserve comments through the round-trip — `go/ast` + `go/printer`/`format.Node` drops them.
+Use `go/parser` and `astutil` for structural edits. Use a decoration-preserving library when comments or exact placement require it.
 
-Regex on Go source is fine for read-only existence checks — it's writing new source by string edit that's fragile, not detecting whether something already exists:
+Use textual searches to locate candidates. Inspect the syntax tree when the presence of a declaration decides whether to edit.
 
 ```go
 func HasGoFunction(src []byte, name string) bool {
@@ -73,7 +73,7 @@ Keep templates free of business logic. Move decisions (if/else chains, string tr
 
 ## YAML Indent Discipline
 
-YAML uses spaces, never tabs. A single tab causes a parse error:
+Use spaces for YAML indentation. Tabs inside quoted scalar values have different rules.
 
 ```
 yaml: found a tab character where an indentation space is expected
@@ -81,12 +81,12 @@ yaml: found a tab character where an indentation space is expected
 
 Rules:
 - 2-space indentation in all YAML templates.
-- Never use `\t` in any YAML literal.
+- Use spaces in generated indentation.
 - Test YAML templates by parsing the output with `yaml.Unmarshal` — don't just assert strings.
 
 ## Schema Validation Before Render
 
-Validate the manifest or schema before executing templates:
+Check the manifest or schema before executing templates.
 
 ```go
 if err := schema.Validate(block); err != nil {
@@ -117,44 +117,28 @@ func TestGenerate_HTTPServer(t *testing.T) {
 }
 ```
 
-Regenerate goldens on intentional changes with the project's verified update flag/environment variable — these are custom test conventions, not built-in Go flags. Run the existing bounded wrapper. Never commit goldens that fail to compile — run `go build ./...` on generated output in CI.
+Regenerate golden files with the project's documented update mechanism. Repeat generation and check the output for unexpected drift.
 
 ## Injection Pipeline
 
 A safe pipeline order prevents partial writes:
 
 1. Register capabilities (extension points) and injections (what to insert).
-2. Validate every injection target exists — fail before writing any files.
+2. Check that every insertion target exists before writing files.
 3. Sort injections by priority (lower = applied first).
 4. Group by target file.
 5. Parse each target file once.
 6. Apply typed injectors (`import`, `field`, `code`, `struct`).
-7. Write formatted Go only when the file was modified.
+7. Write the formatted output only if it differs from the existing file.
 
-If any step fails, abandon the entire generation run — never leave a partially-injected file.
+Check all generated files before replacing destinations. If publication can fail partway, provide a recovery path for earlier replacements.
 
-## Quick Reference
+## Checks
 
-| Pattern | Rule |
-|---|---|
-| AST manipulation | `go/parser` + `astutil` by default; `dst` only to preserve comments |
-| Existence detection | Regex on raw source is fine for read-only checks |
-| Template context | Typed struct with helpers, not `map[string]any` |
-| YAML indentation | Spaces only, 2-space indent, tested by parse |
-| Schema validation | Before render, not after |
-| Test strategy | Golden files + `-update` flag or `UPDATE_GOLDEN=1` env var |
-| Injection pipeline | Parse once, apply all injectors, write only if modified |
-
-## Checklist
-
-- [ ] No `strings.Replace` or string concatenation to write generated Go source
-- [ ] Regex on Go source, if used, is read-only detection, not a source edit
-- [ ] Template context is a typed struct, not `map[string]any`
-- [ ] YAML templates tested by parsing output (not just string matching)
-- [ ] Schema validated before template execution
-- [ ] Golden files exist for non-trivial generated output
-- [ ] Golden files compile in CI
-- [ ] Injections write only modified files
+- Parse emitted YAML and Go files. Compile generated Go packages with the project wrapper.
+- Compare representative output with reviewed golden files. Include a malformed-input case.
+- Generate twice with identical inputs. Check that the second run produces no diff.
+- Exercise a failed generation against disposable output. Check that existing results remain usable.
 
 ## Related Skills
 

@@ -1,28 +1,26 @@
 ---
 name: z-py-core
-description: Python tooling and idiom baseline — uv for env/deps, ruff lint+format, mypy strict-leaning, pytest, pydantic v2 at the boundary. Routes to references for FastAPI, Django, Flask, or data (polars/pandas) work. Triggers on "uv sync", "ruff check", "pydantic model". Does not cover test-depth choice; see [[z-testing-strategy]].
+description: "Maintain Python packages with uv, Ruff, mypy, pytest, and Pydantic. Use the framework references for FastAPI, Django, Flask, or data workloads. See [[z-testing-strategy]] for test scope."
 ---
 
-# Python core
+# Python packages
 
-House Python stack: `uv` for env and deps, `ruff` for lint and format, mypy strict-leaning, `pytest`, pydantic v2 at IO boundaries. Route to the matching reference for framework or data work.
+## Match the project environment
 
-## Tooling
-
-`uv` is the default — replaces pip, venv, virtualenv, and pip-tools:
+Inspect `pyproject.toml`, the lockfile, and CI. Preserve an existing package manager and supported Python versions.
+For a new uv project, distinguish initialization and dependency changes from checks on an existing environment.
 
 ```bash
 uv init                    # new project, writes pyproject.toml
 uv add fastapi             # add a runtime dep
 uv add --dev pytest ruff mypy
-uv sync                    # install from lockfile
-uv run pytest              # run inside the project's venv
+uv sync                    # update the lock when needed, then synchronize the environment
+timeout 10m uv run pytest  # run the default serial suite in the project environment
 uv python pin 3.12         # pin the interpreter
 ```
 
-Commit `uv.lock`. Use pip or poetry only when a project already runs on one of them — don't migrate an incumbent project unasked.
-
-`ruff` does both lint and format — never pair it with black/isort/flake8, pick one formatter:
+Commit the project's `uv.lock`. Use `uv sync --locked` when setup must respect that lockfile.
+Use Ruff according to the project's lint and format policies. These commands edit the working tree.
 
 ```bash
 uv run ruff check --fix
@@ -38,7 +36,7 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ```
 
-mypy strict-leaning, not full strict from day one on an existing codebase:
+Choose mypy settings that match the supported Python version and package layout.
 
 ```toml
 [tool.mypy]
@@ -50,30 +48,21 @@ module = "legacy.*"
 disallow_untyped_defs = false
 ```
 
-Escape hatches stay narrow: `# type: ignore[attr-defined]` with the error code attached, never a bare `# type: ignore`.
+Keep ignores local and specific, such as `# type: ignore[attr-defined]`.
 
-## Project layout
+## Define types at boundaries
 
-`src/` layout — `src/pkgname/`, tests in `tests/` outside the package. Forces the package to be imported as installed, catching accidental relative-import bugs that a flat layout hides.
-
-`__init__.py` re-exports the public surface; don't drop logic into it. An empty file is fine for a regular package; an implicit namespace package omits it.
-
-## Typing
-
-- Builtin generics: `list[str]`, `dict[str, int]` — not `List`/`Dict` from `typing`.
-- `X | Y` unions, `X | None` — not `Union[X, Y]`, not `Optional[X]`.
-- `Protocol` for a structural seam (duck-typed interface) instead of an ABC when there's no shared implementation to inherit:
+Install and test the distribution from its supported layout. A `src/` layout helps expose imports that rely on the checkout.
+Keep `__init__.py` focused on the public package interface. Implicit namespace packages can omit it.
+Match generic and union syntax to the minimum Python version.
+Use a `Protocol` when callers require behavior without shared implementation.
 
 ```python
 class SupportsWrite(Protocol):
     def write(self, data: bytes) -> int: ...
 ```
 
-- No `Any` crossing a function boundary. If a value's type is genuinely unknown at the edge (deserialized JSON, `**kwargs`), narrow or validate it before it reaches typed code — don't let `Any` propagate.
-
-## Validation and data shapes
-
-pydantic v2 `BaseModel` at IO edges — HTTP request/response, config, external API payloads. Validates once, at the boundary:
+Check external data at entry. For a Pydantic v2 project, select coercion, strictness, and unknown-field behavior from the input contract.
 
 ```python
 class CreateUserRequest(BaseModel):
@@ -81,20 +70,11 @@ class CreateUserRequest(BaseModel):
     age: int = Field(ge=0)
 ```
 
-Plain `@dataclass` for internal domain shapes once validated data has crossed the boundary — no per-field validation overhead, no pydantic coupling deeper in the call stack. Reaching for `BaseModel` everywhere because it's already imported is the over-engineering trap here; see [[z-no-over-engineering]].
+Use typed domain models or dataclasses for trusted internal data. Avoid repeating the same boundary validation.
 
-## Testing
+## Handle errors and concurrency
 
-`pytest`, not `unittest`, for new code:
-
-- Fixtures over `setUp`/`tearDown`.
-- `@pytest.mark.parametrize` over copy-pasted test methods.
-- How much to cover isn't a pytest question — see [[z-testing-strategy]].
-- Use the project's bounded wrapper. With `pytest-timeout` installed, set `timeout = 60` in pytest configuration or `--timeout=60` in `addopts`; also bound the whole process. With `pytest-xdist`, set a finite worker cap, never `-n auto`.
-
-## Errors
-
-Raise with context, keep the chain:
+Catch specific errors. Preserve causes when translating failures.
 
 ```python
 try:
@@ -103,34 +83,14 @@ except KeyError as e:
     raise ValueError(f"invalid user id: {user_id}") from e
 ```
 
-Catch specific exception types. A bare `except Exception` belongs only at a real top-level boundary — a task runner, a request handler — where it's logged and either re-raised or converted to a response. Never `except: pass`.
+Reserve broad catches for boundaries that log, recover, or translate the failure. Avoid silent exception handlers.
+Use async I/O with an appropriate driver. Blocking file or CPU work inside `async def` still blocks the event loop.
+Keep sync-to-async transitions explicit. A thread with a running loop cannot start another loop using `asyncio.run()`.
 
-## Async
+## Check the package
 
-`asyncio` only when the workload is actually IO-bound — network, disk, subprocess. Wrapping a CPU-bound loop in `async def` buys nothing; it still blocks the event loop.
-
-Don't mix sync and async call paths in one component. Calling `asyncio.run()` in a thread with an active event loop raises `RuntimeError`; pick one discipline per component and keep the boundary where sync meets async explicit (a thread pool executor, not an ad hoc `run_until_complete`).
-
-## Framework routing
-
-| Building | Reference |
-|---|---|
-| FastAPI service | [[references/fastapi.md]] |
-| Django app | [[references/django.md]] |
-| Flask app (often inherited) | [[references/flask.md]] |
-| Data pipeline, notebook, or LLM client | [[references/data.md]] |
-
-Read the matching reference before writing framework-specific code — this file covers the language and tooling baseline that applies regardless of framework.
-
-## Do not
-
-- Hand-roll a `venv` + `pip install` workflow on a new project — use `uv`.
-- Run black or isort alongside ruff.
-- Validate the same payload twice — once at the pydantic boundary, then again by hand deeper in.
-- Leave a bare `# type: ignore` without the error code.
-- Reach for `unittest.TestCase` in new test code.
-
-## Verify
+Use the existing runner, fixtures, and parameterized cases. Set an overall deadline and a finite worker count for parallel tests.
+A pytest per-test timeout requires the installed plugin. See [[z-testing-strategy]].
 
 ```bash
 uv run ruff check
@@ -138,4 +98,5 @@ uv run mypy .
 timeout 10m uv run pytest --timeout=60   # requires pytest-timeout; cap workers if xdist is enabled
 ```
 
-see [[z-testing-strategy]], [[z-no-over-engineering]]
+Read the applicable [FastAPI](references/fastapi.md), [Django](references/django.md), [Flask](references/flask.md), or [data](references/data.md) reference.
+Use [[z-no-over-engineering]] when choosing new dependencies.

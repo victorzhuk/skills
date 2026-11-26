@@ -1,54 +1,36 @@
 ---
 name: z-dotnet-core
-description: C#/ASP.NET Core web APIs for inherited and green services — minimal APIs, nullable reference types as errors, dependency injection, EF Core AsNoTracking reads, async all the way. Triggers on ASP.NET Core, minimal API, EF Core. Does not cover Go/Rust; see [[z-go-clean-arch-di]].
+description: "Build ASP.NET Core APIs with dependency injection, EF Core, cancellation, and nullable references. Use for minimal APIs or controllers. See [[z-testing-strategy]] for test scope."
 ---
 
-# .NET core
+# ASP.NET Core services
 
-Default to minimal APIs for a new small service, controllers only where the codebase already committed to them — don't migrate an inherited controller app just to match a green one.
+## Select the framework
 
-## Target framework
+Read `global.json` for SDK selection and the project file for target frameworks.
+Preserve the existing target unless the task includes an upgrade. Check Microsoft's support policy before selecting an LTS for new services.
+Prefer minimal APIs for small new services. Preserve existing controller routes and contracts.
+Enable nullable analysis with `<Nullable>enable</Nullable>` and the project's warning policy. Check request input at runtime. Nullable annotations affect static analysis.
 
-- Select a supported LTS from Microsoft's current support policy for new services. Preserve the target of an inherited application unless an upgrade is in scope.
-- verify against the actual `global.json`/`.csproj` `TargetFramework` before assuming a version — an inherited codebase may sit on an out-of-support release
+## Wire dependencies
 
-## API style
+- Inject services through constructors or supported minimal-API handler parameters.
+- Keep request state and the usual EF Core `DbContext` within a scope.
+- Use singletons for services safe to share across requests. Avoid capturing scoped services in a singleton.
+- Use transient registration for independent short-lived instances.
 
-- minimal APIs (`MapGet`/`MapPost` on `WebApplication`) for small, focused services — less ceremony, faster to read top to bottom
-- controllers where the codebase already has them — don't rewrite a working controller-based API to minimal APIs on style preference alone
-- nullable reference types enabled (`<Nullable>enable</Nullable>`) with warnings treated as errors — this is what makes a `null` a compile-time signal instead of a runtime surprise
+## Handle data and errors
 
-## Dependency injection
+Review generated migrations against populated tables. Check column removals and new required values.
+Use `AsNoTracking()` for read-only entity queries. Inspect SQL and query counts.
+Project or explicitly load the relationships the operation needs. Lazy navigation can issue one query per row.
+Await asynchronous I/O through the endpoint. Blocking on `.Result` or `.Wait()` can exhaust the thread pool.
+Pass the request's `CancellationToken` to database and HTTP operations.
+Use UTC for stored instants. Inject `TimeProvider` where the target supports it and tests require controllable time.
+Catch errors where the application can recover or translate them to its public error contract.
 
-- Use constructor injection for services and supported handler-parameter injection for minimal APIs. Do not hide dependencies behind `IServiceProvider.GetService` in business logic.
-- register lifetimes deliberately: `Scoped` for anything touching a `DbContext` or per-request state, `Singleton` only for genuinely stateless or thread-safe services, `Transient` for cheap short-lived instances
+## Check the service
 
-## EF Core discipline
-
-- review every migration before it ships — a generated migration can silently drop a column or add a non-nullable one without a default on a populated table
-- `AsNoTracking()` on read-only queries — skips change-tracking overhead for data that's never saved back
-- no lazy-loading surprises: either disable lazy loading and `Include()` explicitly, or know exactly which navigation properties trigger N+1 queries on access
-- LINQ readable over clever — a query that reads like the SQL it produces is easier to review than one showing off `Aggregate`/`SelectMany` chains
-
-## Async
-
-- Keep asynchronous I/O asynchronous through the endpoint. Blocking on `.Result` or `.Wait()` can cause thread-pool starvation; ASP.NET Core does not install the classic ASP.NET synchronization context.
-- thread a `CancellationToken` through to DB/HTTP calls that support it, sourced from the request's own token
-
-## Testing
-
-- xUnit as the default test framework
-- `WebApplicationFactory<T>` for API-level tests against the real DI graph and middleware pipeline, not just isolated handler unit tests
-
-## Do not
-
-- grow god controllers — a controller accumulating unrelated endpoints is a decomposition signal, not a place to keep adding `[HttpPost]` methods
-- sync-over-async (`.Result`, `.Wait()`, `.GetAwaiter().GetResult()` on a hot path) — thread-pool starvation and deadlocks follow
-- use `DateTime.Now` for anything that becomes business logic or gets tested — use `DateTime.UtcNow`, or inject `TimeProvider` (built into .NET 8+) so tests can control time
-- catch `Exception` broadly at a layer that isn't the outermost error boundary — it swallows bugs a narrower catch or the framework's own exception handling would surface
-
-## Verify
-
-- `dotnet build -warnaserror`
-- Use the existing test wrapper with a whole-process deadline and the selected runner's supported timeout and parallelism limits; see [[z-testing-strategy]]. Discover the runner before choosing flags.
-- `dotnet format --verify-no-changes`
+1. Run the project's build and format checks, such as `dotnet build -warnaserror` and `dotnet format --verify-no-changes`.
+2. Exercise changed endpoints through their middleware and dependency graph. Use the existing harness, such as xUnit with `WebApplicationFactory<T>`.
+3. Bound the test process and worker count using the selected runner's supported options. See [[z-testing-strategy]].

@@ -1,19 +1,18 @@
 ---
 name: z-no-ai-style-code
-description: Write like a senior maintainer of this project, not a tutorial — natural short names, concise error context, structure matching the surrounding code's idiom. Use when writing or reviewing new code, especially after a first draft. Triggers on "applicationConfiguration", "UserServiceInterface"/"UserServiceImpl" pairs, "failed to X in the Y", verbose wrapper names, or a diff reading more formal than its file. Does not cover comment content; see [[z-zero-comments]].
+description: "Review naming, error context, and code structure against nearby project code. Use for redundant wrappers, Interface/Impl suffixes, or verbose identifiers. See [[z-zero-comments]] for comments."
 ---
 
 # No AI-style code
 
-Match the file you're editing. New code should read like the maintainer who owns this file wrote it on an ordinary day — not like a textbook example generated in isolation.
+Follow the naming and error conventions of nearby code.
 
 ## Core rules
 
-- Short, natural names over descriptive-but-bloated ones: `cfg`, `repo`, `srv`, `pool` — not `applicationConfiguration`, `userRepositoryInstance`, `httpServerInstance`, `databaseConnectionPool`.
-- Error context is a phrase, not a sentence: `"create user: %w"`, not `"failed to create user in the database: %w"`.
-- Use [[z-no-over-engineering]] to decide whether a type boundary is needed. Avoid redundant `Interface` and `Impl` naming.
-- Before writing, read a neighboring file in the same package and match its naming density, abstraction level, and idiom. A diff that looks more "polished" than its surroundings is a signal, not a compliment.
-- Match existing idioms while preserving correctness and required contracts.
+- Read a file in the same package. Follow its naming and error conventions.
+- Prefer names that describe the role at the point of use. Use familiar local abbreviations such as `cfg` or `repo`.
+- Wrap an error with the failed operation, for example `"create user: %w"`.
+- Use [[z-no-over-engineering]] to determine whether a caller needs a type boundary. Omit redundant `Interface` and `Impl` suffixes.
 
 ## Examples
 
@@ -54,4 +53,4 @@ type UserService struct { ... }
 
 ## Verify
 
-Read one existing file in the same package before finishing the diff; the new code should be indistinguishable in tone from what's already there.
+Compare the changed names, error handling, and structure with nearby code. Preserve required behavior.

@@ -1,7 +1,6 @@
 ---
 name: z-creating-flow-doc
-description: >
-  Document one operation, RPC, cron, or query as a single-page behavioral contract. Follow local conventions. Default to Mermaid, with paired Mermaid/PlantUML diagrams only when required. Trigger on "add a flow doc", "document an RPC", or "create a behavioural contract". Use architecture docs for system-wide structure and runbooks for operational procedures.
+description: "Document one operation, RPC, scheduled job, or query. Trace its observable behavior and follow the project's diagram convention. Use runbooks for operational procedures."
 ---
 
 # Creating flow docs
@@ -29,12 +28,10 @@ Use the gap sections instead of forcing a normal-operation template onto a defec
 
 Inspect the implementation and tests before drafting. Determine:
 
-- initiating actor or trigger;
-- actual feature gates and authorization;
-- inputs, required headers, and entity-state conditions;
-- service interactions and persistence effects;
-- conditional events and best-effort side effects;
-- success result, failures, retries, and concurrency risks.
+- Initiating actor or trigger
+- Feature gates, authorization, inputs, required headers, and initial state
+- Service calls, persistence, events, and best-effort effects
+- Success, failure, retry behavior, and concurrency risks
 
 Do not invent a feature flag or error code to fill a template. Separate verified current behavior from a proposed change.
 
@@ -46,17 +43,17 @@ Use this fallback only when no local convention supplies one:
 2. **What happens** — actor, operation, and outcome in one or two sentences.
 3. **Participants** — actors, services, storage, and messaging in interaction order.
 4. **Preconditions / When triggered** — actual gates, authorization, inputs, existence, and state.
-5. **What changes / What returns** — mutations or result shape; identify conditional and best-effort effects.
+5. **State or result.** Identify mutations, result shape, and any conditional or best-effort effects.
 6. **Sequence** — the main interaction path.
 7. **Branching / State** — only when they add information missing from the sequence.
-8. **Errors** — caller-visible failures; for jobs, observable failure and retry behavior.
+8. **Errors.** Document caller-visible failures. For jobs, include observable failures and retry behavior.
 9. **Caveats** — concrete race windows, partial effects, and limitations.
 
 Read operations and scheduled jobs can fail. Do not omit their error contract.
 
 ## Diagrams
 
-Use Mermaid alone unless the project requires paired Mermaid/PlantUML diagrams. When paired, keep semantics identical; do not add a twin to a Mermaid-only project.
+Use Mermaid unless the project requires another format. For paired Mermaid and PlantUML diagrams, keep the participants, order, and branches consistent.
 
 - Sequence diagrams show participants and causal ordering.
 - Branching diagrams show meaningful decisions and named outcomes.
@@ -97,6 +94,6 @@ Link the new flow from the existing index. Update existing companion docs only w
 - Every mutation, result, conditional emission, and failure has the intended meaning.
 - Errors cover the selected variant.
 - Diagrams agree with prose and local pairing rules.
-- Index links resolve; no contradictory companion contract remains.
+- Index links resolve. Related documents describe the same behavior.
 
 See [[z-domain-modeling]], [[z-concise-human-docs]].

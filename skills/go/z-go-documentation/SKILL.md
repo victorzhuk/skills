@@ -1,14 +1,13 @@
 ---
 name: z-go-documentation
-description: Go documentation conventions — godoc comments, package comments, README structure, Example tests, API docs, and llms.txt. Use when writing or reviewing doc comments, examples, or project docs for a library or CLI. Triggers on "godoc", "pkg.go.dev", "ExampleXxx", "doc comment", "llms.txt", "go doc". Does not cover naming; see [[z-go-naming]]. Does not cover test structure or comment discipline; see [[z-go-testing]] and [[z-zero-comments]].
+description: "Write Go package and symbol comments, executable examples, README files, and API documentation. See [[z-changelog]] for release notes and [[z-zero-comments]] for implementation comments."
 ---
 
 # Go Documentation
 
 ## Writing Principles
 
-Code shows *what*; comments explain *why* and *when*. Every doc comment must add
-information the reader cannot read directly from the signature.
+Explain behavior that the signature cannot express.
 
 Anti-patterns to remove on sight:
 - Paraphrase comments that start with the name and stop there (`// Foo returns a foo.`)
@@ -62,39 +61,32 @@ Omit guarantees already implied by the API's conventional behavior.
 
 | What | Rule |
 |---|---|
-| Package comment | Required; one per package; place in `doc.go` for large packages |
-| Exported symbols | All must have comments; start with the symbol name |
+| Package comment | Write a package overview. Use `doc.go` when the overview needs its own file. |
+| Exported symbols | Start each doc comment with the symbol name |
 | Comment content | Why/when/constraints/errors — never restate the signature |
 | Deprecated | `// Deprecated: Use X instead.` on its own line |
 | Interface docs | Document the contract, not the implementation |
-| Example tests | Useful for executable usage contracts; `ExampleXxx()` in `*_test.go` when you do write one |
-| Internal funcs | Comment complex ones; skip trivial ones |
+| Example tests | Use `ExampleXxx` in `*_test.go` to verify a public usage contract |
+| Internal functions | Document hidden invariants and operational constraints |
 | Test functions | Do not comment |
 
 ## Example Test Functions
 
-Nice-to-have, not a default — rarely used in practice. Write `ExampleXxx` in
-`_test.go` files when a runnable usage snippet earns its keep for a public
-API; they run under `go test` and appear on pkg.go.dev:
+Use `ExampleXxx` in a `_test.go` file for an executable example of public behavior.
 
 ```go
-func ExampleOrderRepository_Create() {
-    repo := orders.NewRepository(db)
-    id, err := repo.Create(ctx, &orders.Order{
-        CustomerID: "c-123",
-        Items:      []orders.Item{{SKU: "A1", Qty: 2}},
-    })
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Println(id != "")
+func Example() {
+    var b strings.Builder
+    b.WriteString("go")
+    fmt.Println(b.String())
     // Output:
-    // true
+    // go
 }
 ```
 
-Output comments are mandatory for the test runner to verify them. Omit only when output
-is non-deterministic (add `// Unordered output:` for set results).
+Examples with an output comment run and compare output during `go test`. Examples without one compile but do not run.
+
+Use `// Unordered output:` only when the contract permits reordering. [Go example tests](https://pkg.go.dev/testing#hdr-Examples)
 
 ## README
 
@@ -108,28 +100,23 @@ Get a contributor running tests and opening a PR in under 10 minutes: prerequisi
 clone, build, test, PR process. If setup takes longer, fix the tooling first (Makefile,
 Taskfile, devcontainer).
 
-## CHANGELOG
-
-Does not cover CHANGELOG maintenance; see [[z-changelog]].
+For release notes, see [[z-changelog]].
 
 ## Library vs Application Docs
 
 | Item | Library | Application/CLI |
 |---|---|---|
 | godoc comments | Required | Required |
-| `ExampleXxx` tests | Nice-to-have (rare in practice) | Nice-to-have (rare in practice) |
+| `ExampleXxx` tests | Demonstrate public behavior | Demonstrate a supported calling pattern |
 | pkg.go.dev / `go doc` | Primary API surface | Supplemental |
 | CLI `--help` text | N/A | Primary API surface |
 | Config/env docs | Optional | Required |
 | OpenAPI / protobuf | If applicable | If applicable |
-| llms.txt | Optional, unused so far | Optional, unused so far |
+| llms.txt | Optional when a consumer requires it | Optional when a consumer requires it |
 
-**Libraries:** doc comments are the primary deliverable; Example tests are a
-nice-to-have on top, not required.
-Playground links in comments: `// Play: https://go.dev/play/p/xxx`.
+For libraries, document the public API and link to runnable examples. For applications, compare `--help` with supported flags and configuration.
 
-**Applications:** `--help` is the primary doc surface. Document all env vars, config
-keys, and CLI flags. Installation section must cover binary, `go install`, and Docker.
+Document only the installation methods the project supports.
 
 ## API Documentation
 
@@ -144,20 +131,14 @@ truth.
 
 ## llms.txt
 
-Optional — zero adoption in practice so far. Add it only when a concrete
-agent-consumption need comes up, not by default. If added: a plain-text,
-structured overview at the repo root — project purpose, key packages, public
-API surface, and links to machine-readable specs (OpenAPI, proto files). Keep
-it factual — no marketing.
+Add an overview only for a known consumer. Link to the authoritative API or schema. Avoid duplicating specifications.
 
 ## Do not
 
 - Write comments that only restate what the signature shows.
 - Use `// TODO` as a substitute for a real doc comment on an exported symbol.
 - Skip the package comment on non-trivial packages.
-- Put `// Output:` blocks in Example functions when output is truly non-deterministic
-  (use `// Unordered output:` for sets, or drop the output check and accept the example
-  won't be verified).
+- Add an output assertion for a nondeterministic value. Use `// Unordered output:` if only the line order varies.
 - Commit `llms.txt` with speculative or future-tense claims.
 
 ## Verify

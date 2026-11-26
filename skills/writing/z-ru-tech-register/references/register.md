@@ -34,14 +34,9 @@ Avoid: ALL-CAPS, emoji spam, «успей»/«подпишись», motivational
 - **AI coding agents**: @evocoders — Claude Code skills/subagents, model comparisons, token-cost optimization.
 - **PostgreSQL internals**: Егор Рогов, «PostgreSQL 17 изнутри» (Postgres Professional / ДМК Пресс, 2025; free PDF on postgrespro.ru) plus the Habr series on MVCC, indexes, buffer cache, and WAL — the canonical RU terminology source.
 
-Caveats: handles and subscriber counts drift — verify a channel is alive before citing it. @devopsina is a meme channel, not a technical reference. Aggregator feeds (@goproglib, @backenddigest) are content farms, not register models. Роскомсвобода is designated a «foreign agent» in RF — mind how it is referenced.
+Check the original publication and author before citing a channel. Use official publications for law and enforcement.
 
-## Legal caveats — circumvention and compliance content
+## Legal claims
 
-**Circumvention.** Verify the current law and publication context:
-
-Before publishing legal claims, retrieve the current statute and applicable enforcement decision from primary sources. Record jurisdiction, effective date, exact provision, and the scope it addresses. Advertising rules, information-blocking rules, and administrative penalties are separate questions.
-
-Do not repeat an unverified “first enforcement” claim or infer the scope of a prohibition from a secondary summary. This style reference is not a legal authority.
-
-**Compliance.** Keep a «not legal advice» frame. Date every legal claim; RF internet regulation moves fast — re-verify statute text and enforcement state before publishing.
+Record the jurisdiction, effective date, provision, and publication context. Check the applicable primary source.
+Distinguish advertising restrictions, information blocking, and administrative penalties. Attribute interpretations to their source.

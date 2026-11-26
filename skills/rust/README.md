@@ -6,6 +6,6 @@ Rust core, web, and GTK/libadwaita desktop guidance.
 
 Model- or user-reachable via skill name and trigger phrasing.
 
-- **[z-rust-core](./z-rust-core/SKILL.md)** — Rust development with ownership, lifetimes, error handling, async, traits, and idiomatic patterns.
-- **[z-rust-gtk4](./z-rust-gtk4/SKILL.md)** — Build GTK4 desktop apps in Rust with relm4 and libadwaita — the Elm-style component loop, libadwaita widget hierarchy, preferences dialogs, system tray, message-driven UI patterns.
-- **[z-rust-web](./z-rust-web/SKILL.md)** — Rust web stack discovery and boundaries — inspect the target service before choosing its HTTP framework, database adapter, middleware, and logging conventions.
+- **[z-rust-core](./z-rust-core/SKILL.md)** — Design Rust ownership, lifetimes, traits, error types, and async tasks.
+- **[z-rust-gtk4](./z-rust-gtk4/SKILL.md)** — Build GTK4 desktop interfaces in Rust with relm4 and libadwaita.
+- **[z-rust-web](./z-rust-web/SKILL.md)** — Review Rust HTTP routes, middleware, or adapters with the project's framework and runtime.

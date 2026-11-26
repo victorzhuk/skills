@@ -1,45 +1,31 @@
 ---
 name: z-lisp-core
-description: Embeddable Scheme-flavored Lisp interpreters/compilers embedded in a host app — lexical closures, proper tail calls as a requirement, hygienic macros by default, call/cc only if needed, tagged-value VM/host boundary. Triggers on Lisp VM, Scheme interpreter, tail call, hygienic macro. Does not cover the host language; see [[z-rust-core]].
+description: "Design an embedded Scheme-style interpreter. Use for lexical closures, tail calls, macro hygiene, garbage collection, or the VM interface. See [[z-rust-core]] for Rust host code."
 ---
 
-# Lisp core
+# Embedded Scheme-style interpreters
 
-Design the interpreter/compiler and its host boundary together — an embedded Lisp VM lives or dies on how cleanly values, errors, and control cross that boundary.
+## Define the language contract
 
-## Core semantics — non-negotiable
+Use lexical scope. A closure captures its defining environment. Mark any dynamic bindings explicitly.
+Implement proper tail calls across procedures, including mutual recursion. Tail calls must preserve bounded control-stack usage.
+Prefer hygienic macros. Document intentional capture where the dialect permits it.
+Implement the continuation semantics the dialect promises. A one-shot escape continuation cannot implement general multi-shot `call/cc`.
+For a custom dialect, select full continuations only when required.
 
-- lexical scoping and closures: a closure captures its defining environment, not the dynamic call stack. This is Scheme's defining trait — get it right before anything else
-- proper tail calls are a requirement, not an optimization flag. A self-tail-call written as `(loop ...)` must run in constant stack space, or callers will fall back to `while`/`goto` and lose the language's expressiveness
-- macros hygienic by default (rename introduced bindings so they can't capture caller identifiers). If the VM only supports unhygienic macros, document the capture hazard at every macro definition site — don't leave it implicit
-- full `call/cc` is expensive to implement correctly (stack copying or a CPS transform) — support it only when the host genuinely needs resumable control flow (generators, backtracking, coroutines-via-continuations). A one-shot escape continuation covers most real uses at a fraction of the cost
+## Define the host interface
 
-## VM/host boundary
+- Represent values with tagged types. Register the host functions the program can call.
+- Map errors in both directions. Preserve Lisp stack context and structured errors for `condition` or `guard` handlers.
+- Pass data through the typed interface. Avoid constructing source text for `eval`.
+- Register roots for Lisp values retained by host callbacks or objects. Release each root when the host releases the value.
+- Prefer precise collection when references are identifiable. Conservative scanning can retain pointer-like values.
+- Bound symbol retention. Use uninterned symbols where macro expansion needs fresh names.
+- Limit execution and allocation for untrusted programs. Propagate cancellation into host callbacks.
 
-- values cross as tagged types (a discriminated union/enum on the host side) — never as untyped host-native values guessed at runtime
-- host functions register explicitly through a table the embedder builds, not via reflection over the host language — reflection breaks static typing and hides the real API surface
-- errors map both directions without losing stack context: a Lisp error surfacing to the host carries the Lisp call stack; a host error raised into Lisp carries enough structure for a `condition`/`guard` handler to act on, not just a string
+## Check the interpreter
 
-## GC
-
-- Prefer precise GC when the VM can describe its references. Conservative scanning can falsely retain pointer-like data; either design can miss roots if the host boundary does not register them correctly.
-- rooting discipline at the boundary: any Lisp value the host holds outside the VM's own stack (a callback closure stored in a host struct) must be explicitly rooted, or the collector reclaims it out from under the host
-- For untrusted programs, enforce execution and allocation budgets and propagate cancellation into host callbacks. Test infinite loops, allocation pressure, and blocked host calls.
-
-## Workflow
-
-- REPL-driven development from day one — it's both the fastest debug loop and the first proof that reader, evaluator, and printer round-trip correctly
-
-## Do not
-
-- default to dynamic scope — that's a different language design (Emacs Lisp is the well-known counterexample); if a form needs dynamic binding, mark it explicitly (`fluid-let`/parameterize) instead of making it the default
-- do string-based host interop — building host calls by formatting Lisp source into a string and `eval`-ing it defeats the tagged-value boundary and reintroduces injection-style bugs
-- let symbol interning leak silently — an interned symbol table that only grows (every `gensym` during macro expansion, say) is a slow leak; scope gensym'd symbols or use uninterned symbols
-
-## Verify
-
-- round-trip test: read → eval → print for every core special form
-- tail-call test: a self-recursive loop of 10^6+ iterations must not grow the host stack
-- REPL smoke test after any evaluator change
-
-Host-language specifics (memory model, FFI mechanics, async runtime) belong to the host stack's own skill, e.g. [[z-rust-core]] for a Rust-hosted VM.
+1. Exercise the reader, evaluator, and printer through the REPL. Check each special form against its expected result.
+2. Run long direct and mutual tail-call sequences. Measure the maximum host stack depth.
+3. Trigger collection while a host callback retains a Lisp closure. Call the closure after collection.
+4. Exercise allocation limits, infinite loops, and blocked host calls. Check the host's recovery path.

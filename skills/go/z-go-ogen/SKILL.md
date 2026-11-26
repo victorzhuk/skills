@@ -1,29 +1,24 @@
 ---
 name: z-go-ogen
-description: OpenAPI-first HTTP transport in Go using ogen (github.com/ogen-go/ogen). Use when editing an OpenAPI spec, regenerating the transport layer, or implementing handlers against the generated Server interface. Triggers on "ogen", "go tool ogen", "openapi.yaml", "generated Server interface", "SecurityHandler", "UnimplementedHandler". Does not cover database access, custom codegen, or contract semantics; see [[z-go-sqlc]], [[z-go-codegen-patterns]], and [[z-go-api-design]].
+description: "Generate a Go HTTP transport from OpenAPI using ogen. Use for generator pins, handler signatures, response types, validation, or authentication. See [[z-go-api-design]] for the API contract."
 ---
 
 # OpenAPI transport with ogen
 
-ogen reads an OpenAPI 3 spec and emits a complete, type-safe HTTP transport layer:
-request/response structs, a `Handler` interface (one method per operation), a
-`SecurityHandler` interface, an HTTP server, and input validation. The spec is the
-single source of truth — change it first, then regenerate.
+Edit the OpenAPI contract first. Regenerate the transport with the project's pinned ogen version.
 
 ## Spec-driven flow
 
-1. Edit `openapi.yaml` (or wherever your spec lives — the path is a project convention,
-   not enforced by ogen).
+1. Locate and edit the project's input specification.
 2. Regenerate the transport package.
 3. Implement the affected handler methods.
 4. Wire the handler into the HTTP server.
 
-Never change the generated package directly. If the generated output is wrong, the spec
-or the `ogen` invocation is wrong — fix those.
+Fix the specification, generator input, or generator configuration when generated output differs from the contract.
 
 ## Running ogen
 
-Pin `github.com/ogen-go/ogen/cmd/ogen` to the project-selected version in go.mod/go.sum. The directive below identifies the command; it does not select a version by itself. On older Go, preserve a pinned tools.go or generator wrapper. Use one invocation consistently; [official setup](https://ogen.dev/docs/intro/).
+Pin `github.com/ogen-go/ogen/cmd/ogen` to the project version. The directive below names the tool. On older Go versions, retain a pinned tools file or generator wrapper. [Generator setup](https://ogen.dev/docs/intro/)
 
 **`go.mod` tool directive** (Go 1.24+, preferred):
 
@@ -67,15 +62,13 @@ ogen emits a package (conventionally `gen/`) that you must never hand-edit:
 | `UnimplementedHandler` | Do not override in the generated file |
 | Request/response structs | Extend via the spec, not via embedding |
 | `SecurityHandler` interface | Implement in your own file |
-| The HTTP server (`*Server`) | Instantiate; do not edit |
+| The HTTP server (`*Server`) | Instantiate the generated server |
 
 All customisation goes in files outside the generated package.
 
 ## Implementing handlers
 
-Define a struct that satisfies the generated `Handler` interface. Embed
-`gen.UnimplementedHandler` to get default `501 Not Implemented` responses for any
-operation you have not yet wired up — this is safe during incremental development:
+Implement the generated handler interface. Embed `gen.UnimplementedHandler` only when a temporary 501 response is acceptable.
 
 ```go
 type Handler struct {
@@ -96,15 +89,11 @@ func (h *Handler) CreateUser(ctx context.Context, req *gen.CreateUserReq) (*gen.
 }
 ```
 
-Return the types required by the generated Handler signature. Operations with multiple responses may use a response interface; return the generated status response in that response slot, not as a Go error unless it actually implements the required error contract. Names and shapes come from the project's generated code, not a universal `NotFoundResponse` type.
+Inspect the generated handler signature for the operation. Return its generated response type in the response slot. Use the error slot only for failures that implement its error contract.
 
 ## Mapping generated ↔ domain types
 
-A dedicated `genmap.go` file per handler package is a good pattern once the mapping
-surface grows — it keeps conversions out of handler methods and makes drift between
-the gen package and domain enums visible in one place. At smaller scale, building the
-`*gen.User{...}` literal directly inside the handler method (like `CreateUser` above)
-is equally valid — most real ogen consumers do exactly that.
+Convert generated types at the transport boundary. Keep small mappings inline. Extract a mapping file when multiple handlers share conversion rules.
 
 ```go
 // genmap.go — worth splitting out once conversions multiply across handlers
@@ -134,7 +123,7 @@ compiles but silently passes unknown values to clients when the two sets drift.
 Implement the generated `SecurityHandler` interface in its own file. ogen invokes it
 before calling the operation handler, based on the security schemes declared in the spec.
 
-Inspect the generated security interface and the pinned generator's error handler. Implement token verification with a safe error; verify that the configured handler maps authentication and authorization failures to the intended status without exposing credentials. Do not assume a named sentinel or automatic 401 mapping exists across versions.
+Inspect the generated security interface and the pinned error handler. Return safe verification errors. Test the configured status mapping for authentication and authorization failures.
 
 ## Validation and error responses
 
@@ -153,18 +142,18 @@ if err != nil {
 mux.Handle("/api/v1/", http.StripPrefix("/api/v1", srv))
 ```
 
-`/healthz`, `/readyz`, and `/version` NEVER enter `openapi.yaml` — they are not business API. Register them by hand on the same business `mux`, next to the `gen.NewServer` mount, calling the handlers defined per [[z-go-observability]]:
+Register operational probes where the deployment expects them. Keep separately owned probes outside the generated business transport. See [[z-go-observability]].
 
 ```go
 mux.HandleFunc("/healthz", healthzHandler)
 mux.HandleFunc("/readyz", readyzHandler)
 ```
 
-Spec drift stays compiler-caught: anything that IS in the spec regenerates signatures and `go build` flags mismatches (see Verify below).
+A build catches incompatible generated signatures. Behavior changes can still compile, especially with an embedded fallback handler.
 
 See [[z-go-clean-arch-di]] for how the handler's use-case dependencies get wired.
 
-## Verify
+## Verification
 
 ```sh
 go generate ./...   # or your make/task target
@@ -172,6 +161,4 @@ go build ./...
 go vet ./...
 ```
 
-If `go build` fails after regeneration, the spec change is inconsistent with the handler
-implementations — find every method on your `Handler` struct whose signature no longer
-matches the regenerated interface and update it. The compiler output names each mismatch.
+Run requests against the generated router. Check status, body, validation, authorization, and any operation that could return a fallback 501.

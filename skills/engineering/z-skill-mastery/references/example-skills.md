@@ -1,83 +1,39 @@
-# Example Skills Reference
+# Skill authoring examples
 
-House-style skills to copy from. These match what the `z-go-*` family actually does: plain Markdown, imperative, persona-free, `## Do not` / `## Verify`, `[[links]]`. Copy the shape, not the XML-heavy patterns some older guides show.
+## Define the trigger and the result
 
-## Example 1: a knowledge skill (model-invoked)
-
-The common case — reusable domain knowledge the agent reaches for unprompted.
+A skill description identifies work that a caller can recognize. The body gives the procedure and its completion check.
 
 ```markdown
 ---
 name: z-go-errors
-description: Idiomatic Go error handling, wrapping, and inspection — the single-handling rule, sentinel vs typed errors, panic discipline. Use when creating, wrapping, or inspecting errors, or auditing log-and-return. Triggers on "errors.Is", "%w", "log and return", "sentinel error". Does not cover structured logging setup; see [[z-go-observability]].
+description: "Handle Go errors, wrap causes with %w, or inspect failures with errors.Is and errors.As. See [[z-go-observability]] for logging configuration."
 ---
 
-# Go error handling
+# Handle Go errors
 
-Handle an error exactly once: wrap with context and return, or log and stop — never both.
+Wrap an error when its caller needs to inspect the cause. Use a short operation name for context.
 
-## Core rules
+## Choose the error contract
 
-- Wrap with `%w` when the caller may need `errors.Is`/`errors.As`; use `%v` to opaque the chain.
-- Keep context short: `"create user: %w"`, not `"failed to create user in the database: %w"`.
-- Sentinel (`var ErrNotFound = errors.New(...)`) for expected, matchable conditions; typed error for carrying data.
-
-## Do not
-
-- Log and return the same error — the caller logs it again.
-- Wrap with a message that repeats the callee's ("get user: get user by id: %w").
-- `panic` for expected failures; reserve it for programmer bugs.
+- Return a sentinel when callers need to recognize a condition.
+- Return a typed error when callers also need structured details.
+- Log a failure where it is handled. Avoid duplicate logs when returning an error to the caller.
 
 ## Verify
 
-- Inspect changed error paths and their callers for duplicate logging.
-- Run the project's existing vet or lint wrapper for the affected scope.
-
-see [[z-go-observability]], [[z-go-safety]]
+Exercise the failure through its public caller. Check that the caller can distinguish the documented error.
 ```
 
-Why it works: the leading sentence is the whole rule in one line; the description front-loads Leading Words (`errors.Is`, `%w`) and ends with a boundary; `## Do not` names the domain's real traps; `## Verify` gives the agent a self-check.
+The example names specific Go operations and gives an observable result. See [[z-go-errors]] for the maintained guidance.
 
-## Example 2: persona → instruction (the most common refactor)
+## Replace a persona with an instruction
 
-Skills instruct; they do not act a character. Strip every `## Role` / "You are an expert…" opening — it is a No-Op that spends context and nudges roleplay over rule-following.
+“Act as an experienced Rust engineer” leaves the action unspecified.
+“Identify who owns the value after each call” gives the reader a decision to check.
 
-**Before (roleplay — wrong):**
+## Select the entry point
 
-```markdown
-## Role
-
-You are a senior Rust engineer with 10+ years of experience building
-high-performance systems. You care deeply about idiomatic code.
-```
-
-**After (instruction — right):**
-
-```markdown
-# Rust core
-
-Write idiomatic Rust: make ownership explicit, push errors to the type
-system, and prefer iterators over index loops.
-```
-
-The "after" changes behaviour on the first line. The "before" only sets a mood.
-
-## Example 3: model-invoked skill vs user-invoked command
-
-Same domain, two homes. Put reusable knowledge in a skill; put a deliberately-started multi-step flow in the command layer.
-
-| | Skill (`z-go-testing`) | Command (`/zreview`) |
-|--|--|--|
-| Fires | agent hits a testing decision | human types `/zreview` |
-| Description | trigger-rich, always in context | none — human remembers it |
-| Content | rules, tables, `## Do not` | orchestration: dispatch agents, synthesise |
-
-If you catch yourself writing "first do X, then spawn agents, then report" in a model-invoked skill, it probably wants to be a command instead.
-
-## Common structure across house-style skills
-
-1. **Leading sentence** — the core instruction in one line. No persona.
-2. **Core rules / topic sections** — imperative, tables for quick-reference.
-3. **`## Do not`** — named anti-patterns for this domain.
-4. **`## Verify`** — shell checks that confirm the change (for skills that produce artifacts).
-5. **`[[links]]`** — boundaries and see-also, mirroring the `description`.
+Use a skill when the task should select reusable domain knowledge.
+Use a command when the user deliberately starts an ordered workflow.
+Keep dispatch, process control, and permissions in the calling host.

@@ -1,6 +1,6 @@
 ---
 name: z-go-grpc
-description: gRPC and protobuf service design in Go — field evolution, deadline propagation, the status-code/errdetails error model, interceptor ordering, streaming vs unary, and buf as the schema toolchain. Use when evolving a .proto service or setting up buf lint/breaking. Triggers on "protobuf", "buf lint", "buf breaking", "grpc interceptor", "status.Error", "errdetails". Does not cover context, errors, or API semantics; see [[z-go-context]], [[z-go-errors]], [[z-go-api-design]].
+description: "Design Go gRPC services and protobuf contracts. Use for binary and JSON compatibility, Buf checks, deadlines, status details, streaming, and interceptor order."
 ---
 
 # gRPC services
@@ -16,23 +16,14 @@ first, regenerate, then implement.
 |---|---|---|
 | Transport | `grpc-go` (`google.golang.org/grpc`) | connectrpc when browser/curl clients matter more than the existing grpc-go/xDS ecosystem |
 | RPC shape | unary | streaming once one request/response can't carry the payload, or the client needs partial results before completion |
-| Server instrumentation | `grpc.StatsHandler(otelgrpc.NewServerHandler())` | never an interceptor — otelgrpc's interceptor forms are deprecated |
-| buf breaking category | `FILE` | Deliberately select `WIRE_JSON` when generated-source compatibility is not required; `WIRE` excludes JSON guarantees |
+| Server instrumentation | `grpc.StatsHandler(otelgrpc.NewServerHandler())` | Attach telemetry to the RPC lifecycle |
+| Buf compatibility category | `FILE` | `WIRE_JSON` covers JSON and binary formats. `WIRE` covers the binary format. |
 | Keepalive | library defaults | tune only after a specific idle-connection or GOAWAY incident |
 | Client construction | `grpc.NewClient` | never `grpc.Dial`/`DialContext` — deprecated since v1.63 |
 
 ## Proto evolution and wire compatibility
 
-Protobuf's wire format has no way to detect a field decoded with a different
-definition than it was encoded with. Treat every deployed `.proto` field as
-permanent:
-
-- **Never reuse or renumber a field number.** Two servers on different binary
-  versions will otherwise decode the same bytes into different fields.
-- **Never repurpose a field's meaning** for old clients, even without changing its
-  number — add a new field instead and deprecate the old one.
-- **Reserve deleted fields and names**, both, so no one accidentally reintroduces
-  them and so JSON/text-format encoding of old data keeps parsing:
+Preserve the field number and meaning for deployed clients. Add a field with a new number when the meaning changes. After removing a field, reserve its number and name to prevent reuse. Reservations do not restore its JSON representation.
 
 ```proto
 message Order {
@@ -45,17 +36,15 @@ message Order {
 }
 ```
 
-- **Additive-only changes are safe by construction:** a new field, a new RPC method,
-  a new `enum` value (proto3 tolerates unknown enum values on old clients — reserve
-  removed ones, never delete outright). A field rename is wire-compatible (the tag
-  number is what's on the wire) but breaks generated call sites — version it like
-  any other breaking API change.
+An added field is usually safe on the binary wire. ProtoJSON readers can reject unknown fields. A rename can break JSON and generated code. A new enum value can break exhaustive consumers. Exercise each supported encoding and generated client.
+
+See [binary compatibility](https://protobuf.dev/programming-guides/proto3/#binary-wire-safe-changes) and [ProtoJSON compatibility](https://protobuf.dev/programming-guides/json/#json-wire-safety).
 
 | Situation | Do this |
 |---|---|
 | New optional data on an existing message, old clients still valid | Add a field with a fresh number |
-| A field's meaning would change for callers already deployed | New field, reserve the old number/name — never repurpose |
-| A whole new capability alongside an existing RPC family | New RPC method on the same service |
+| Changed field meaning | Deprecate the old field. Reserve its name and number after removal. |
+| New RPC | Deploy server support before clients call it, or handle `UNIMPLEMENTED` |
 | Backward-incompatible request/response reshape | New message type (`CreateOrderV2Request`) or a new versioned RPC — never mutate an existing message's wire shape |
 
 ## buf toolchain
@@ -74,7 +63,7 @@ breaking:
     - FILE
 ```
 
-`STANDARD` is Buf's lint default. Breaking categories decrease in strictness: `FILE` → `PACKAGE` → `WIRE_JSON` → `WIRE`. `FILE` also protects generated source compatibility; it is not limited to file placement. Keep it unless the project deliberately accepts a weaker boundary. See [Buf breaking rules](https://buf.build/docs/breaking/rules/).
+Use `STANDARD` for Buf's default lint rules. Select the breaking category from the public contract. `FILE` and `PACKAGE` protect generated source at different scopes. `WIRE_JSON` and `WIRE` cover encoding compatibility. See [Buf breaking rules](https://buf.build/docs/breaking/rules/).
 
 `buf.gen.yaml` (v2) wires plugins under `local:` — a plain `$PATH` lookup for a
 `protoc-gen-*` binary. Pin the installed plugin version the same way in dev and
@@ -109,11 +98,7 @@ inputs:
   - directory: proto
 ```
 
-It earns its keep over `local:` when no dev machine or CI runner should need a
-`go install pkg@version` pin or any protoc-gen-* toolchain installed at
-all — `buf generate` fetches and runs the plugin from the BSR instead, at the
-cost of a network call on every `buf generate` and trusting the BSR's build of
-the plugin.
+Use a remote plugin when the build must run without a local plugin executable. Generation then depends on the Buf Schema Registry.
 
 CI gate — lint every push, breaking-check every PR against the target branch:
 
@@ -127,19 +112,8 @@ annotates the PR — prefer it over the older split `buf-lint-action`/`buf-break
 
 ## Deadline propagation
 
-A client sets a deadline on `ctx`; grpc-go encodes it as a `grpc-timeout` header,
-already adjusted for elapsed time so clock skew between hosts doesn't matter. The
-server decodes it back into the `ctx` your handler receives — you don't construct
-this deadline, you inherit it. Passing that same `ctx` into a downstream gRPC or
-DB call re-encodes the remaining deadline automatically. The failure mode is
-entirely self-inflicted: `context.Background()` on a downstream call silently
-drops the deadline (and the trace) the caller already gave up on, so the
-downstream call runs unbounded after the original caller has stopped waiting.
-General propagation and cancellation rules — timeouts, `WithoutCancel`, value
-keys — live in [[z-go-context]]; this is just the gRPC-specific wire behavior.
-
-For streaming RPCs the deadline maps to `stream.Context()`, not a single call — see
-Streaming below for checking it inside a send/receive loop.
+Set a deadline on the client context. gRPC sends the remaining timeout. Pass the handler context to downstream RPCs and database calls. A new background context discards the request deadline and trace.
+See [[z-go-context]] for deadline and value propagation. For a streaming RPC, use `stream.Context()` throughout the send or receive loop.
 
 ## Error model
 
@@ -173,7 +147,7 @@ func (s *OrderServer) GetOrder(ctx context.Context, req *pb.GetOrderRequest) (*p
 }
 ```
 
-Translate at the transport boundary. Formatting with `%v` does not sanitize an error. Log an unexpected cause once before returning a generic status, as above, or preserve it in a private boundary type until a translating interceptor logs it. A generic status alone cannot carry the original cause to a later logging interceptor. Request-summary logging should not duplicate the internal-error log.
+Convert internal errors at the transport boundary. Log the cause once before returning a public status. If an interceptor owns translation, preserve the cause until it reaches that interceptor. Keep request summaries separate.
 
 For structured, machine-parseable detail (field violations, quota info), attach
 `errdetails` instead of stuffing it into the message string:
@@ -212,15 +186,9 @@ srv := grpc.NewServer(
 )
 ```
 
-The outer request logger observes authentication failures and recovered panic status. Recovery protects auth and handlers; the outer logger must be panic-safe. Auth rejects unauthorized calls before business logic. Do not assume identity placed in a child context by auth becomes visible in an outer context; use the project's explicit request-attribute mechanism. Test success, auth rejection and panic paths for one request summary and a safe client status.
+Test the chain on success, authentication failure, and panic. The outer logger records the final status. Recovery protects inner calls only. Expose identity through explicit request attributes if the outer logger needs it.
 
-otelgrpc is not in this chain. `UnaryServerInterceptor`/`StreamServerInterceptor`
-are deprecated (otelgrpc v0.46+) in favor of the `grpc.StatsHandler` shown above,
-which hooks the full RPC lifecycle, not just call start/end, and wires as its own
-`grpc.ServerOption`. Its `TagRPC` callback establishes the span in `ctx` before the
-interceptor chain runs, so `trace_id` is already there for auth and logging —
-that's why it needs no chain slot. Span/metric patterns once `ctx` carries the span
-live in [[z-go-observability]].
+Register `otelgrpc.NewServerHandler()` as a stats handler. Its `TagRPC` method attaches the span before the interceptor chain runs. Use the span context in authentication and request logging. See [[z-go-observability]].
 
 ## Streaming
 
@@ -232,9 +200,7 @@ finishes — a live feed, a bulk export, a bulk upload. Three shapes:
 - **Server streaming** — one request, many responses (export, live feed).
 - **Bidi streaming** — both sides send independently (real-time sync).
 
-Server side, check the stream's own context every iteration — a long loop that
-never checks it keeps running (and keeps holding downstream resources) long after
-a client has cancelled:
+Inspect the stream context inside long loops. Stop downstream work when the client cancels.
 
 ```go
 func (s *ExportServer) StreamOrders(req *pb.StreamOrdersRequest, stream pb.ExportService_StreamOrdersServer) error {
@@ -266,11 +232,7 @@ for {
 }
 ```
 
-Streaming costs more than it looks: a partially-consumed stream isn't retryable the
-way an idempotent unary call is, it pins to one backend for its lifetime, and
-cancellation must be checked explicitly instead of falling out of a call deadline.
-Don't reach for a bidi stream just to dodge N unary calls under a shared deadline —
-a batched unary request is usually simpler to retry and version.
+Use a batch unary call when the caller must retry the entire operation. A stream stays on one backend. Define a resume protocol if a disconnected client must continue partway through.
 
 ## Keepalive and connection tuning
 
@@ -279,7 +241,7 @@ Library defaults, almost never worth touching:
 | Setting | Client default | Server default |
 |---|---|---|
 | Ping interval (`Time`) | disabled — pings never sent | 2h |
-| Ping timeout (`Timeout`) | 20s (once pings are enabled) | 20s |
+| Ping timeout (`Timeout`) | 20s with client pings | 20s |
 | `EnforcementPolicy.MinTime` | — | 5m |
 
 Touch these only for a specific, already-observed problem:
@@ -308,30 +270,20 @@ HTTP, including anything a browser or Telegram Mini App talks to, already goes
 through ogen. Reach for connectrpc only if a concrete client needs gRPC-Web or
 plain-HTTP access without standing up a proxy.
 
-## Do not
+## Transport integration
 
-- Reuse or renumber a proto field, or repurpose its meaning for existing clients —
-  reserve the number and name instead.
-- Return `codes.Internal` (or any code) with a raw internal `err.Error()` — log the
-  detail, return a generic message.
-- Use `%w` across the gRPC boundary — wrap internally, convert with `status.Error`
-  at the handler.
-- Wire `otelgrpc.UnaryServerInterceptor`/`StreamServerInterceptor` into the chain —
-  deprecated; use `grpc.StatsHandler(otelgrpc.NewServerHandler())`.
-- Call `context.Background()` for a downstream call inside a handler — it drops the
-  deadline and trace the caller already gave you.
-- Ignore `stream.Context().Done()` in a long streaming loop — a cancelled client
-  otherwise keeps the handler goroutine and its downstream work alive.
-- Reach for a bidi stream to dodge N unary calls — see the retry/LB cost above.
-- Change keepalive settings without a specific dropped-connection incident driving it.
-- Call `grpc.Dial`/`DialContext` — deprecated since v1.63; use `grpc.NewClient`.
+- Protect internal errors at each transport boundary.
+- Register OpenTelemetry with `grpc.StatsHandler(otelgrpc.NewServerHandler())`.
+- Use `grpc.NewClient` in versions that support it. Review resolver defaults when migrating from `grpc.Dial`.
 
-## Verify
+## Checks
 
 ```sh
 buf lint
-buf breaking --against '.git#branch=master'
+buf breaking --against '.git#branch=master'  # use the project's compatibility baseline
 buf generate
 go build ./... && go vet ./...
 grpcurl -plaintext localhost:PORT list   # requires reflection registered
 ```
+
+Exercise an old client against the new server and a new client against the old server. Check binary and JSON consumers where supported.

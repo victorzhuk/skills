@@ -1,24 +1,18 @@
 ---
 name: z-rust-web
-description: Rust web stack discovery and boundaries — inspect the target service before choosing Axum, actix-web, sqlx, tower, or logging conventions. Use for Rust HTTP services and middleware. Core ownership and error handling belong to [[z-rust-core]].
+description: "Review Rust HTTP routes, middleware, or adapters with the project's framework and runtime. See [[z-rust-core]] for ownership and errors."
 ---
 
-# Rust web
+# Rust HTTP services
 
-Inspect the target repository's manifests, lockfile, routes, adapters, and tests before proposing framework conventions. This catalog does not establish which framework an unrelated service uses.
+## Trace the route
 
-## Workflow
+1. Inspect `Cargo.toml`, `Cargo.lock`, route registration, middleware, and endpoint tests.
+2. Identify the direct dependencies and enabled features. Check the installed framework's extractor, authentication, and middleware order.
+3. Follow the existing runtime, error response format, logging policy, and shutdown contract.
+4. Check SQL queries and migrations against the database client's documentation. Use [[z-rust-core]] for ownership and typed errors.
 
-- Preserve the service's runtime, routing, error response, and logging patterns. Follow [[z-rust-core]] for ownership and typed errors.
-- Read the installed framework's official documentation for extractors, middleware order, body limits, authentication, and graceful shutdown. Use sqlx documentation for sqlx queries and migrations; do not infer them from Axum documentation.
-- Verify timeouts, cancellation, resource limits, and authorization at real HTTP boundaries. Use the existing bounded test wrapper and [[z-testing-strategy]].
+## Check the routes
 
-## Do not
-
-- Infer direct dependencies or house conventions from another project's transitive dependencies.
-- Replace logging libraries or web frameworks without a requirement in the target service.
-
-## Verify
-
-- Identify direct dependencies and pinned versions supporting each proposed API.
-- Exercise the changed route through its actual middleware, including relevant error and authorization paths.
+Exercise the changed route through its real middleware. Include authorization failures, input limits, timeouts, and cancellation where applicable.
+Run the project's bounded test wrapper. See [[z-testing-strategy]].

@@ -1,62 +1,39 @@
 ---
 name: z-lean-fix
-description: Smallest-diff fixes for review findings and bugs. Use for "fix crit and majors". See [[z-no-over-engineering]].
+description: "Fix a defect or review finding at its known cause. Preserve unrelated code and report evidence for the requested scope. See [[z-systematic-debugging]] when the cause is unknown."
 ---
 
-# Lean fixes
+# Fix a known defect
 
-Fix the requested defect completely. Keep the diff focused and understandable without the conversation history.
+## Locate the cause
 
-## Before editing
+1. Identify the requested findings and severities. List any excluded severities in the result.
+2. Trace affected callers to the first site that violates the contract. Several callers can share the same defect.
+3. Build the branch and inspect dependencies, protocol definitions, and generated files. Distinguish a pre-existing failure from the requested defect.
+4. Search the project for an existing encoder, selector, mapper, or helper that handles the same case.
 
-- **Scope = the findings asked for.** "Crit and majors" means minors and nits stay untouched, even the easy ones. List them as left alone.
-- **Find the root site.** Several findings often share one cause, such as three callers funnelling through one helper. Fix that site once. Don't patch every symptom.
-- **Check the ground.** Make sure the branch builds and the dependencies (vendor, proto, generated code) match what the change expects. A fix on a broken base proves nothing.
-- **Look for what already exists.** Before writing a filter, mapper, or helper, grep for one. A local helper that already does it wins over a new one.
+## Choose the smallest complete change
 
-## Choosing the fix
+Use [[z-no-over-engineering]] to compare the following options.
 
-Apply [[z-no-over-engineering]] to choose the smallest complete fix:
+| Option | When to use it |
+|---|---|
+| Delete | The code serves no required behavior. Examples include a dead branch, duplicate function, or index that cannot serve its intended query. |
+| Reuse | An existing implementation meets the input and error contract. |
+| Edit in place | A guard, missing field, allowlist entry, or limit addresses the cause. |
+| Extract a helper | An unexported helper owns a repeated decision or clarifies a current responsibility. |
 
-1. **Delete.** When the defective thing adds no value, remove it. Examples: an index that can't serve the query, a copy of a function, a dead branch.
-2. **Reuse.** Call the existing helper, the sibling code path, or the pattern the target branch already uses. Examples: copy fields into the existing request type and call the existing encoder; call the selector the other endpoints call.
-3. **Inline edit.** Change the lines where the bug lives. A guard, a missing field, one more entry in an allowlist, a limit stage.
-4. **Local extract.** Use an unexported helper when it clarifies a current responsibility or owns a repeated decision.
+Select a range query when it serves existing data without a migration. Use a constant when no caller needs a configurable limit.
 
-Prefer the mechanism that needs no new infrastructure. A plain range match that works on current data beats a geo index that needs a data migration. A constant cap beats a config knob that no one has asked to tune.
+## Keep the diff in scope
 
-## Keep the diff reviewable
+- Preserve unrelated formatting, names, ordering, and fixtures. When splitting a function, keep unchanged code in place when its responsibilities remain clear.
+- Consolidate repeated decisions that the change introduces. Add an abstraction, feature flag, option, migration, or backfill only for a current requirement.
+- Preserve necessary rationale, contracts, and tooling markers under [[z-zero-comments]].
+- Retain lint findings for actual duplication. Give a reason for a suppression on a required literal, such as a wire key.
 
-- Don't reformat, rename, or reorder code the fix doesn't touch.
-- Preserve the position of unchanged code when splitting a function, unless the resulting layout obscures its responsibilities.
-- Consolidate repeated decisions introduced by the fix. Leave unrelated literals and pre-existing cleanup outside the scope.
-- Apply [[z-zero-comments]] to comment edits. Preserve necessary rationale, contracts, and tooling markers.
+## Verify and report
 
-## Decisions you made, not facts
+Exercise the original failure against the change. Run the approved project commands within their limits. Use [[z-testing-strategy]] for additional tests and [[z-verify-before-done]] for evidence.
 
-Any number or policy you picked is a decision the user owns: a limit, a TTL, a fallback, a dropped feature. Name each one in the report so it can be overridden. Never present it as a requirement.
-
-## Do not
-
-- Add an interface, option struct, config knob, or feature flag without a current requirement.
-- Write a migration, backfill, or new infra when removing or rescoping the defective part solves it.
-- "While I'm here" cleanups outside the requested severities.
-- Rewrite test fixtures beyond what the fix breaks.
-- Silence a linter on real duplication. `nolint` is only for literal-by-nature code (field names, wire keys), and it carries a reason.
-
-## Prove it
-
-Per [[z-verify-before-done]], with the project wrappers and resource limits:
-
-- Use the approved commands and scope from [[z-testing-strategy]] and [[z-verify-before-done]]. Preserve existing required checks. Add a lower-layer test only for a named residual risk E2E cannot prove; prove it fails without the fix and passes with it. Runner-specific lint flags belong to the language tooling skill.
-
-## Report
-
-Terse. For each finding: one line saying what changed. Then:
-
-- **Decisions:** the numbers and policies you picked.
-- **Assumptions and limits:** what the fix relies on, and what it still doesn't handle.
-- **Untouched:** the severities out of scope.
-- **Proof:** command → result.
-
-Nothing is committed unless the user asks.
+For each finding, report the change and its command result. Identify assumptions, remaining limits, and excluded severities. Name any selected TTL, limit, fallback, or feature trade-off so the user can review it. Commit only when the user asks.

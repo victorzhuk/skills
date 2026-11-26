@@ -1,6 +1,6 @@
 ---
 name: z-go-ci
-description: GitHub Actions CI/CD for Go projects — test matrix, race detection, golangci-lint, govulncheck, CodeQL, GoReleaser, Dependabot/Renovate, Docker image pipelines. Triggers on "github actions", "workflow", "govulncheck", "goreleaser", "dependabot", "release pipeline". Does not cover lint rule selection; see [[z-go-lint]].
+description: "Configure GitHub Actions for Go tests, lint, vulnerability checks, release tags, and image publication. Use for workflow dependencies, permissions, and release evidence."
 allowed-tools: Read Edit Write Bash(go:*) Bash(golangci-lint:*) Bash(git:*) Bash(goreleaser:*) Bash(gh:*)
 ---
 
@@ -12,14 +12,14 @@ allowed-tools: Read Edit Write Bash(go:*) Bash(golangci-lint:*) Bash(git:*) Bash
 |------------|----------------------------------------|--------------------------------------|
 | Test       | `go test -race`                       | Unit tests + race detection          |
 | Lint       | `golangci-lint`                       | Static analysis                      |
-| Vuln scan  | `govulncheck`                         | CVEs in call-reachable paths only    |
+| Vuln scan | `govulncheck` | Known vulnerabilities in the selected Go build |
 | Release    | GoReleaser                            | Cross-compiled binaries + changelog, only when a binary ships |
 
-This is the real baseline: one pinned Go version, race-detected tests, lint, `govulncheck`, and GoReleaser for anything that produces a binary. See **Optional hardening** below for coverage gates, version matrices, SAST, dependency bots, and multi-platform Docker — each is a real, addable option, none is the default.
+Use the project's supported Go toolchain. Test, lint, and scan the revision before publishing a binary or image.
 
 ## Test workflow
 
-`.github/workflows/test.yml`:
+Example test job. Keep jobs that use `needs` in the same workflow.
 
 ```yaml
 name: test
@@ -37,11 +37,11 @@ jobs:
       - run: timeout 15m go test -parallel 4 -p 2 -race -timeout 10m ./...
 ```
 
-Pin one Go version — either `go-version-file: go.mod` (tracks the module automatically) or the project's explicitly selected supported Go version. No version matrix by default. `-count=1` on integration jobs to disable caching for service-backed tests. Set a job deadline, a process deadline, a per-test-binary timeout, and package/test worker caps; none substitutes for all the others.
+Use `-count=1` for integration tests that depend on live services. Specify job, process, and test-binary deadlines. Limit package and test parallelism.
 
 ## Lint workflow
 
-`.github/workflows/lint.yml`:
+Example lint job.
 
 ```yaml
 name: lint
@@ -61,11 +61,11 @@ jobs:
           version: v2.13
 ```
 
-The action/linter pair above follows the [official compatibility example](https://github.com/golangci/golangci-lint-action#compatibility), checked 2026-10-13. Preserve a verified project pin and check runner/Go compatibility before upgrading it.
+Use a compatible linter, action, and runner version. See the [official compatibility example](https://github.com/golangci/golangci-lint-action#compatibility).
 
 ## Security workflow
 
-`.github/workflows/security.yml`:
+Example security job for a module that pins `govulncheck` as a Go tool.
 
 ```yaml
 name: security
@@ -79,16 +79,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version-file: go.mod }
-      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - run: go tool govulncheck ./...
 ```
 
-`govulncheck` only reports CVEs in paths your code actually calls — prefer it over generic dependency scanners. This is the whole security job by default; `gosec` findings are usually surfaced through a `golangci-lint` linter (see [[z-go-lint]]) rather than run as their own step, and CodeQL is optional hardening (below), not part of the baseline.
+Inspect reachability and scan mode in the [govulncheck report](https://go.dev/doc/security/vuln/). Record the tool version and applicable build tags. See [[z-go-lint]] for lint checks.
 
 ## Release workflow
 
-Add this job to the same workflow as `test`, `lint`, and `security`. Keep those
-checks enabled for tag pushes (`on: [push, pull_request]` above). Every job must
-check the triggering commit; only successful `v*` tag pushes may publish:
+Keep release, test, lint, and security jobs in one workflow. Enable prerequisites on tag pushes. Publish only successful release tags.
 
 ```yaml
 jobs:
@@ -111,11 +109,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Minimal `.goreleaser.yml`: `builds` → `main: ./cmd/myapp`, `goos: [linux, darwin, windows]`, `goarch: [amd64, arm64]`; `archives` with `tar.gz` and a Windows `zip` override; `checksum`; `changelog: sort: asc`. For a library omit `builds` and set `release: { draft: false }`. For multi-binary add one entry per `cmd/*`.
+Configure each GoReleaser build for the actual command, target platforms, archive format, and checksums. Inspect library workflows separately.
 
 ## Docker workflow
 
-Add the publisher to the same workflow as the required `test`, `lint`, and `security` jobs. All jobs must check the same commit. The following job publishes trusted default-branch pushes only; a PR cannot enter the privileged path:
+Publish images from trusted default-branch pushes. Require test, lint, and security jobs to succeed on the same commit.
 
 ```yaml
 jobs:
@@ -158,44 +156,34 @@ jobs:
           exit-code: 0
 ```
 
-The snippets above are job ingredients, not independent publication gates: merge them under one workflow and retain the `needs` edges for both publishers. Do not override failed or skipped prerequisites with `always()`. If an existing design requires `workflow_run`, restrict its triggering event/branch, bind checkout to the verified head SHA, and require every release check before publishing. Never execute an arbitrary PR head with registry credentials.
+Preserve both publishers' `needs` dependencies. A `workflow_run` publisher must check the event, branch, head SHA, and prerequisite results.
 
-One `docker/build-push-action` call, one platform. Multi-platform builds, provenance/sbom attestations, and image scanning are real options — see Optional hardening — not part of the baseline.
+Keep registry credentials out of jobs that execute untrusted pull request code.
 
-The Trivy step scans the just-pushed image ref at `HIGH,CRITICAL` severity and
-is additive hardening — `exit-code: 0` reports findings without failing the
-publish. Pin the action to its version tag (`aquasecurity/trivy-action@v0.36.0`); use a full commit SHA only where supply-chain policy requires an immutable reference, and bump deliberately. Keep `.dockerignore`
-correct: `.git` must be excluded, or every commit changes the build context and
-invalidates the Docker layer cache.
+The example scans the published image for high and critical findings. Exit code zero makes this scan informational.
 
-Repository settings: protect the actual default/release branch (required status checks, PR approval, no force push); `contents: read` as the default workflow permission; grant write only per-job where needed; credentials in repository secrets, never inline.
+To gate publication, scan the exact artifact before promoting it. Exclude unrelated files from the Docker build context.
+
+Protect the release branch. Set read-only workflow permissions. Grant write permissions only to jobs that need them.
 
 ## Optional hardening
 
-Each of these is a real, well-known option and worth adding once a specific risk justifies the extra job — none of them is the default, and adding all of them preemptively is cost without a matching need:
+Select additional checks from the repository's risks and deployment targets.
 
 | Hardening | What it adds | Add it when |
 |---|---|---|
 | `codecov/codecov-action` coverage gate | Coverage percentage tracked and gated in PRs | Someone actually reads the coverage number and acts on drops |
-| Go version matrix + `fail-fast: false` + `-shuffle=on` | Compatibility across Go versions; catches order-dependent test bugs | A library needs to prove multi-version compatibility, or shuffle-sensitive flakiness is suspected |
+| Go version matrix, `fail-fast: false`, and `-shuffle=on` | Check supported Go versions and test independence | Use when the library supports multiple toolchains or test order affects results |
 | CodeQL (`github/codeql-action`) | Deeper SAST than a linter | An internet-facing service needs a documented SAST story beyond `golangci-lint`'s `gosec` linter |
 | Dependabot (`.github/dependabot.yml`) or Renovate (`renovate.json`) | Automated dependency-bump PRs | Dependency drift has actually caused a problem, or the team wants it hands-off |
 | Multi-platform Docker + `provenance: mode=max` + `sbom: true` + Trivy scan | `linux/amd64,linux/arm64` images, supply-chain attestations, vulnerability scanning | The image ships to more than one architecture, or a consumer requires attestations |
-| `go mod tidy && git diff --exit-code` tidy-check | Catches stale `go.sum` | `go.sum` drift has bitten the project before |
+| `go mod tidy && git diff --exit-code` | Detect stale module files | A change to dependencies must include updated `go.mod` and `go.sum` |
 | OIDC federation (`aws-actions/configure-aws-credentials`, `google-github-actions/auth`, etc.) | Exchanges a short-lived, workflow-scoped identity token for cloud credentials instead of a static key in secrets | A workflow needs to authenticate to a cloud provider — prefer this over long-lived cloud secrets by default, not just for high-risk repos |
 
-## Do not
-
-- Omit `-race` from the test job — data races are undefined behaviour.
-- Cache integration test results — use `-count=1` for service-backed tests.
-- Use `@master` or `@latest` for action refs — pin to a major version tag (`@v4`) as the baseline; pin third-party (non-`actions/`, non-`docker/`) actions to a full commit SHA instead where supply-chain policy requires an immutable reference, since a tag can be moved.
-- Grant `contents: write` globally — scope it to the release job.
-- Add a version matrix, `-shuffle=on`, CodeQL, Dependabot, multi-platform Docker, or a tidy-check by default "just in case" — each is real, useful hardening, but add it for a specific risk, not preemptively.
-
-## Verify
+## Checks
 
 ```sh
 gh workflow list
 gh run list --workflow=test.yml --limit 5
-go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+go tool govulncheck ./...
 ```

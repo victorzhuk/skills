@@ -1,13 +1,13 @@
 ---
 name: z-go-feature-flags
-description: Feature flag lifecycle in a Go service — typed flag constants, a layered Evaluator (env kill-switch → remote provider → default), fail-open/fail-closed semantics, a fake evaluator for tests. Use when adding a kill switch or gating a feature on a remote provider (PostHog, LaunchDarkly, OpenFeature). Triggers on "feature flag", "kill switch", "IsEnabled", "Evaluator". Env parsing — [[z-go-env-v11]].
+description: "Evaluate feature flags in Go services. Use for typed keys, environment overrides, provider failures, per-user variants, and flag retirement. Preserve authorization checks independently."
 ---
 
 # Feature flags in Go
 
 ## Flag type and constants
 
-Define flags as a typed string constant in your domain or feature package — never raw strings at call sites:
+Define a named string type and a constant for each flag.
 
 ```go
 type Flag string
@@ -18,11 +18,11 @@ const (
 )
 ```
 
-Keep all flag constants in one file so adding a flag is a single-location diff.
+Keep the constants with the code that owns the flags.
 
 ## Evaluator interface
 
-The interface lives at the domain boundary — use cases depend on it, infra implements it:
+Define the evaluator at the consumer boundary. Implement it in the provider adapter.
 
 ```go
 type Evaluator interface {
@@ -31,21 +31,17 @@ type Evaluator interface {
 }
 ```
 
-`Variant` is for multivariate flags backed by an experimentation provider
-(PostHog and similar support this natively) — it returns the assigned variant
-key (`"control"`, `"treatment-a"`) or `""` when the flag is unset or
-boolean-only. Use `IsEnabled` for on/off gates, `Variant` once a flag has more
-than two states.
+Use `IsEnabled` for a boolean gate. Use `Variant` for a named treatment. The empty string means no treatment.
 
-This interface uses an explicit fallback contract: implementations record failures and return the selected flag default. Preserve a project interface that returns errors when callers need to distinguish failure from a valid value; either design still needs a deadline.
+The adapter records failures and returns the configured fallback. Return an error separately when callers must distinguish failure from a valid value.
 
 ## Layered evaluation
 
-Apply layers in priority order:
+Evaluate each flag in this order.
 
-1. **Env kill-switch** — an explicit env var (`FLAG_<NAME>_ENABLED=false`) overrides everything. Lets the operator disable a flag without touching the remote provider.
-2. **Remote provider** — PostHog, LaunchDarkly, OpenFeature, or a home-grown API supplies the evaluated value when configured.
-3. **Default** — returned when the env var is absent *and* the provider is unreachable or unconfigured.
+1. Check the environment override. An explicit `false` disables the flag.
+2. Query the configured provider with the caller's deadline and targeting data.
+3. Return the per-flag default if the provider is absent or fails. Reject a missing default during startup.
 
 ```go
 type compositeEvaluator struct {
@@ -75,9 +71,7 @@ func (e *compositeEvaluator) Variant(ctx context.Context, f Flag, userID uuid.UU
 }
 ```
 
-`Variant` returns `""` when explicitly disabled. Callers must treat an empty variant as disabled, not substitute an enabled treatment. An env value of true permits provider selection; it does not invent a variant.
-
-`envEvaluator.lookup` returns `(false, false)` when the var is absent — so an unset env var passes control to the next layer.
+Return an empty variant for a disabled flag. An explicit `true` permits provider selection. An absent override passes control to the provider.
 
 ### Env kill-switch convention
 
@@ -94,30 +88,24 @@ Document every flag in `.env.example` as a commented-out line:
 # FLAG_NEW_CHECKOUT_ENABLED=false
 ```
 
-Choose an explicit fallback per flag. New rollouts and safety gates normally default to disabled. Retain enabled behavior only when availability requirements justify it; do not share one implicit default across unrelated flags.
+Set a default for each flag according to its effect during an outage.
 
 ## Fail-open vs fail-closed
 
 | Flag class | Recommended default | Rationale |
 |---|---|---|
-| UX / product feature | Explicit per-flag default | Preserve established behavior; keep unlaunched treatments disabled |
+| UX or product feature | Explicit per-flag default | Preserve established behavior until a rollout starts |
 | Safety gate / kill switch | **fail-closed** (`false`) | Unknown state must not permit the risky path |
-| Billing/payment **gate** (paywall UI visibility) | **fail-open** (`true`) | The flag only decides what the UI shows; a provider outage shouldn't lock out paying users |
+| Paywall display | Product-defined | Keep access and payment authorization independent of display flags |
 | Billing/payment **charge path** (the money-moving decision) | **fail-closed** (`false`) | Unknown state must never authorize a charge |
 
-A single flag can look like it covers both without you noticing: showing an
-upgrade button is a *gate*; actually calling the payment provider to move
-money is the *charge path*. Pick fail-open or fail-closed by which one the
-flag controls, not by the word "billing" in its name.
+A flag can change the purchase button without authorizing the charge. Enforce authorization in the payment path.
 
 ### Provider implementation
 
-Keep provider evaluation bounded and preserve targeting:
-
-- Cache evaluated results by flag plus every relevant identity/context field, including tenant and user. Prefer the SDK's local flag-definition cache when available; never share a targeted result under the flag name alone.
-- Use a context-aware SDK/transport with a deadline inherited from the caller. Do not wrap an uncancellable call in a new goroutine per request: timing out the caller leaves that work running. If unavoidable, use bounded admission and an owned worker lifecycle; see [[z-go-concurrency]].
-- Return the flag's explicit fallback on provider failure; do not cache a transient failure as a successful evaluation. Count outcomes with bounded flag/outcome labels and avoid user identifiers in metrics.
-- Test opposing users, env-disabled variants, caller cancellation, and a stalled provider. Verify in-flight work stays bounded.
+- Prefer the SDK's local definition cache. Include tenant, user, and other targeting fields in any result-cache key.
+- Pass the deadline to the SDK. If the SDK cannot cancel, bound admission and give workers an owner. See [[z-go-concurrency]].
+- Record provider failures separately from successful evaluations. Exclude user IDs from metric labels.
 
 [Evaluation context](https://openfeature.dev/specification/sections/evaluation-context/) is part of the evaluation input, not optional cache metadata.
 
@@ -128,7 +116,7 @@ Keep provider evaluation bounded and preserve targeting:
 | Platform / global | All users share one value | Static config payload evaluated at startup or request time with no user context |
 | Per-user / targeted | Each user ID independently | Per-request identity payload (e.g. a `/me` response) evaluated with the real user ID |
 
-The env adapter ignores user identity. Before passing `uuid.Nil` for a global flag, verify how the selected provider interprets it; a zero UUID does not inherently mean non-targeted evaluation.
+Check how the provider represents global evaluation. A zero UUID can identify a user to a provider.
 
 For the per-request identity payload, iterate the known per-user flags at handler time:
 
@@ -139,7 +127,7 @@ for _, f := range perUserFlags {
 }
 ```
 
-Keep two explicit lists in the feature package: one for all flags (drives env-key documentation and diagnostics), one for per-user flags (drives the identity payload). Omitting a targeted flag from the per-user list is a silent partial bug: the kill-switch still works, but the client never receives the evaluated value.
+Document each flag in the registry. Include every targeted flag in the response that exposes per-user decisions.
 
 ## Injecting Evaluator into use cases
 
@@ -156,7 +144,7 @@ func (uc *CheckoutUseCase) Execute(ctx context.Context, userID uuid.UUID) error 
 }
 ```
 
-Platform handlers that build a static config struct read the env var directly via the service's `getenv` seam — the remote provider adds no value for a flag that is the same for every user.
+Read local-only settings through the configuration seam.
 
 ## Tests — fake evaluator
 
@@ -175,33 +163,19 @@ func (m mapEvaluator) Variant(_ context.Context, _ Flag, _ uuid.UUID) string {
 }
 ```
 
-Most tests only need `IsEnabled`; if a test needs a specific variant, add a
-`variantEvaluator map[Flag]string` fake rather than overloading `mapEvaluator`.
-
-Usage:
+Add a separate fake for variant values if the caller uses them.
 
 ```go
 flags := mapEvaluator{feature.FlagNewCheckoutEnabled: false}
 uc := NewCheckoutUseCase(flags)
 ```
 
-Pass `mapEvaluator(nil)` to disable all flags. To assert behavior under provider outage, either pass explicit values or implement a separate `errorEvaluator` that always returns `fallback`.
+Use the map fake for use-case tests. Exercise the real adapter with a failing provider to prove the outage policy. Inject an environment lookup for tests that run in parallel.
 
-Do not use `os.Setenv` in tests to control flags — it is global state and introduces order-dependent failures.
-
-## Checklist
-
-- [ ] `Flag` const added and documented in `.env.example` as `# FLAG_<NAME>_ENABLED=false`
-- [ ] Added to the all-flags registry (env-key docs, diagnostics)
-- [ ] Added to the per-user flags list if targeted
-- [ ] `Evaluator` interface injected; `IsEnabled` called with the correct user ID
-- [ ] Multivariate callers treat an empty `Variant` as disabled; env kill-switch tests cover this path
-- [ ] Fail-open/fail-closed default is intentional; fail-closed default has a WHY comment
-- [ ] Billing/payment flags: fail-open/fail-closed matches whether the flag controls a gate or a charge path
-- [ ] Tests use the fake evaluator, not `os.Setenv`
-
-## Verify
+## Checks
 
 ```sh
 go build ./... && timeout 5m go test -parallel 4 -p 2 -short -timeout 2m ./...
 ```
+
+Test two users with different treatments. Disable the flag locally and check both evaluation methods. Test cancellation and enforce the provider concurrency limit. Remove the registry entry, override, and evaluation code after rollout.

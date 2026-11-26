@@ -1,56 +1,28 @@
 ---
 name: z-design-handoff
-description: Design handoff from [[z-design-brief]] to Figma Make, Google Stitch, v0, or Lovable. Use for "design system", "handoff package", or "generate this in Figma/Stitch/v0". Produce tokens, components, states, and per-screen prompts. Does not operate tools. Prototype-to-PRD work belongs to [[z-to-prd]].
+description: "Prepare a design handoff from a screen brief for Figma Make, Stitch, v0, or Lovable. Write the tokens, components, screen prompts, and prototype results."
 ---
 
-# Design handoff
+# Prepare a design handoff
 
-Turn a design brief into a handoff package the user pastes into a cloud design tool (Figma Make, Google Stitch, v0, Lovable, …) to build a design system and prototype there. The user runs the tool; this skill prepares its inputs and records its outputs.
+## Extract the design requirements
 
-## Read the brief
+1. Read `docs/design/<slug>-brief.md` and the supplied visual references. Use [[z-design-brief]] to resolve missing actions or states.
+2. Define semantic color roles, type sizes, spacing, and corner radii. Use fixed values when the references establish them.
+3. List the components each action needs. Record their variants and states.
+4. Record tone, density, and platform conventions. Resolve a missing brand decision with [[z-grill-with-docs]].
 
-Start from `docs/design/<slug>-brief.md` ([[z-design-brief]]). Missing screens or unresolved actions go back to the brief first — a handoff built on gaps produces a prototype that answers nothing.
+## Prepare the package
 
-## Design-system spec
+Use [the handoff template](assets/handoff.template.md) at `docs/design/<slug>-handoff.md`.
+Write one portable prompt per screen. Include its purpose, content, actions, states, and relevant reference.
+Resolve open questions that prevent a complete prompt before delivering the package.
+Refer to shared tokens when the target tool has that context. Otherwise include the necessary tokens in each prompt.
 
-Derive from the brief plus whatever references the user provides — screenshots, products they like, brand assets:
+Check every brief screen against its prompt. Check that each listed component appears in a screen.
+Leave Results empty for the initial handoff. The user operates the design tool.
 
-- **Tokens** — color roles (background, surface, primary, danger, …), type scale, spacing scale, radius. Name roles, not hex values, unless a reference pins them.
-- **Component inventory** — every element the screens' Actions and States imply: buttons, inputs, cards, lists, dialogs, navigation. For each, the variants and states the brief names.
-- **Voice** — density, tone, platform conventions to follow.
+## Record a returned prototype
 
-Infer from references; where nothing pins a choice, ask — option cases with a recommended default, per [[z-grill-with-docs]] question discipline — don't invent a brand.
-
-## Per-screen generation prompts
-
-One prompt per screen, self-contained and portable across tools:
-
-- a compact restatement of the design-system spec (or a reference to it, if the tool holds context),
-- the screen's Purpose/Shows/Actions/States from the brief, in prose,
-- which reference applies and what to take from it.
-
-## Package
-
-Write `docs/design/<slug>-handoff.md` from [assets/handoff.template.md](assets/handoff.template.md): design-system spec, reference list, per-screen prompts, and an empty Results section.
-
-## Re-entry
-
-When the user returns with a prototype — link, exports, screenshots — record it in the handoff doc's Results section, screen by screen, noting deviations from the brief worth keeping vs fixing. That record is what [[z-to-prd]] reads.
-
-## Do not
-
-- Drive the design tool yourself — the user runs the generation step.
-- Lock prompts to one tool's syntax; keep them prose.
-- Invent brand values no reference supports.
-- Hand off while Open questions still block a screen prompt.
-- Treat the returned prototype as a build order — it feeds [[z-to-prd]]; implementation is not this skill's next step.
-
-## Verify
-
-    fd -e md . docs/design/    # handoff doc exists next to the brief
-
-- Every screen in the brief has a generation prompt.
-- Every component in the inventory appears in at least one screen prompt.
-- The Results section captures the returned prototype before moving to [[z-to-prd]].
-
-see [[z-design-brief]], [[z-to-prd]]
+Record its link, exports, or screenshots in Results. List deviations by screen and record which ones the user accepts.
+Use the returned results as input to [[z-to-prd]] when requested.

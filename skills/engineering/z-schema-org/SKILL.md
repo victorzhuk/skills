@@ -1,6 +1,6 @@
 ---
 name: z-schema-org
-description: Schema.org structured data for web content. Use for JSON-LD, Microdata, RDFa, rich results, or structured-data validation. Covers entity types, stable identifiers, truthful markup, and consumer requirements. JSON payload validation belongs to [[z-json-schema]].
+description: "Describe web entities with Schema.org. Use for JSON-LD, Microdata, RDFa, rich results, and structured-data validation. Use [[z-json-schema]] for JSON payloads."
 ---
 
 # Schema.org structured data
@@ -11,8 +11,8 @@ Describe the page's actual entities with verified Schema.org terms and facts fro
 
 - Identify the page template, primary entity, content source, rendering framework, and consuming service.
 - Inspect existing markup from templates, plugins, and client code before adding another emitter.
-- Read the current Schema.org type and property pages. Verify expected value types and term status.
-- Read the consumer's documentation separately. Schema.org vocabulary support does not imply eligibility for a search feature.
+- Read the current Schema.org definitions for each type and property. Verify value types and vocabulary status.
+- Read the consumer's supported types and properties. Google Search specifies additional requirements for each rich result.
 
 ## Model the entities
 
@@ -26,11 +26,9 @@ Describe the page's actual entities with verified Schema.org terms and facts fro
 
 ## Emit the markup
 
-- Prefer JSON-LD for new integrations unless the consumer requires another encoding.
-- Preserve working Microdata or RDFa unless migration serves a concrete requirement.
-- For JSON-LD, use `@context: "https://schema.org"` and an `application/ld+json` script element.
-- Serialize an object instead of concatenating JSON strings.
-- Use a serializer safe for HTML script contents. Plain JSON serialization alone does not prevent script termination by untrusted text.
+- Prefer JSON-LD for a new integration unless its consumer requires another encoding. Preserve working Microdata or RDFa unless migration serves a requirement.
+- For JSON-LD, use `@context: "https://schema.org"` in an `application/ld+json` script.
+- Serialize the data with an HTML script-safe encoder. A JSON encoder alone can emit an untrusted closing script tag.
 - Generate markup from the same content model as the page. Update both when prices, dates, or availability change.
 - Inspect the rendered page for duplicate or contradictory entities after plugins and hydration run.
 
@@ -38,7 +36,6 @@ Describe the page's actual entities with verified Schema.org terms and facts fro
 
 - Treat Schema.org as a JSON Schema validation dialect.
 - Promise rankings, indexing, or rich results because markup passes validation.
-- Assume a valid Schema.org type has a supported Google rich result.
 - Add hidden claims or misleading entities solely to qualify for search features.
 - Replace semantic HTML, accessible content, or canonical metadata with JSON-LD.
 

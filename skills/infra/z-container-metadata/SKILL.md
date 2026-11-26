@@ -1,20 +1,15 @@
 ---
 name: z-container-metadata
-description: Container image metadata with OCI annotations and legacy Label Schema migration. Use for Dockerfile labels, org.label-schema keys, org.opencontainers.image keys, or missing registry metadata. Covers placement, provenance values, and compatibility. Build pipelines belong to [[z-deploy-pipeline]].
+description: "Set OCI image annotations and Dockerfile labels. Use for missing registry metadata or migration from org.label-schema keys. See [[z-deploy-pipeline]] for image delivery."
 ---
 
 # Container image metadata
 
-Identify the metadata consumer and storage location before changing keys. Prefer OCI conventions for new images.
-
 ## Choose the location
 
-- Inspect the Dockerfile, build configuration, published image, and downstream consumers.
-- Separate image configuration labels from annotations on OCI manifests, indexes, and descriptors.
-- Use Dockerfile `LABEL` for image configuration metadata. Configure manifest or index annotations through the existing builder.
-- Select the level the consumer reads. Matching key names do not synchronize values across locations.
-- For multi-platform images, inspect the index and each relevant platform manifest and configuration.
-- Verify the builder, exporter, and registry preserve the selected annotations. A local image load may not preserve them.
+1. Identify the consumer and the location it reads. Use Dockerfile `LABEL` for image configuration metadata.
+2. Use the existing builder for OCI manifest, index, or descriptor annotations. Matching keys do not synchronize these locations.
+3. For multi-platform images, inspect the registry index and each relevant platform manifest and configuration. A local load can discard annotations.
 
 ## Choose truthful values
 
@@ -38,7 +33,7 @@ Use string keys and values. Populate only fields supported by build or repositor
 
 ## Migrate Label Schema
 
-Label Schema is deprecated in favor of OCI. Preserve legacy keys while identified consumers still require them.
+Use OCI conventions for new keys. Preserve legacy keys while identified consumers still require them.
 
 | Legacy suffix under `org.label-schema` | OCI suffix |
 |---|---|
@@ -63,10 +58,10 @@ Keep legacy descriptions within 300 characters and values in UTF-8.
 
 ## Verify
 
-- Build through the project's existing wrapper using verified source and release inputs.
+- Build with the project wrapper and the intended source revision.
 - Inspect final image labels and the selected OCI annotation locations.
 - Compare revision, version, timestamp, and license values against their source records.
-- Verify dual-written values agree and the intended consumer displays them.
+- Compare values across metadata locations. Inspect what the intended consumer displays.
 - Report any registry verification that could not run. Do not publish merely to complete metadata verification.
 
 ## References

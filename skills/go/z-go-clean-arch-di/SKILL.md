@@ -1,6 +1,6 @@
 ---
 name: z-go-clean-arch-di
-description: Clean architecture wiring, layer direction, and dependency injection for Go services. Use when wiring composition roots, designing service/use-case interfaces, choosing a DI approach (manual vs library), phased injection, or a blocking Run(ctx) lifecycle. Triggers on "composition root", "DI library", "constructor injection", "samber/do", "google/wire", "uber-go/fx". Interfaces are [[z-go-interfaces]]; bounded-context boundaries [[z-domain-modeling]].
+description: "Wire Go service dependencies through constructors and a composition root. Use for layer direction, interface ownership, startup, and shutdown. See [[z-go-interfaces]] for type contracts."
 ---
 
 # Clean Architecture & DI
@@ -22,13 +22,13 @@ internal/
   transport/      — HTTP/gRPC handlers — depends on use-case contracts
 ```
 
-Transport never imports `internal/app`. It receives its deps through provider interfaces.
+Give transport adapters their required dependencies. Keep the composition root independent of request handling.
 
 Container structs, a full wiring example, provider methods, interface narrowing, and a composition-root test: [references/di-contracts.md](references/di-contracts.md).
 
 ## Phased Wiring
 
-Build in three phases so construction order is explicit — this lives in `bootstrap.go`:
+Construct dependencies before their consumers. The example uses three phases in `bootstrap.go`.
 
 ```go
 type container struct {
@@ -48,7 +48,7 @@ func buildContainer(ctx context.Context, cfg *config.Config) (container, error) 
 }
 ```
 
-Infra → services → usecases. Never reverse.
+Use the dependency graph to establish initialization order.
 
 ## Constructors
 
@@ -103,7 +103,7 @@ Never use aliases to hide cross-layer imports that violate direction rules.
 
 ## Lifecycle
 
-Expose one owned blocking `Run(ctx) error` when that fits the existing lifecycle; preserve an approved Start/Shutdown seam. `bootstrap` wires the app and returns an internal shutdown closure that `Run` owns; nothing outside `app.go` calls shutdown directly.
+Assign startup and shutdown to one owner. Preserve an existing blocking `Run` or separate start and stop contract.
 
 ```go
 func (a *App) Run(ctx context.Context) error {
@@ -129,7 +129,7 @@ func (a *App) Run(ctx context.Context) error {
 }
 ```
 
-Never call `os.Exit` inside `Run` — the caller (`main`) decides logging and exit code. Shutdown always runs on a fresh context (the parent is already cancelled by the time `gCtx.Done()` fires).
+Return errors to `main`. Use a fresh bounded context to shut down after cancellation.
 
 ## Layer Direction
 
@@ -141,38 +141,23 @@ Transport   → Domain, UseCase (via interface)
 App         → all layers (composition root only)
 ```
 
-Enforce with `go-arch-lint`, `depguard`, or a custom CI check — violations accumulate silently otherwise.
+Use the project's import checks to enforce dependency direction.
 
 ## DI Library Decision
 
-Prefer manual constructor injection for new wiring. Preserve an established DI framework; constructor count alone does not justify a migration.
+Start with manual constructor injection. Preserve an established DI framework when it meets the lifecycle contract.
 
-Reach for a DI library only once you hit a concrete need manual wiring can't
-satisfy on its own — dynamic plugin loading, or a lifecycle graph so tangled
-that phased build funcs stop being readable. Until that need is real, adding
-one is speculative complexity for a problem manual wiring already solves.
+Evaluate a library for a concrete discovery or lifecycle requirement. Check its support for startup failure and shutdown order.
 
-`google/wire` is archived and no longer maintained: keep it as a legacy maintenance branch, not a new dependency recommendation ([repository status](https://github.com/google/wire)). For a justified library choice, `uber-go/fx` is reflect-based with rich lifecycle hooks but
-steeper learning curve; `samber/do` is generic-based with built-in health
-checks and graceful shutdown.
+For existing Wire code, account for its [archived repository](https://github.com/google/wire) before extending the dependency.
 
-## Quick Reference
+## Composition checks
 
-| Pattern | Rule |
-|---|---|
-| Composition root | `internal/app/` — only package that knows all concrete types |
-| Phased wiring | infra → services → usecases, never reverse |
-| Constructors | Prefer concrete returns and narrow dependency contracts. See exceptions in [[z-go-interfaces]] |
-| Interface placement | Consumer side or shared contract by default. Respect protocol ownership. See [[z-go-interfaces]] |
-| Contract aliases | for readability in `bootstrap.go`, not to hide bad imports |
-| Lifecycle | one blocking `Run(ctx) error` in `app.go`; shutdown is an internal closure |
-| DI library | manual constructor injection by default, regardless of scale |
-| Nil validation | check at external API boundaries only, not inside internal graph |
-| Layer direction | enforced by lint tool in CI |
-| Service locator | never pass the container as a dependency |
-| Global vars / init() | never use for service setup |
+- Keep concrete implementations at the composition root. Pass each consumer only the dependencies it needs.
+- Reject invalid external input at the boundary. Construct internal dependencies before serving requests.
+- Avoid global service registration and initialization through `init`.
 
-## Verify
+## Verification
 
 ```sh
 go build ./...

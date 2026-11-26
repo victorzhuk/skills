@@ -1,6 +1,6 @@
 ---
 name: z-go-entrypoint
-description: Thin Go `main` and testable `run` for `func main`, `cmd/` packages, CLI startup, or service bootstrap. Excludes cobra trees [[z-go-cobra-patterns]], wiring [[z-go-clean-arch-di]], and tests [[z-go-testing]].
+description: "Design a testable Go main function. Use for process exit codes, flag parsing, signals, HTTP startup, and graceful shutdown. See [[z-go-cobra-patterns]] for command trees."
 ---
 
 # Go Entrypoint
@@ -10,7 +10,7 @@ testable behavior lives in `run`.
 
 ## Thin `main`
 
-Five statements, no logic. It owns the only `os.Exit` in the call graph.
+Keep process exit and error reporting in `main`. Pass dependencies, arguments, and output streams to a testable function.
 
 ```go
 // cmd/app/main.go
@@ -19,7 +19,6 @@ package main
 import (
     "context"
     "fmt"
-    "io"
     "os"
 )
 
@@ -32,8 +31,7 @@ func main() {
 }
 ```
 
-Map other failures to distinct codes here (`flag` errors and `context.Canceled`
-→ 2 and 130) — nothing below `main` can exit.
+If the CLI specifies distinct exit codes, map errors in `main`. Preserve the published exit-code contract.
 
 ## Testable `run`
 
@@ -84,15 +82,11 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 }
 ```
 
-Order is fixed: parse → cancel on signal → construct → run. Parsing before the
-signal context keeps a bad flag from installing a handler; `defer stop()`
-releases the channel registration so the binary can exit promptly.
+Parse flags before registering signals. Call `defer stop()` after successful registration. Construct and run the service with the signal context.
 
 ### HTTP server: timeouts + drain
 
-Inside `run`, build the server with inbound timeouts and attempt a bounded drain
-on cancel. This sketch returns a drain error to its owner; it does not implement
-forced-stop recovery:
+Set inbound timeouts. Start a bounded drain on cancellation. The example returns a drain failure to its owner.
 
 ```go
 srv := &http.Server{
@@ -125,19 +119,17 @@ if err := srv.Shutdown(shutdownCtx); err != nil {
 }
 ```
 
-Shutdown order is fixed: stop accepting → drain in-flight requests → close
-dependencies. A `Shutdown` error does not prove handlers have stopped. On drain
-timeout, the owner must apply the agreed recovery policy: close ordinary HTTP
-connections with `Server.Close`, cancel and join owned handlers, and handle
-hijacked connections separately. `Close` alone does not join handlers. Do not
-release dependencies while handlers can still use them or claim `run` is safe
-for in-process reuse without verifying this path. Keep the signal context as
-the trigger and the drain context independent so cancellation allows draining.
+Stop accepting requests before draining handlers. Close dependencies after their last user exits.
+
+Use a fresh bounded context for `Shutdown` after the signal context ends. A shutdown error can leave handlers running.
+
+On timeout, apply the agreed policy for ordinary and hijacked connections. `Server.Close` does not join handlers.
+
+Wait for all owned handlers to exit before reusing or releasing their dependencies.
 
 ## Flags
 
-`flag.NewFlagSet` with `ContinueOnError` and output bound to the injected stderr —
-the default writes to `os.Stderr`, which a test cannot capture.
+Create a `flag.FlagSet` with `flag.ContinueOnError`. Route diagnostics to the supplied error writer for testing.
 
 ```go
 func parseArgs(args []string, stderr io.Writer) (*config, []string, error) {
@@ -171,34 +163,15 @@ applies and `signal.Stop` runs on return. Register `os.Interrupt` and
 
 ## Output
 
-Write to the injected `stdout`/`stderr`. Program output goes to stdout;
-diagnostics, usage, and the top-level error message go to stderr. Splitting them
-keeps `app --json | jq` clean.
-
-## Quick Reference
-
-| Element | Rule |
-|---|---|
-| `main` | thin; passes args, streams, ctx; owns `os.Exit` |
-| `run` | `run(ctx, args []string, stdout, stderr io.Writer) error` |
-| Flags | `flag.NewFlagSet(name, flag.ContinueOnError)`, `SetOutput(stderr)` |
-| Positional args | validated after `fs.Parse` |
-| Signals | `signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)` + `defer stop()` |
-| Construction | `newApp(cfg, stdout, stderr) (app, error)` inside `run` |
-| Streams | injected `io.Writer`, never `os.Stdout`/`os.Stderr` below `main` |
-| Errors | wrap with `%w`; return up; `main` prints and exits |
-| Server timeouts | `ReadHeaderTimeout`/`ReadTimeout`/`WriteTimeout`/`IdleTimeout` + `MaxHeaderBytes` at construction |
-| Shutdown | `srv.Shutdown` with a bounded context; stop accepting → drain → close deps |
-| Testing | call `run` with `[]string` and `bytes.Buffer` |
+Send program output to the injected stdout. Send diagnostics, usage, and the final error to the injected stderr.
 
 ## Do not
 
 - `os.Exit` inside `run` or any package it calls — return an error instead.
-- Read `os.Args`, `os.Stdout`, or `os.Stderr` inside `run`; they are parameters.
+- Read process streams or arguments directly inside `run`.
 - Package-level `flag.Parse` — it reads the real process state and exits on error.
 - Build the app in `main`, or store it in a package-level var for later reuse.
-- Unit-test `main()` directly — it exits the test runner; test `run` instead.
-- Mutate `os.Args` in a test to drive behavior; pass args to `run`.
+- Call `main` in a unit test. Test `run` with explicit arguments and writers.
 - Treat `TestMain(m *testing.M)` as a `main()` test — it is a per-test-binary
   setup hook that calls `m.Run()`, unrelated to entrypoint shape.
 - Register signals without `defer stop()` — the goroutine outlives the run.
@@ -206,7 +179,7 @@ keeps `app --json | jq` clean.
 ## Verify
 
 ```sh
-go build ./... && timeout 5m go test -timeout 2m ./cmd/...
+go build ./... && timeout 5m go test -p 2 -parallel 4 -timeout 2m ./cmd/...
 ```
 
 ## Related skills

@@ -1,14 +1,11 @@
 ---
 name: z-go-pkg
-description: Query the official pkg.go.dev API (v1) for Go module and package metadata — package info, module versions, symbols, imported-by, search, and vulnerabilities. Use for authoritative, machine-readable Go module data instead of scraping pkg.go.dev HTML or guessing. Triggers on module version lookup, symbol listing, imported-by search, vulnerability check, package search.
+description: "Query the pkg.go.dev v1 API for Go versions, package metadata, symbols, importers, and vulnerability records. Use for published modules. Use [[z-go-stdlib]] for the local toolchain."
 ---
 
 # pkg.go.dev API
 
-Authoritative metadata for published Go modules via a stateless, GET-only HTTP API. Use this instead of scraping pkg.go.dev HTML or relying on stale training data about versions, symbols, or dependents.
-
-Base URL: `https://pkg.go.dev/v1`
-Interactive spec: https://pkg.go.dev/api · OpenAPI: https://pkg.go.dev/v1/openapi.yaml
+Use `https://pkg.go.dev/v1` for published package metadata. Consult the [API reference](https://pkg.go.dev/v1/api) for endpoint parameters and response fields.
 
 ## Endpoints
 
@@ -27,22 +24,26 @@ Interactive spec: https://pkg.go.dev/api · OpenAPI: https://pkg.go.dev/v1/opena
 
 ## Versions
 
-`package`, `module`, and `symbols` endpoints accept an optional `?version=` query param. Default is the latest tagged version.
+Use the route's documented `version` filter. Pin an exact version when answering a compatibility question.
+Where supported, `main` and `master` select a default branch. Use the resolved version in the result.
+If several modules provide a path, inspect the candidates. Select the owning module before reporting metadata.
 
-- Semantic version: `?version=v1.2.3`
-- Branch: `?version=master` or `?version=main` only (resolves to a pseudo-version). Arbitrary branch names are NOT supported.
+## Handle responses
 
-## Precision over convenience
-
-The API requires the module to be unambiguous. If a package path could be provided by multiple modules (e.g. `example.com/a/b/c` from either `example.com/a` or `example.com/a/b`), the API does NOT apply the web UI's "longest module path" rule — it returns candidates and an error asking you to be more specific. The web interface auto-resolves; the API does not.
+1. Check the HTTP status before decoding a successful response. A JSON error object is not a package record.
+2. For a paginated route, continue while `nextPageToken` is nonempty, including after an empty page.
+3. Repeat the original request with the returned token in the `token` parameter. Preserve the other parameters.
+4. On HTTP 429, pause before retrying. Respect `Retry-After` when present. Bound retry time and attempts.
+5. Report incomplete results when a required page fails. Keep incomplete results out of negative findings.
 
 ## Usage
 
-Plain `curl` + `jq`:
+Use an HTTP client that returns failure for unsuccessful responses. In Bash:
 
 ```bash
-curl -s https://pkg.go.dev/v1/package/github.com/google/go-cmp/cmp | jq .
-curl -s "https://pkg.go.dev/v1/package/github.com/google/go-cmp/cmp?version=master" | jq '{path, version}'
+set -o pipefail
+curl -fsSL --max-time 15 https://pkg.go.dev/v1/package/github.com/google/go-cmp/cmp | jq .
+curl -fsSL --max-time 15 'https://pkg.go.dev/v1/package/github.com/google/go-cmp/cmp?version=master' | jq '{path, version}'
 ```
 
 Example package response:
@@ -64,7 +65,7 @@ Example package response:
 
 ## Reference CLI (pkgsite-cli)
 
-A reference client. CLI surface is NOT yet stable; the HTTP API is.
+If the CLI is already installed, check its version and help first. The commands below illustrate the pinned client.
 
 ```bash
 go install golang.org/x/pkgsite/cmd/internal/pkgsite-cli@v0.6.0
@@ -79,10 +80,8 @@ pkgsite-cli module -packages -versions github.com/google/go-cmp
 
 It handles pagination and formatting for you.
 
-## Notes
+## Verification
 
-- Stateless and cacheable — safe to call repeatedly; prefer it over HTML scraping.
-- `/v1` is current. Backward compatibility is committed to for existing integrations.
-- The pinned `pkgsite-cli` release above tracks the module's tags; `@latest` is the
-  fallback only when deliberately tracking upstream between reviews.
-- When in doubt about exact field names or new endpoints, fetch the OpenAPI spec rather than guessing.
+Check the returned module path and resolved version against the requested package.
+For a list response, check every continuation token before claiming the result is complete.
+Check the [OpenAPI description](https://pkg.go.dev/v1/openapi.yaml) when a route or field differs.

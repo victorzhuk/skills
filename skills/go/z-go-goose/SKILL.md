@@ -1,6 +1,6 @@
 ---
 name: z-go-goose
-description: Schema migrations for Go using goose (github.com/pressly/goose) — numbered SQL files, up/down blocks, PL/pgSQL wrapping with StatementBegin/End, embed.FS embedding, bare-text enum pattern, and startup version gating. Use when adding migrations, wiring goose into a binary, or choosing enum representation. Triggers on "goose", "+goose StatementBegin", "goose up", "embed.FS migrations". Sqlc is [[z-go-sqlc]]; repository queries [[z-go-database]].
+description: "Manage Go database migrations with goose. Use for numbered SQL files, Up and Down annotations, PL/pgSQL blocks, embedded migrations, and startup schema checks."
 ---
 
 # Goose migrations
@@ -10,8 +10,7 @@ the CLI during development and CI, or embed them in the binary so the service sh
 
 ## File structure
 
-Migrations live in a dedicated directory (conventionally `db/migrations/` or `migrations/`).
-Each file is numbered and named descriptively:
+Put migration files in one directory. Give each file a unique numeric prefix and a descriptive name.
 
 ```
 migrations/
@@ -20,8 +19,7 @@ migrations/
   00003_add_status_index.sql
 ```
 
-goose orders files lexically, so the numeric prefix must sort correctly. Pick a width and keep
-it consistent. Never reuse a number; goose will error on collisions.
+Goose compares numeric versions. Use a consistent filename width for directory listings. Gaps are valid.
 
 ## Up/Down anatomy
 
@@ -38,7 +36,7 @@ CREATE TABLE jobs (
 DROP TABLE jobs;
 ```
 
-Always write a working `-- +goose Down`. Rollback-less migrations turn drift into an incident.
+Test each reversible Down migration. For irreversible changes, document and test the recovery procedure before deployment.
 
 ## PL/pgSQL and multi-statement blocks
 
@@ -66,8 +64,7 @@ DROP TRIGGER IF EXISTS trg_jobs_updated_at ON jobs;
 DROP FUNCTION IF EXISTS set_updated_at();
 ```
 
-Each `StatementBegin` / `StatementEnd` pair wraps exactly one statement; use multiple pairs
-when a migration creates several functions.
+Give each compound SQL statement its own annotation pair.
 
 ## CLI usage
 
@@ -80,17 +77,13 @@ goose -dir ./migrations postgres "$DATABASE_URL" up
 goose -dir ./migrations postgres "$DATABASE_URL" down
 ```
 
-`go install` at a pinned, reviewed release into the dev machine's `$GOBIN` is the house
-practice for the goose CLI — unlike codegen tools (e.g. ogen), it is not pinned via a
-`go.mod` `tool` directive. `@latest` is the fallback only when deliberately tracking
-upstream between reviews.
+Install the CLI at the version selected by the project.
 
-Apply during local dev setup and in CI. Never call `goose.Up` from an HTTP handler or
-gRPC method — DDL under traffic causes lock contention and partial rollouts.
+Apply migrations during deployment or local setup. If startup owns migration, complete it before the process accepts traffic.
 
 ## Embed in the binary
 
-Embedding lets the binary carry its own migrations without shipping SQL files as sidecars:
+Embed migrations when the executable must carry its own SQL files.
 
 ```go
 import (
@@ -117,18 +110,11 @@ func applyMigrations(ctx context.Context, db *sql.DB) error {
 }
 ```
 
-`goose.SetBaseFS` + `goose.SetDialect` + `goose.UpContext` is the house pattern. Apply
-migrations in CI and dev setup by default; run them at service startup only behind an
-explicitly documented opt-in gate, before any listener binds — see [[z-go-database]] for
-the gate rationale. The package-level state is set once at startup and never touched
-again, so the shared globals aren't a real problem in practice.
+Configure the package-level filesystem and dialect once before concurrent use. See [[z-go-database]] for startup policy.
 
-### Upgrade path: `goose.NewProvider`
+### Instance-specific migration sets
 
-`goose.NewProvider` (v3.16+) replaces the package-level globals with a provider value —
-useful once a binary embeds more than one migration set or needs per-instance dialect
-control. Nothing here has migrated to it yet; treat it as a deliberate upgrade, not the
-default:
+Use `goose.NewProvider` for an instance-specific filesystem or dialect. Check that the pinned goose version supports it.
 
 ```go
 import "io/fs"
@@ -151,8 +137,7 @@ func applyMigrations(ctx context.Context, db *sql.DB) error {
 
 ## Startup version gate
 
-When new code depends on a specific schema change, guard the binary against starting with a
-stale database:
+Check the schema version before starting code that depends on a migration.
 
 ```go
 func checkMigration(db *sql.DB, required int64) error {
@@ -167,31 +152,26 @@ func checkMigration(db *sql.DB, required int64) error {
 }
 ```
 
-Keep the required version as a named constant in the binary, updated alongside the migration
-file that justifies the bump. Call this in startup before any handler registration.
+Update the required version with the code that depends on the migration.
 
-## Enums: text over CREATE TYPE
+## PostgreSQL enum storage
 
-Native `CREATE TYPE` enums cannot have values removed and require non-transactional `ALTER TYPE`
-in Postgres < 12 — avoid them:
+PostgreSQL native enums do not support removing individual values. Check the target server's rules before adding and using a value in one transaction.
 
 ```sql
--- avoid
+-- Native enum
 CREATE TYPE job_status AS ENUM ('pending', 'done');
 ALTER TABLE jobs ADD COLUMN status job_status NOT NULL;
 ```
 
-The baseline is a bare `text NOT NULL` column, with validity enforced entirely in Go
-(`Parse*` / `IsValid*` on the enum type). No `CHECK` constraint:
+A text column permits Go-side validation. Other writers can bypass that validation.
 
 ```sql
--- baseline
+-- Go validates the value
 status text NOT NULL
 ```
 
-This keeps adding or removing a value a Go-only change — no migration needed for the value
-set itself. Tighten with a `CHECK` once a table sees enough direct-SQL risk (ad-hoc queries,
-other services writing rows) that Go-side validation alone isn't enough:
+Check existing rows and older readers before removing a value. Add a database constraint when all writers must use the same set.
 
 ```sql
 -- tightening, once direct-SQL risk justifies it
@@ -212,27 +192,18 @@ ALTER TABLE jobs ADD CONSTRAINT jobs_status_check
     CHECK (status = ANY (ARRAY['pending', 'done', 'failed']));
 ```
 
-Update the corresponding Go enum (`Parse*` / `IsValid*`) in the same commit.
+Before running Down, migrate any rows that use `cancelled`. Coordinate accepted values with all running application versions.
 
-## Do not
+## Migration maintenance
 
-- **Edit an applied migration.** Once applied anywhere (dev, CI, prod), the file is
-  immutable. Add a new migration to correct mistakes.
-- **Reuse a version number.** goose orders by filename; a gap in the sequence is fine,
-  a collision is not.
-- **Let Down drift from Up.** A Down that does not fully reverse its Up leaves the schema
-  in an unknown state after rollback.
-- **Put heavy data migrations inside schema migrations.** Bulk backfills belong in a separate
-  admin command or a documented operator runbook with explicit rollback steps.
-- **Trigger migrations from request-handling code.** Apply in CI/CD and dev setup only, or
-  behind the documented startup gate — never from a handler path.
+- Keep applied migrations immutable. Correct an error in a new migration.
+- Separate heavy backfills from schema changes. Give the operator a resumable procedure.
 
-## Verify
+## Checks
 
 ```sh
 goose -dir ./migrations postgres "$DATABASE_URL" status
 timeout 15m go test -parallel 4 -p 2 -count=1 -run Integration -timeout 10m ./...
 ```
 
-Confirm all pending migrations are applied, then run integration tests against a clean
-container (testcontainers or a local Compose DB) to catch migration regressions before merge.
+Exercise Up on an empty database and on the previous schema with representative rows. Exercise Down or the documented recovery procedure on disposable data.

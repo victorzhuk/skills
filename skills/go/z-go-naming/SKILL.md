@@ -1,17 +1,17 @@
 ---
 name: z-go-naming
-description: Go naming conventions — MixedCaps, package stuttering, constructors, booleans, acronyms, enums, error strings, receivers, getters, functional options. Use for naming decisions like "New vs NewTypeName", "isConnected vs connected", "ErrNotFound vs NotFoundError". Triggers on "MixedCaps", "snake_case identifier", "stuttering", "receiver name". Does not cover formatting/line-length; see [[z-go-style]]. Interface depth belongs to [[z-go-interfaces]].
+description: "Choose Go package, type, receiver, constructor, enum, and error names. Use for MixedCaps, package stuttering, getters, and boolean predicates. Use [[z-go-style]] for formatting."
 ---
 
 # Go Naming
 
-Prefer `MixedCaps` or `mixedCaps` for Go identifiers. Preserve established public names and project conventions; generated names, tests and interop can differ. These are naming conventions, not additional language restrictions.
+Match package conventions and preserve public identifiers. Generated code and interop can impose different names.
 
 ## Quick Reference
 
 | Element | Rule | Example |
 |---|---|---|
-| Package | short lowercase name; plural when natural | `json`, `http`, `tabwriter` |
+| Package | Short lowercase name, plural where natural | `json`, `http`, `tabwriter` |
 | File | lowercase, underscores OK | `user_handler.go` |
 | Exported | UpperCamelCase | `ReadAll`, `HTTPClient` |
 | Unexported | lowerCamelCase | `parseToken`, `userCount` |
@@ -19,15 +19,15 @@ Prefer `MixedCaps` or `mixedCaps` for Go identifiers. Preserve established publi
 | Interface | verb/noun + `-er` suffix | `Reader`, `Stringer`, `Closer` |
 | Constructor (single type) | `New()` | `ring.New()`, `user.New()` |
 | Constructor (multi-type) | `NewTypeName()` | `http.NewRequest()` |
-| Boolean field | clear predicate; prefix only when useful | `isConnected`, `hasPermission` |
+| Boolean field | Readable predicate | `isConnected`, `hasPermission` |
 | Boolean getter | prefix kept | `IsConnected() bool` |
-| Non-bool getter | no `Get` prefix on field accessors; `Get` is idiomatic on repo/store/query methods | `user.Name()` not `GetName()`; `repo.GetByID(id)` is fine |
+| Field accessor | Omit `Get` for simple accessors. Repository lookups can use `Get`. | `user.Name()`, `repo.GetByID(id)` |
 | Setter | `Set` prefix | `SetTimeout(d time.Duration)` |
 | Constant | MixedCaps, not ALL_CAPS | `MaxRetries`, `defaultTimeout` |
-| Enum zero value | plain `iota` is the default; sentinel only if zero-value ambiguity is a real risk | `StatusPending = iota` |
+| Enum zero value | Use a sentinel when zero means invalid | `StatusPending = iota` |
 | Sentinel error var | `Err` prefix | `ErrNotFound`, `ErrTimeout` |
 | Error type | `Error` suffix | `PathError`, `SyntaxError` |
-| Error string | lowercase start except proper names/initialisms; no trailing punctuation | `"invalid message id"` |
+| Error string | Start lowercase except for proper names and initialisms. Omit final punctuation. | `"invalid message id"` |
 | Sentinel error string | package-prefix when it helps, not universal | `"apiclient: not found"` or plain `"not found"` |
 | Acronym | all caps or all lower | `URL`, `HTTPServer`, `xmlParser` |
 | Context variant | `WithContext` suffix | `FetchWithContext()` |
@@ -37,9 +37,9 @@ Prefer `MixedCaps` or `mixedCaps` for Go identifiers. Preserve established publi
 | Format func | `f` suffix | `Errorf`, `Wrapf` |
 | Import alias | only on collision | `mrand "math/rand"` |
 
-## MixedCaps is non-negotiable
+## Choose identifier case
 
-Go's export mechanism depends on capitalization. MixedCaps is the standard naming convention; underscores are not a language error.
+Use MixedCaps for Go identifiers. The first character controls export visibility for eligible declarations.
 
 ```go
 // good
@@ -55,7 +55,7 @@ kMaxBufferSize    // Hungarian
 
 ## No stuttering
 
-The package name is always at the call site — never repeat it in the identifier.
+Read an exported name together with its package qualifier. Omit a repeated word when the meaning remains clear.
 
 ```go
 http.Client       // not http.HTTPClient
@@ -67,8 +67,7 @@ config.Parse()    // not config.ParseConfig()
 type Connection struct{}  // not DBConnection
 ```
 
-Anti-stutter applies to all exported types, not just the primary one. In package `dbpool`:
-`Pool`, `Status`, `Option` — callers write `dbpool.Pool`, `dbpool.Status`, `dbpool.Option`.
+For example, `dbpool.Pool`, `dbpool.Status`, and `dbpool.Option` keep the qualifier meaningful.
 
 ## Constructor choice
 
@@ -85,7 +84,7 @@ func NewServeMux() *ServeMux
 
 ## Booleans
 
-Use a readable predicate. `connected`, `isConnected`, `hasPermission` and `canRetry` can all be clear; preserve the package's convention.
+Use a readable predicate that fits the package convention. Examples include `connected`, `isConnected`, `hasPermission`, and `canRetry`.
 
 ```go
 type conn struct {
@@ -100,13 +99,11 @@ Do not rename a clear boolean merely to add a prefix.
 
 ## Getters
 
-Plain field accessors skip `Get`: `user.Name()` not `user.GetName()`. Repository, store,
-and query methods are the idiomatic exception — `Get` reads as "fetch", not "field access":
-`repo.GetByID(id)`, `store.GetOrLoad(key)`, `db.GetTask(id)` are all correct as-is.
+Use `Name()` for a field accessor. A repository operation such as `GetByID` can describe retrieval rather than field access.
 
 ## Enums
 
-Plain 0-based `iota` with a real state at zero is the observed default:
+Choose the meaning of zero before defining an enumeration. Use a real zero state when the contract permits it.
 
 ```go
 type Status int
@@ -118,9 +115,7 @@ const (
 )
 ```
 
-Add an explicit `Unknown`/`Invalid` sentinel at 0 only when an uninitialized `var s Status`
-reaching production code is a real risk — e.g. the zero value crosses a serialization
-boundary or drives a billing/permission decision:
+Use an explicit zero sentinel when an unset value could cross a boundary or enable an unintended action.
 
 ```go
 const (
@@ -133,7 +128,7 @@ const (
 
 ## Error strings
 
-Start errors lowercase unless a proper name or initialism begins the message. Preserve meaningful acronym spelling, and omit trailing punctuation so wrapped errors compose.
+Start errors lowercase unless a proper name or initialism starts the message. Preserve meaningful acronym spelling, and omit trailing punctuation so wrapped errors compose.
 
 ```go
 // good
@@ -145,13 +140,11 @@ errors.New("not found")              // plain is fine too — common in domain-l
 errors.New("Invalid message ID")
 ```
 
-Package-prefixing a sentinel string is helpful when it disambiguates, not a universal rule —
-real code is inconsistent about it even within a single repo, and domain-layer errors often
-skip the prefix.
+Prefix an error with its package name only when that context helps the caller distinguish failures.
 
 ## Packages
 
-- Use a short lowercase package name; plurals can be natural (`strings`, `errors`, `slices`). Avoid unnecessary renames of established packages.
+- Preserve natural plural names such as `strings` and `slices`.
 - No `util`, `helper`, `common` — these say nothing. Name the abstraction: `middleware`,
   `validator`, `retry`.
 - Avoid stuttering in file names too: `user/store.go` not `user/user_store.go`.
@@ -161,7 +154,7 @@ skip the prefix.
 | Mistake | Fix |
 |---|---|
 | `ALL_CAPS` constants | `MaxRetries` — Go uses MixedCaps for emphasis |
-| `GetName()` field accessor | `Name()` — omit `Get` on plain accessors; `repo.GetByID()` is fine |
+| `GetName()` field accessor | Use `Name()`. Queries can use `repo.GetByID()`. |
 | `Url`, `Http`, `Json` | `URL`, `HTTP`, `JSON` — acronyms are all-caps or all-lower |
 | `this`/`self` receiver | 1-2 letter abbreviation (`s` for `Server`) |
 | `util`/`helper` packages | Name the domain: `retry`, `validator` |
@@ -176,10 +169,9 @@ skip the prefix.
 
 ## Lint enforcement
 
-`revive`, `errname`, `predeclared`, `misspell` catch most violations automatically.
-Configure in the project's `.golangci.yml`. See [[z-go-style]] for linter setup.
+Check the project's enabled linters before attributing a naming failure to a rule. See [[z-go-lint]] for configuration.
 
-## Verify
+## Verification
 
 ```sh
 golangci-lint run ./...

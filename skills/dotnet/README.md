@@ -6,4 +6,4 @@ C#/ASP.NET Core web API conventions for inherited and green services.
 
 Model- or user-reachable via skill name and trigger phrasing.
 
-- **[z-dotnet-core](./z-dotnet-core/SKILL.md)** — C#/ASP.NET Core web APIs for inherited and green services — minimal APIs, nullable reference types as errors, dependency injection, EF Core AsNoTracking reads, async all the way.
+- **[z-dotnet-core](./z-dotnet-core/SKILL.md)** — Build ASP.NET Core APIs with dependency injection, EF Core, cancellation, and nullable references.

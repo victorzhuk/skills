@@ -12,6 +12,10 @@ The catalog is the source for these reusable skills. Installed copies are deploy
 [`z-qa-android`](../skills/qa/z-qa-android/SKILL.md) was authored in this catalog.
 It owns Android device control, headless emulation, and device screenshot comparisons.
 
+## Just command runner
+
+[`z-just`](../skills/engineering/z-just/SKILL.md) was authored in this catalog using the [upstream just documentation](https://github.com/casey/just).
+
 ## Original imports
 
 Copied 51 `z-*` skills from `~/.agents/skills` into this repo. A further 5

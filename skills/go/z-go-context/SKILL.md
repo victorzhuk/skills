@@ -1,11 +1,6 @@
 ---
 name: z-go-context
-description: >
-  Idiomatic context.Context usage in Go — propagation, cancellation, timeouts,
-  deadlines, WithoutCancel, request-scoped values. Triggers on
-  "context.WithCancel", "context.WithTimeout", "ctx.Done()", "WithoutCancel",
-  "context.Background in handler", "context value key". Does not cover
-  concurrency patterns; see [[z-go-concurrency]].
+description: "Propagate context.Context through Go calls. Use for cancellation, deadlines, AfterFunc, WithoutCancel, and request values. See [[z-go-concurrency]] for goroutine ownership."
 ---
 
 # context.Context
@@ -14,7 +9,7 @@ description: >
 
 | Situation | Use |
 |---|---|
-| Entry point (`main`, `init`, test body) | `context.Background()` |
+| Process entry or test | Use the lifecycle context when available. Use `context.Background()` for an independent root. |
 | Function needs ctx but caller doesn't supply one yet | `context.TODO()` |
 | HTTP handler | `r.Context()` |
 | Manual cancellation | `context.WithCancel(parent)` |
@@ -22,16 +17,16 @@ description: >
 | Absolute deadline | `context.WithDeadline(parent, t)` |
 | Background work must outlive request (Go 1.21+) | `context.WithoutCancel(ctx)` |
 
-\* `context.AfterFunc(ctx, fn)` (Go 1.21+) runs `fn` in its own goroutine when `ctx` is done — an alternative to `WithoutCancel` + an explicit `select` for pure cleanup. Zero use in practice so far; reach for it only if the `select` pattern below doesn't fit.
+Use `context.AfterFunc(ctx, fn)` to schedule cleanup on cancellation. Its stop function does not wait for an active callback. Coordinate completion if needed. [AfterFunc](https://pkg.go.dev/context#AfterFunc)
 
 ## Core rules
 
-- `ctx` is always the first parameter, always named `ctx context.Context`.
-- Never store context in a struct — pass it through function parameters.
-- Never pass `nil` — use `context.TODO()` if you don't have one yet.
-- Never create `context.Background()` mid-request — propagate the caller's context.
-- Always `defer cancel()` immediately after `WithCancel`/`WithTimeout`/`WithDeadline`.
-- Context value keys must be unexported types; bare strings collide across packages.
+- Pass `ctx context.Context` as the first argument to context-aware operations.
+- Pass a context per operation. Preserve a public API's established context ownership when compatibility requires it.
+- Use `context.TODO()` while the caller lacks an appropriate parent. Never pass nil.
+- Propagate the request's context. A new root drops its deadline, cancellation, and values.
+- Call the returned cancel function on every exit path. In a loop, release each iteration's resources promptly.
+- Define a private comparable key type for context values.
 
 ## Propagation
 
@@ -53,7 +48,7 @@ Always use context-aware variants: `QueryContext`, `ExecContext`, `NewRequestWit
 
 ## Cancellation
 
-`WithCancel` lets a parent scope request shutdown of cooperating downstream work. Cancellation does not wait for workers or interrupt code that ignores it; join workers before releasing resources they use. Call `cancel()` as soon as the reason is gone — the `defer` handles the normal path; call it explicitly on error to signal early:
+Use `WithCancel` to ask cooperating work to stop. Call the cancel function as soon as the operation ends. Wait for workers before releasing their resources.
 
 ```go
 ctx, cancel := context.WithCancel(ctx)
@@ -86,7 +81,7 @@ func (s *BatchService) Run(ctx context.Context, b Batch) error {
 }
 ```
 
-Nested timeouts: the shorter deadline always wins. A 10s child of a 2s parent expires at 2s.
+A child inherits the earlier deadline. A 10-second child of a parent with two seconds remaining gets at most two seconds.
 
 ## Listening for cancellation
 
@@ -107,11 +102,11 @@ func poll(ctx context.Context, interval time.Duration) error {
 }
 ```
 
-For CPU-bound loops, check `ctx.Err() != nil` periodically instead of `select`.
+In a CPU-bound loop, inspect `ctx.Err()` periodically.
 
 ## WithoutCancel (Go 1.21+)
 
-Preserves context values but removes cancellation and deadline; `Done()` is nil.
+`WithoutCancel` retains context values and removes the deadline and cancellation signal. Its `Done` channel is nil.
 Use only when work deliberately outlives the request. Give it its own bound
 with `context.WithTimeout(context.WithoutCancel(ctx), limit)`, and arrange
 application-owned shutdown and joining through [[z-go-concurrency]]. A timeout
@@ -143,13 +138,13 @@ func TraceIDFromContext(ctx context.Context) (string, bool) {
 }
 ```
 
-Bare string keys (`context.WithValue(ctx, "trace_id", ...)`) collide across packages — never use them.
+Use a dedicated key type to avoid collisions across packages.
 
 Context values are for cross-cutting, request-scoped metadata: trace/request IDs, authenticated user or tenant, and loggers enriched with trace fields. Everything else — DB connections, feature flags, business-logic parameters — belongs in constructors or function arguments.
 
 ## HTTP handlers
 
-Use `r.Context()` — never `context.Background()`. After a service call fails, check `ctx.Err() != nil` before writing an error response (client may already be gone). Middleware enriches context via `r.WithContext(ctx)` before the handler runs.
+Propagate `r.Context()`. Distinguish client disconnects from server deadlines when selecting a response or recording an error.
 
 ## Verify
 

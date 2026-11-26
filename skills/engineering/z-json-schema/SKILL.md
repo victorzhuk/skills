@@ -1,16 +1,16 @@
 ---
 name: z-json-schema
-description: JSON Schema contracts for configuration and payload validation. Use for schema authoring, dialect migration, $ref resolution, or compatibility analysis. Covers required fields, composition, formats, and validator behavior. Web entity markup belongs to [[z-schema-org]].
+description: "Write and evolve JSON Schema contracts. Select the dialect, resolve references, configure the validator, and test compatibility. Use [[z-schema-org]] for web entity markup."
 ---
 
 # JSON Schema contracts
 
-Select the dialect and validator before writing constraints. Verify the accepted data, not only the schema's syntax.
+Select the dialect and validator before writing constraints. Test which data the configured validator accepts.
 
 ## Establish the contract
 
 - Inspect existing schemas, validators, generator inputs, and producer and consumer versions.
-- Preserve the project's dialect unless migration is required. For new contracts, prefer Draft 2020-12 when all consumers support it.
+- Keep the project’s dialect unless the change requires migration. For new contracts, prefer Draft 2020-12 when all consumers support it.
 - Declare `$schema` explicitly. Use `https://json-schema.org/draft/2020-12/schema` for Draft 2020-12.
 - In Draft 2020-12, use `$id` for schema identity and `$defs` for reusable definitions.
 - Preserve older dialect keywords where required, including Draft 4 `id` and Draft 7 `definitions`.
@@ -26,7 +26,7 @@ Select the dialect and validator before writing constraints. Verify the accepted
 | Required field | List it in `required`. Declaring a property does not require its presence. |
 | Nullable field | Include `"null"` in the allowed types. Missing and null are different cases. |
 | Unknown fields | Choose an explicit compatibility policy before closing the object. |
-| Simple closed object | Use `additionalProperties: false` where its properties are declared. |
+| Simple closed object | Put `additionalProperties: false` in the schema object that declares the properties. |
 | Closed composition | Consider `unevaluatedProperties: false` with a supporting dialect and validator. |
 | Alternatives | Use `anyOf` for one or more matching branches, `oneOf` for exactly one. |
 | Combined constraints | Use `allOf` for intersection. It does not merge objects or override constraints. |
@@ -54,7 +54,7 @@ Test conditional schemas when the discriminator is absent. Include `required` in
 
 - Confuse JSON Schema with Schema.org vocabulary or database migrations.
 - Assume generated language types enforce runtime constraints.
-- Silently upgrade a dialect or accept unsupported keywords.
+- Rely on a keyword that the production validator ignores.
 - Maintain a second handwritten schema when the repository already generates its contract from an authoritative source.
 
 ## Verify

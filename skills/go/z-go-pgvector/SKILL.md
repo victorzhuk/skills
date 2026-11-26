@@ -1,6 +1,6 @@
 ---
 name: z-go-pgvector
-description: pgvector-backed similarity search in Go — declaring vector(N) columns, encoding []float32 via pgvector.NewVector, L2/cosine/inner-product distance operators, ORDER BY / LIMIT k queries, and choosing exact scan vs ivfflat vs hnsw indexes. Use when adding embedding storage or writing ANN queries. Triggers on "pgvector", "vector(1536)", "cosine distance", "ivfflat", "hnsw", "pgvector.NewVector". Does not cover general SQL access or migrations; see [[z-go-database]].
+description: "Store embeddings and query pgvector from Go. Use for vector parameters, distance operators, exact search, HNSW, and IVFFlat. See [[z-go-database]] for database access."
 ---
 
 # pgvector similarity search in Go
@@ -8,7 +8,7 @@ description: pgvector-backed similarity search in Go — declaring vector(N) col
 pgvector is a PostgreSQL extension that adds a `vector` type and distance
 operators for ANN search. `github.com/pgvector/pgvector-go` wraps a `[]float32`
 in a `pgvector.Vector` that pgx sends as a regular query parameter — no ORM,
-no manual text encoding, once `pgxvec.RegisterTypes` is wired into the pool.
+no manual text encoding. Register the types on each connection with `pgxvec.RegisterTypes`.
 
 ## Extension and column
 
@@ -22,9 +22,7 @@ CREATE TABLE items (
 );
 ```
 
-The dimension is fixed at column creation. Changing it later requires
-`ALTER TABLE items ALTER COLUMN embedding TYPE vector(N)` plus re-embedding
-every row.
+Check the model and dimension at each write and query. Plan a migration when existing vectors use a different dimension or model.
 
 ## Encoding []float32 for a query
 
@@ -81,7 +79,7 @@ _, err = pool.Exec(ctx,
 
 | Operator | Distance | Notes |
 |---|---|---|
-| `<->` | L2 (Euclidean) | default; good for normalized unit vectors |
+| `<->` | L2 (Euclidean) | Euclidean distance between vectors |
 | `<=>` | cosine | use when vector magnitude is not meaningful |
 | `<#>` | inner product | multiply by -1 to get similarity |
 
@@ -129,7 +127,7 @@ func Search(ctx context.Context, db *pgxpool.Pool, embedding []float32, k int) (
 }
 ```
 
-Apply a distance threshold in SQL or after retrieval according to the contract. Either can yield zero matches. Post-filtering a limited candidate set can yield fewer than k results:
+Apply the required distance threshold in SQL or after retrieval. Filtering a limited candidate set can return fewer than k results.
 
 ```go
 const maxDistance = 0.35
@@ -153,7 +151,7 @@ type Embedder interface {
 }
 ```
 
-Validate dimensionality at the infra boundary before returning:
+Check dimensionality at the infra boundary before returning:
 
 ```go
 if len(vec) != cfg.Dim {
@@ -161,9 +159,7 @@ if len(vec) != cfg.Dim {
 }
 ```
 
-Wire any OpenAI-compatible provider (OpenAI, Azure, LM Studio, vLLM) behind
-this interface. Do not mark the API key as `required` if local keyless
-providers must be supported.
+Use the configured embedding provider. Require credentials only when the selected provider needs them.
 
 ## Index trade-off
 
@@ -171,15 +167,14 @@ providers must be supported.
 |---|---|---|---|
 | Index | none | `CREATE INDEX … USING ivfflat` | `CREATE INDEX … USING hnsw` |
 | Build time | — | fast | slow (memory-intensive) |
-| Query speed | O(n) full scan | fast | faster |
-| Recall | exact | measure against exact search; tune lists/probes | measure against exact search; tune ef_search and index construction |
+| Search cost | Scan all candidates | Varies with list and probe counts | Varies with graph and search settings |
+| Recall | Exact baseline | Compare recall while tuning lists and probes | Compare recall while tuning construction and `ef_search` |
 | When to add | meets measured latency | representative recall/latency justifies the index | representative recall/latency/memory justifies the index |
 
-Start without an index. Exact scan is accurate and simple; add an index only
-after profiling shows it matters.
+Measure exact search first. Add an approximate index when representative latency and recall meet the product contract.
 
 ```sql
--- ivfflat: lists ≈ sqrt(row_count), probe at query time with SET ivfflat.probes
+-- IVFFlat: choose lists and probes from table size and measured recall.
 CREATE INDEX ON items USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 -- hnsw: higher m = better recall, more memory
@@ -197,11 +192,12 @@ must match the distance operator used in queries.
   can't infer the column type from a bare string parameter.
 - Change the vector column dimension without re-embedding all rows and running
   a migration.
-- Assume a WHERE distance predicate categorically disables ANN indexing. Preserve an indexable distance ORDER BY and LIMIT; inspect EXPLAIN. For filtered ANN search, evaluate iterative scans and the documented materialized-CTE pattern for distance filters. See [pgvector filtering](https://github.com/pgvector/pgvector#filtering).
-- Mix operator classes between the index and query — results will be wrong
-  or the index unused.
+- Assume a distance filter disables ANN indexing. Keep the distance operator in the ordering and inspect the actual plan.
+- Expect a mismatched operator class to accelerate a query. Match the index to the metric and measure recall against exact results.
 
-## Verify
+See [pgvector filtering](https://github.com/pgvector/pgvector#filtering) for iterative scans and version-specific requirements.
+
+## Verification
 
 ```sh
 # extension present

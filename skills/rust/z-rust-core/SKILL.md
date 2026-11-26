@@ -1,47 +1,38 @@
 ---
 name: z-rust-core
-description: Rust development with ownership, lifetimes, error handling, async, traits, and idiomatic patterns. Triggers on rust, ownership, borrow, lifetime, cargo.
+description: "Design Rust ownership, lifetimes, traits, error types, and async tasks. Use for borrowing, trait objects, FFI, or Cargo checks. See [[z-rust-gtk4]] and [[z-rust-web]] for application patterns."
 ---
 
-# Rust core
+# Rust design and verification
 
-Write idiomatic, zero-cost Rust: make ownership and lifetimes explicit, model errors in the type system, keep concurrency safe, and encode invariants at compile time.
+## Establish ownership
 
-## Core rules
+Borrow values when the callee only needs access. Transfer ownership when the callee must retain the value.
+Use `Arc<T>` for shared ownership across threads when the contained type supports the required thread-safety guarantees.
+Cloning a GUI handle can be cheap. Measure large data copies separately.
+Isolate FFI and unsafe operations. Document each safety invariant at the operation that relies on it.
 
-1. **Ownership**: Prefer borrowing (`&T`) over ownership transfer; explain move semantics for non-Copy types
-2. **Error Handling**: Use `anyhow` for application code, `thiserror` for libraries; always propagate with `?`; never panic in library code
-3. **Async**: Preserve the target service's existing executor and lifecycle. Use `tokio` APIs only in Tokio applications or when a new runtime choice is explicitly authorized — `tokio::spawn` panics outside a Tokio runtime context; use `tokio::select!` for racing futures; wrap blocking calls with `spawn_blocking`
-4. **Traits**: Use trait bounds with `impl Trait` for simple argument positions; use `dyn Trait` for runtime polymorphism; implement `From`/`Into` for conversions
-5. **Project Layout**: For GUI desktop apps ([[z-rust-gtk4]]), split by concern, not by domain/service/handler layers — a workspace with one crate per feature (`core/`, `subscription/`, `ui/`, ...) or a single crate with modules per concern (`api/`, `app/`, `platform/`, `ui/`, ...). See [[z-rust-web]] for HTTP-service layout.
-6. **Safety**: Minimize `unsafe`; document all safety invariants when unavoidable; use `#[must_use]` on types where ignoring the return is a bug; use `#[non_exhaustive]` on public enums for future compatibility
-7. **Tooling**: Run `cargo fmt` and `cargo clippy -- -D warnings` in CI. `-W clippy::all` enables warnings but does not fail on them. Add `--nocapture` only to an already bounded test command when debug output helps.
-8. **Testing**: Unit tests in `#[cfg(test)]` module in the same file; integration tests in `tests/`; use `proptest`/`quickcheck` for property-based tests; use `mockall` for mocking traits and `mockito` to stub HTTP responses in adapter/client tests. `cargo test` has no timeout and spawns one thread per core — run dev suites as `timeout 5m cargo test -- --test-threads=4` (or via a runner target carrying the same limits); [[z-testing-strategy]] has the per-runner floor
+## Choose an interface
 
-## Do not
+- Return a typed error when callers must distinguish cases. Use `?` to propagate compatible errors.
+- Reuse existing error types or dependencies such as `thiserror` and `anyhow` where their contracts fit.
+- Reserve panics for documented invariants. Handle expected input and operational failures explicitly.
+- Use generic bounds for static dispatch and `dyn Trait` for runtime dispatch. Specify required associated types on the trait object.
+- For dynamic async dispatch, inspect the target compiler's dyn compatibility rules. A boxed future or `async-trait` can provide an adapter.
+- Use `#[must_use]` when ignoring the result is usually an error. Consider `#[non_exhaustive]` before publishing an extensible enum.
 
-- Turn on `clippy::pedantic` reflexively — it earns its place with a concrete reason, not by default.
-- Mix `anyhow` into a library's public API — libraries return typed `thiserror` errors so callers can match on variants; `anyhow` is for application code that only needs to propagate and log.
+## Run asynchronous work
 
-## Edge cases
+Use the project's executor. Call Tokio runtime APIs within a suitable runtime context.
+Use `tokio::select!` when operations race. Check what cancellation does to each losing future.
+Use `spawn_blocking` for suitable blocking work on Tokio. Bound concurrency and handle shutdown.
+Release a synchronous lock before `.await`. Use an async lock when the critical section must cross an await point.
 
-If lifetime annotations become complex: Simplify by restructuring ownership; consider `Arc<T>` to eliminate lifetime constraints across thread boundaries.
+## Check the crate
 
-If `Clone` appears frequently in GUI event-loop code ([[z-rust-gtk4]]: relm4/iced closures that must own their captures): that's the idiom, not a smell — cheap handle/String clones feeding `sender.input()` or message closures are expected. Only treat `Clone` as a smell when it's masking a lifetime fight on a hot path or duplicating something non-trivial to dodge the borrow checker.
-
-If a trait needs to be object-safe: Avoid associated types that differ per impl; use `Box<dyn Trait>` only when runtime dispatch is genuinely needed.
-
-If an async trait needs to be used as a trait object (`Arc<dyn Trait>`, `&dyn Trait`): use `#[async_trait]` — `async fn` in traits still isn't dyn-compatible without boxing, regardless of MSRV. This isn't a legacy fallback: it's the live pattern once dynamic dispatch is in play. Skip `async-trait` only when every call site is static dispatch (`impl Trait` / `<T: Trait>`), never boxed.
-
-If build times are slow: Measure compilation and test execution separately. Check existing profile settings and dependency costs before splitting crates or adding a runner.
-
-If FFI boundary is needed: Isolate all `unsafe` in a dedicated module; wrap in a safe Rust API immediately; document all invariants.
-
-If deadlock is suspected in async code: Avoid holding `std::sync::Mutex` across `.await`; use `tokio::sync::Mutex` for async-aware locking.
-
-## Verify
-
-- Use the existing project wrapper for formatting, linting, and tests.
-- Confirm `cargo fmt --check` and the project's Clippy policy pass.
-- Bound the whole test process and parallel workers; use supported per-test limits when the runner provides them. See [[z-testing-strategy]].
-- Exercise changed error, cancellation, and ownership boundaries, not only the success path.
+Run the project's formatting, Clippy, and test wrappers. Example checks include `cargo fmt --check` and `cargo clippy -- -D warnings`.
+Use the established lint policy. A warning-level lint alone does not fail the command.
+Bound build jobs, test workers, and total time. For example, use `timeout 5m cargo test -j 2 -- --test-threads=4`.
+Exercise error, cancellation, and ownership boundaries. Put unit tests in `#[cfg(test)]` modules and integration tests in `tests/`.
+Use property tests or mocks only for identified risks. Measure build and test time separately before changing crate layout.
+See [[z-testing-strategy]], [[z-rust-gtk4]], and [[z-rust-web]].

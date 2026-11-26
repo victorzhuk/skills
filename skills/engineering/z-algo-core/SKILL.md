@@ -1,11 +1,11 @@
 ---
 name: z-algo-core
-description: DS/algorithm selection judgment for production code, not competitive tricks — hash map for membership/dedup, slice+sort beats a tree until proven, heap for top-k, two-pointer/sliding-window for scans, BFS/DFS/topo-sort for dependency shapes. Triggers on Big-O, hash map vs tree. Does not cover profiling/tuning; see [[z-go-performance]].
+description: "Choose a data structure for lookup, ordering, top-k queries, or graph traversal. Compare time and space costs. Use [[z-go-performance]] to measure Go code."
 ---
 
 # Algorithm core
 
-Pick the data structure by what the code does with it — membership check, ordering, top-k, adjacency — not by habit, then measure before reaching for anything fancier.
+Identify the required operations and their frequency. Measure the candidate structure with representative inputs.
 
 ## Complexity quick table
 
@@ -14,33 +14,32 @@ Pick the data structure by what the code does with it — membership check, orde
 | Array/slice | O(n) | O(1) amortized append | O(n log n) sort | default choice, best cache locality |
 | Hash map | O(1) average | O(1) average | none | membership, dedup, counting |
 | Balanced tree | O(log n) | O(log n) | O(n) in order | only when ordered iteration/range queries are load-bearing |
-| Heap | O(1) peek | O(log n) | none | top-k, priority scheduling |
+| Heap | O(1) root, O(n) arbitrary lookup | O(log n) | none | top-k, priority scheduling |
 | Graph (adjacency list) | — | — | BFS/DFS O(V+E) | dependency graphs, reachability |
 
 ## When it matters
 
-- for small bounded inputs, begin with the simplest correct structure; there is no portable size threshold where a scan beats hashing
-- measure representative key types, hit rates, mutation patterns, and repeated queries before optimizing; profile the actual hot path
-- an algorithm swap that isn't on a measured hot path is speculative work; [[z-no-over-engineering]] applies to data structures too
+- Start with a simple structure for bounded inputs. A scan can outperform hashing for some key types and collection sizes.
+- Measure representative hit rates, mutations, and repeated queries before changing a hot path. See [[z-no-over-engineering]].
 
 ## Selection patterns
 
 - map for a membership test or dedup (`if _, ok := seen[x]; ok`) — not a nested loop re-scanning a slice
-- slice + sort beats a tree-based ordered structure until the workload proves otherwise — sort once and binary-search; simpler and usually faster than maintaining a balanced tree over a mostly-static dataset
+- For mostly static ordered data, compare sorting once and binary search with maintaining a balanced tree.
 - heap for top-k over a stream — a bounded k-sized heap beats sorting the whole stream when k is much smaller than n
-- two-pointer / sliding-window for a sequential scan with a running invariant (subarray sum, longest substring without repeats) — turns an O(n²) nested scan into O(n)
+- Use a sliding window when its invariant lets either endpoint advance without backtracking. For sums, check assumptions about negative values.
 - BFS/DFS/topological sort for dependency shapes: BFS for shortest-path-in-hops, DFS for exhaustive traversal or cycle detection, topo-sort for "what must run before what"
 
 ## Complexity smells a reviewer should catch
 
-- nested loops over the same collection — an O(n²) hiding in plain sight; ask whether a map or a single indexed pass solves it
-- sort inside a loop — sorting is O(n log n); sorting on every outer-loop iteration turns that into O(n² log n). Sort once, outside the loop
-- repeated linear scans replaceable by one index pass — three separate loops each searching the same slice usually collapse into one pass that builds a map first
+- Estimate iteration counts before classifying nested loops. An inner loop that consumes each item once can still give linear total work.
+- If the sort key and collection remain unchanged, sort once outside the loop.
+- Compare repeated searches with the cost of building and maintaining an index.
 
 ## Memory locality
 
-- contiguous memory (array/slice) beats pointer-chasing (linked list, heap-allocated tree nodes) at scale — cache misses dominate once the working set exceeds L2/L3, regardless of Big-O. A "worse" O(n) scan over a contiguous slice frequently outruns a "better" O(log n) walk over scattered allocations at realistic n
-- this is part of why slice+sort beats a tree-based structure so often in practice, not just in theory
+Compare a contiguous scan with pointer-based lookup on the target workload.
+Record input size and key distribution. Cache misses can outweigh a lower operation count.
 
 ## Language mapping
 
@@ -48,7 +47,7 @@ Pick the data structure by what the code does with it — membership check, orde
 - Rust: `HashMap`/`BTreeMap`, `BinaryHeap`, `Vec::sort`/`binary_search`
 - C++: `std::unordered_map`/`std::map`, `std::priority_queue`, `std::sort`/`std::lower_bound`
 
-## Do not
+## Check the algorithm
 
-- reach for data-structure exotica (skip list, trie, bloom filter, segment tree) without a measurement proving the standard structure is the bottleneck — real tools for real problems, not a default
-- golf for Big-O at the cost of clarity when n is small and bounded — a ten-line O(n²) that's obviously correct beats an O(n log n) one that needs a comment to explain, until profiling says otherwise
+Test empty inputs, duplicate keys, and the largest supported input. Check ordering requirements before replacing a map, tree, or sorted slice.
+Compare the time and memory costs of the existing and proposed structures on representative data.

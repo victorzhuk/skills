@@ -1,66 +1,34 @@
 ---
 name: z-qa-analyst
-description: "Behavior-based test planning and acceptance traceability. Use for QA analysis, coverage gaps, test priorities, or a test plan. Map requirements to assertions and execution evidence; distinguish coverage from proof. Stub generation belongs to [[z-qa-spec-writer]], failure triage to [[z-qa-debugger]]."
+description: "Map requirements to assertions, execution evidence, and gaps. Use for test planning, priorities, or coverage review. See [[z-qa-spec-writer]] for scaffolding and [[z-qa-debugger]] for failures."
 ---
 
-# Test-plan analysis
+# Build a test plan
 
-Map behavior and risk to existing tests. Use execution coverage as supporting evidence, not proof of assertions.
-
-## Inspect before planning
+## Inspect behavior
 
 1. Read the scoped requirements, public interfaces, and existing tests.
-2. Discover the repository's runner and coverage format.
-3. Map each behavior to acceptance scenarios and assertions. Include relevant source paths for navigation.
-4. Run or read current applicable coverage evidence through the bounded project wrapper.
-5. Update the existing test-plan record; create a new record only within the requested scope.
+2. Identify the project runner and coverage format. Inspect current evidence or use the bounded project wrapper.
+3. Map each behavior to a scenario and its observable assertions. Record the source path when it helps navigation.
+4. Assign risk from impact and likelihood. P0 examples include money, data loss, crashes, and unauthorized access.
+5. Use P1 for core workflows and P2 for lower-impact cases when these match the project's conventions.
 
-A test file name does not prove coverage. Conversely, a source file without a same-named test may be covered through a higher interface.
+A matching filename or executed statement cannot establish what a test asserts. A higher-level test can cover several source files.
 
-## Prioritize
+## Record evidence
 
-| Tier | Risk |
+| Status | Meaning |
 |---|---|
-| P0 | Auth bypass, permissions, money, crashes, data loss |
-| P1 | Core product invariants and common workflows |
-| P2 | Remaining integration cases and lower-impact behavior |
+| Covered | A relevant assertion passed for the scenario and revision. |
+| Partial | Assertions cover only some required outcomes. Identify the missing outcomes. |
+| Gap | No adequate assertion exists. A skipped stub leaves a gap. |
+| Unverified | A test exists, but current execution evidence is unavailable. |
 
-Classify by impact and likelihood in the actual project. Do not mark everything P0 or infer importance from file size.
+Use the existing plan format. Record behavior, source paths, assertion, risk, status, missing proof, and next check.
+Include the date and revision or scope. Reuse existing requirement IDs. Keep deliberate exclusions visible.
+Create a new plan file or delegate analysis only within the caller's scope.
 
-## Evidence status
+## Check the plan
 
-| Status | Required evidence |
-|---|---|
-| Covered | A relevant assertion, its execution result, and the scenario it proves |
-| Partial | Some required outcomes have assertions; list the missing ones |
-| Gap | No adequate assertion for the required behavior |
-| Unverified | Test exists but current execution evidence is unavailable |
-
-Statement/branch coverage shows executed paths. It cannot establish that a test asserts the required outcome. A skipped stub remains a gap.
-
-## Plan format
-
-Use the project's convention. A compact table is sufficient:
-
-| Behavior / requirement | Source paths | Test / assertion | Risk | Status | Missing proof |
-|---|---|---|---|---|---|
-
-Use existing acceptance IDs when present. Do not invent IDs or require one test file per source file. Date the record and identify the revision or scope reviewed.
-
-List partial, gap, and unverified items with their reason and proposed next check. Preserve deliberate exclusions.
-
-## Do not
-
-- Install tools to count files or lines when the task needs behavior evidence.
-- Generate skipped stubs automatically from every uncovered source file.
-- Infer a framework or dependency setup from another project.
-- Spawn parallel analysis unless the caller authorizes delegation.
-- Mark coverage complete because an instrumentation percentage is high.
-
-## Verify
-
-Each status traces to inspected assertions and available execution evidence. Every missing proof is visible in the plan.
-Use the approved product boundary for acceptance. Propose lower-layer tests only for named residual risks per [[z-testing-strategy]].
-Preserve existing tests. Apply [[z-bdd]] when deciding whether required scenario evidence passes the gate.
-
-See [[z-testing-strategy]], [[z-qa-spec-writer]], [[z-qa-debugger]], [[z-qa-orchestrator]], [[z-go-bdd]].
+Trace each status to an assertion and its available result. Use [[z-bdd]] for acceptance evidence.
+Preserve existing tests. Recommend a lower-level test only for a named risk under [[z-testing-strategy]].

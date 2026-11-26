@@ -1,15 +1,11 @@
 ---
 name: z-go-telegram-bot
-description: Hand-rolled Go Telegram Bot API clients for MarkdownV2, Mini-App, Stars. Triggers on "telegram bot api", "sendMessage", "MarkdownV2", "initData", "X-Telegram-Bot-Api-Secret-Token". Excludes request hardening [[z-go-security]].
+description: "Implement Telegram Bot API calls in Go. Use for MarkdownV2, Mini App initData, webhook validation, or Stars payments. See [[z-go-security]] for HTTP hardening."
 ---
 
 # Telegram Bot API Client
 
-Two real patterns, pick by complexity. Simple polling/webhook-only bots can
-use `github.com/go-telegram/bot`. Once you need MarkdownV2 formatting, Mini
-App initData validation, or Stars payments, hand-roll a client instead: every
-call is a POST to `https://api.telegram.org/bot<token>/<method>`. Place the
-client in your infrastructure layer (e.g., `internal/infra/telegram/`).
+Use the project's client if it supports the required Bot API methods. Otherwise implement the missing methods behind a narrow Go interface. Keep the bot token in the infrastructure client.
 
 ## Client
 
@@ -24,7 +20,7 @@ func NewBot(token string, client *http.Client) *Bot {
 }
 ```
 
-`http.Client.Do` errors include the request URL, whose path contains the bot token. Sanitize request-construction and transport errors before returning them; URL.Redacted only covers userinfo passwords, not this path. Keep the underlying cause for errors.Is/As, but never log it separately:
+Telegram puts the token in the URL path. Remove the URL from transport and request-construction error messages. Preserve the cause for `errors.Is` and `errors.As`. Do not log the wrapped cause. `URL.Redacted` only masks userinfo passwords.
 
 ```go
 type transportError struct {
@@ -44,7 +40,7 @@ func safeTransportError(err error) error {
 }
 ```
 
-Validate a nonempty token at configuration time. Test transport and URL-parse failures with a synthetic token and assert no returned message contains it.
+Check a nonempty token at configuration time. Test transport and URL-parse failures with a synthetic token and assert no returned message contains it.
 
 ### Per-method request/response
 
@@ -138,10 +134,7 @@ func call[T any](ctx context.Context, b *Bot, method string, body any) (T, error
 }
 ```
 
-For methods with no meaningful return value use `call[json.RawMessage]` and
-discard the result; the envelope's `description` still surfaces error detail.
-The rest of this skill shows methods built on `call[T]` for brevity — both
-patterns produce the same wire behavior.
+For methods without a meaningful result, use `call[json.RawMessage]`. Discard the result after checking the error.
 
 ## Common methods
 
@@ -158,20 +151,18 @@ func (b *Bot) AnswerCallbackQuery(ctx context.Context, queryID, text string, sho
 
 ## Dev mode / no-op
 
-When no token is configured, swap in a no-op that satisfies the same narrow
-interface the use case consumes:
+Select a no-op client only in an explicit development mode. Reject a missing token when the service must deliver messages.
 
 ```go
 type NoopBot struct{ log *slog.Logger }
 
-func (n *NoopBot) SendMessage(_ context.Context, chatID int64, text, _ string) error {
-	n.log.Debug("noop send message", "chat_id", chatID, "text", text)
+func (n *NoopBot) SendMessage(_ context.Context, _ int64, _, _ string) error {
+	n.log.Debug("noop send message")
 	return nil
 }
 ```
 
-Nil-guard the real `*Bot` at the composition root; do not bury the check
-inside bot methods.
+Check the bot configuration when the service starts.
 
 ## MarkdownV2 escaping
 
@@ -200,14 +191,13 @@ func EscapeMarkdownV2(s string) string {
 }
 ```
 
-Call `EscapeMarkdownV2` on every dynamic value (user names, IDs, numbers
-formatted as strings). Keep intentional template markup separate from escaped plain-text values. Code/pre blocks and link destinations have different escape rules; this helper is for ordinary text, not those contexts.
+Escape dynamic values in ordinary MarkdownV2 text with `EscapeMarkdownV2`. Keep template markup separate. Apply the rules for each context to code blocks and link destinations.
 
 ## Webhook security
 
 ### Secret-token header
 
-Set a secret token when registering the webhook with `setWebhook`. Validate it
+Set a secret token when registering the webhook with `setWebhook`. Check it
 before processing the body:
 
 ```go
@@ -217,14 +207,11 @@ func validateWebhookSecret(r *http.Request, expected string) bool {
 }
 ```
 
-`subtle.ConstantTimeCompare` is constant-time — never `==` for secret
-comparison. Reserve `hmac.Equal` for comparing two already-computed HMAC
-digests against each other, as in the initData check below — not general
-secret comparison (see [[z-go-security]]).
+`subtle.ConstantTimeCompare` compares equal-length inputs in constant time. Use `hmac.Equal` for the HMAC below. See [[z-go-security]].
 
 ### Mini App initData
 
-Telegram Mini Apps pass `initData` as a URL-encoded query string. Validate the
+Telegram Mini Apps pass `initData` as a URL-encoded query string. Check the
 HMAC-SHA256 signature before trusting any field in it:
 
 ```go
@@ -232,6 +219,11 @@ func ValidateInitData(initData, botToken string, maxAge time.Duration, now time.
 	vals, err := url.ParseQuery(initData)
 	if err != nil {
 		return fmt.Errorf("parse initData: %w", err)
+	}
+	for _, values := range vals {
+		if len(values) != 1 {
+			return errors.New("initData: repeated field")
+		}
 	}
 	hash := vals.Get("hash")
 	vals.Del("hash")
@@ -260,8 +252,9 @@ func ValidateInitData(initData, botToken string, maxAge time.Duration, now time.
 	if err != nil {
 		return fmt.Errorf("parse auth_date: %w", err)
 	}
-	if now.Sub(time.Unix(authDate, 0)) > maxAge {
-		return errors.New("initData: expired")
+	issued := time.Unix(authDate, 0)
+	if maxAge <= 0 || issued.After(now) || now.Sub(issued) > maxAge {
+		return errors.New("initData: invalid age")
 	}
 	return nil
 }
@@ -273,8 +266,7 @@ func deriveInitDataKey(botToken string) []byte {
 }
 ```
 
-The HMAC key is derived as `HMAC-SHA256("WebAppData", botToken)`. Validate at
-the transport boundary on every request — do not re-validate inside use cases.
+Derive the HMAC key with `HMAC-SHA256("WebAppData", botToken)`. Check each request at the transport boundary.
 
 ## Telegram Stars / Payments
 
@@ -322,31 +314,23 @@ func (b *Bot) RefundStarPayment(ctx context.Context, userID int64, chargeID stri
 }
 ```
 
-`AnswerPreCheckoutQuery` must be called within 10 seconds of receiving the
-`pre_checkout_query` update — Telegram cancels the payment automatically if
-the deadline is missed. `RefundStarPayment` reverses a completed Stars
-payment given the charge ID from the successful-payment update.
+Answer `pre_checkout_query` within 10 seconds. Before fulfillment, check the amount, currency, and invoice payload in `successful_payment`. Record `telegram_payment_charge_id` so repeated updates cannot deliver the order twice. Use this ID for a Stars refund. [Stars payment flow](https://core.telegram.org/bots/payments-stars)
 
 ## Do not
 
-- Compare secrets or tokens with `==` — use `subtle.ConstantTimeCompare` for
-  secret/token comparison, `hmac.Equal` only for digest-vs-digest checks.
-- Supply a payment-provider token for Stars. The current API marks this field optional; an explicit empty string follows its documented Stars example ([Bot API](https://core.telegram.org/bots/api#sendinvoice)).
+- Use ordinary string equality for secret checks.
+- Supply a payment-provider token for Stars. Follow the [sendInvoice parameters](https://core.telegram.org/bots/api#sendinvoice).
 - Embed dynamic values in MarkdownV2 text without `EscapeMarkdownV2`.
 - Call `context.Background()` inside bot methods — propagate `ctx` from the caller.
 - Skip `defer resp.Body.Close()` — leaks the HTTP connection.
 - Skip `auth_date` expiry check — initData without an age gate is replayable indefinitely.
-- Reach for the hand-rolled client's full surface (MarkdownV2, initData, Stars)
-  when a simpler polling/webhook-only library already covers the bot's needs.
+- Log message bodies, bot tokens, or Mini App initData.
 
-## Verify
+## Verification
+
+Test the webhook with valid and invalid secrets. Reject repeated initData fields, expired signatures, and future timestamps. Replay a successful payment and check a single delivery.
 
 ```sh
-# Confirm webhook secret comparison uses subtle.ConstantTimeCompare, never ==
-rg 'subtle\.ConstantTimeCompare' internal/
-
-# Confirm no bare == on secret/token strings
-rg '(secret|hash|token).*==|== .*(secret|hash|token)' internal/
 
 timeout 5m go test -parallel 4 -p 2 -race -timeout 5m ./internal/infra/telegram/...
 ```

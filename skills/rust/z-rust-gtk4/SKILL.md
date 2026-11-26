@@ -1,42 +1,26 @@
 ---
 name: z-rust-gtk4
-description: Build GTK4 desktop apps in Rust with relm4 and libadwaita — the Elm-style component loop, libadwaita widget hierarchy, preferences dialogs, system tray, message-driven UI patterns. Use when asked to "build a GTK4 app in Rust", "create a libadwaita UI", "use relm4", "implement a GTK4 widget", "add system tray", or the request mentions AdwApplicationWindow, AdwPreferencesPage, or message-driven GTK4 UI. Does not cover general Rust ownership/error/async patterns; see [[z-rust-core]].
+description: "Build GTK4 desktop interfaces in Rust with relm4 and libadwaita. Use for message-driven components, preferences dialogs, widget updates, or system trays. See [[z-rust-core]] for Rust ownership and async work."
 ---
 
-# Rust GTK4 (relm4 + libadwaita)
+# Rust GTK4 with relm4
 
-Build HIG-compliant GTK4 desktop apps with the relm4 Elm-style loop: message-driven, composable components with clean separation between model state and view rendering.
+## Route messages to the model
 
-## Core Architecture: relm4 Elm Pattern
+Use `init()` to build the initial model and widget tree. Send typed messages from signal handlers. Update the model in `update()`. Bind dependent properties with `#[watch]` in `view!`.
 
-relm4 implements an Elm-like model-update-view loop:
-
-- **`Component::init()`** — construct initial model state + build widget tree
-- **`Component::update()`** — receive a typed message, mutate model
-- **`view!` macro** — declarative widget tree; auto-syncs to model on `#[watch]` fields
-
-The `#[relm4::component]` macro generates the boilerplate; the `view!` macro is the widget DSL.
-
-## Key Concepts
-
-### Sync vs Async Components
-
-| Trait | When to use |
+| Trait | Use |
 |---|---|
-| `SimpleComponent` | No async work; instant model updates |
-| `Component` | Background commands via `type CommandOutput` + `sender.oneshot_command(...)` — the pattern used everywhere below |
-| `AsyncComponent` | `update()` itself is async; reach for it only if `Component` + `oneshot_command` genuinely can't fit |
-
-### Message Flow
+| `SimpleComponent` | Synchronous updates without command outputs |
+| `Component` | Background commands that return typed outputs to `update_cmd()` |
+| `AsyncComponent` | Component initialization or updates that must await work |
 
 ```
 User action (signal) → sender.input(Msg::X)         → update()     → model mutates → view re-renders
 Background task      → sender.oneshot_command(...)  → update_cmd() → sender.input(...) / model mutates
 ```
 
-### Background Work Pattern
-
-Never block `update()`. Dispatch an async block with `sender.oneshot_command()`; the block's return value becomes the `CommandOutput` message, handled in `update_cmd()`:
+Keep GTK widget access on its main thread. Send background results to the component. Ignore stale results when a newer request supersedes them.
 
 ```rust
 fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
@@ -63,9 +47,11 @@ fn update_cmd(&mut self, msg: Self::CommandOutput, sender: ComponentSender<Self>
 }
 ```
 
-## libadwaita Widget Hierarchy
+Route sibling messages through the parent with `sender.output()`. Name widgets with `#[name = "my_widget"]` when the component needs a widget reference.
 
-One shell composition uses a vertical `gtk::Box`:
+## Choose widgets
+
+Keep the existing window layout. A vertical box or `AdwToolbarView` can hold the header and content.
 
 ```
 AdwApplicationWindow
@@ -75,9 +61,7 @@ AdwApplicationWindow
         └── [primary content]
 ```
 
-The example uses a vertical `gtk::Box`; `AdwToolbarView` is another supported shell. Preserve the target application's composition unless a concrete layout need warrants changing it.
-
-### Preferences Dialog Structure
+Use `AdwPreferencesDialog` with libadwaita 1.5 or later. For older targets, use `AdwPreferencesWindow`. GNOME deprecated the window in 1.6.
 
 ```
 AdwPreferencesDialog
@@ -94,9 +78,7 @@ dialog.add(&page);       // one add() per AdwPreferencesPage
 dialog.present(Some(&parent_window));
 ```
 
-`AdwPreferencesWindow` is deprecated since libadwaita 1.6 in favor of `AdwPreferencesDialog` (same page/group/row API, presented as a dialog instead of a standalone window). Only reach for `PreferencesWindow` when targeting pre-1.6 libadwaita.
-
-### Empty + Loading States
+Use a status page for an empty collection, a banner for an actionable failure, and a toast for a brief confirmation.
 
 ```rust
 // Empty state
@@ -116,8 +98,6 @@ adw::Banner {
 }
 ```
 
-### Toast Notifications
-
 ```rust
 adw::ToastOverlay {
     // wraps main content; show toasts programmatically:
@@ -129,9 +109,7 @@ self.toast_overlay.add_toast(
 );
 ```
 
-## Signal → Message Pattern
-
-All signals close over `sender` and call `sender.input()`:
+Connect signals to typed input messages.
 
 ```rust
 gtk::Button {
@@ -156,11 +134,14 @@ adw::SwitchRow {
 }
 ```
 
-## System Tray Integration
+See [component patterns](references/component-patterns.md) and the [widget catalog](references/adwaita-widgets.md) for other layouts.
 
-This example uses `ksni`, a pure-Rust StatusNotifierItem implementation with no GTK/AppIndicator dependency. It implements `Tray` on a plain struct, spawns it to get a `Handle<T>`, and mutates state through `handle.update()`:
+## Connect a tray
+
+Check the desktop's tray protocol. With `ksni`, keep the tray state independent of GTK objects and send actions to the component.
 
 ```rust
+use std::sync::Arc;
 use ksni::{Handle, Tray, TrayMethods};
 use ksni::menu::{MenuItem, StandardItem};
 
@@ -194,11 +175,9 @@ let handle: Handle<AppTray> = AppTray { connected: false, on_action }.spawn().aw
 handle.update(|tray| tray.connected = true).await;
 ```
 
-Choose a tray implementation from the target desktop's supported protocols and the application's existing dependencies. Verify behavior on each supported desktop; no private anchor project establishes a universal choice here.
+## Check the desktop build
 
-## Cargo.toml Dependencies
-
-Prefer relm4's compatible re-exports where they cover the required APIs. Direct gtk/glib/gio dependencies can be legitimate; keep versions compatible and avoid duplicate incompatible crate types. The dependency block below is illustrative, not a current-version recommendation:
+Check compatible crate versions, enabled features, and native library versions. This manifest example targets one platform configuration.
 
 ```toml
 [dependencies]
@@ -212,21 +191,4 @@ use relm4::gtk;
 use relm4::adw;
 ```
 
-Inspect the installed relm4 feature table and the minimum GTK/libadwaita runtime shipped on supported systems. Choose only available features that fit that runtime; do not infer a feature name from the calendar or GNOME release number.
-
-## Edge Cases
-
-If a component needs to talk to a sibling: use `ComponentSender::output()` to emit upward; parent routes messages downward.
-
-If the view needs to reference a named widget outside the macro: use `#[name = "my_widget"]` annotation inside `view!`.
-
-If GTK panics with "assertion failed: is_main_thread": ensure all GTK calls happen on the GLib main thread — never from `tokio::spawn`.
-
-If an API needs a newer runtime, first decide whether raising the minimum supported platform is in scope. Then update compatible crate features and verify on that minimum runtime.
-
-For deep widget patterns, component composition, and real-world relm4 structure: see the reference files below.
-
-## References
-
-- [Component Patterns](references/component-patterns.md)
-- [libadwaita Widget Catalog](references/adwaita-widgets.md)
+Build against the oldest supported runtime. Open the preferences dialog and exercise the success, empty, and failure states. Test tray actions on each supported desktop.

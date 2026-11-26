@@ -1,6 +1,6 @@
 ---
 name: z-qa-android
-description: Android device QA for native and cross-platform apps. Use for adb device control, headless Android Emulator runs, APK smoke tests, scripted taps, or pixel-by-pixel screenshot comparison. Select the device explicitly and record assertions and artifacts. Browser flows belong to [[z-qa-browser]].
+description: "Test Android apps with adb, a headless emulator, or a physical device. Use for APK smoke tests, scripted interactions, and exact screenshot comparison. See [[z-qa-browser]] for browser flows."
 ---
 
 # Android device QA
@@ -31,12 +31,12 @@ Run the app on an approved Android emulator or physical test device. Verify user
    python3 scripts/android_device.py --serial "$SERIAL" wait --seconds 120
    ```
 
-5. Verify the owned process is still running. Run `adb -s "$SERIAL" emu avd name` and verify the AVD name. Verify the package manager responds and the target is unlocked before running the app.
+5. Verify the owned emulator process still runs. Run `adb -s "$SERIAL" emu avd name` and compare the name with the selected AVD. Before launch, verify package-manager readiness and access past the lock screen.
 6. Stop the owned foreground process or let the supervisor stop it on success, failure, or interruption. Verify process exit and device removal. Use a disposable AVD or the project's fixture reset for clean state. `-no-snapshot` disables snapshot load and save but preserves writable device data.
 
 ### Diagnose Linux KVM
 
-Run these checks in the session that will start the emulator:
+Inspect KVM from the session that will launch the emulator.
 
 ```sh
 stat /dev/kvm
@@ -44,7 +44,7 @@ id
 emulator -accel-check
 ```
 
-If the restricted session cannot see `/dev/kvm`, repeat the checks in an authorized host session. CPU flags and loaded modules alone do not prove device access.
+If the restricted session cannot see `/dev/kvm`, run the same commands in an authorized host session. CPU flags and loaded modules alone do not prove device access.
 
 - If KVM works on the host, run the emulator in the authorized host session. Run ADB where it can reach the same ADB server.
 - If the host sees the device but cannot use it, inspect device permissions and the launch user's effective groups.
@@ -59,8 +59,8 @@ Use a dedicated AVD and a fresh artifact directory. The live run used an English
 1. Follow the headless boot steps. Verify `adb -s "$SERIAL" shell pm path com.android.settings` returns a package path.
 2. Wake the display with `adb -s "$SERIAL" shell input keyevent KEYCODE_WAKEUP`. On an AVD without a secure lock, use `adb -s "$SERIAL" shell wm dismiss-keyguard`.
 3. Open Settings with `adb -s "$SERIAL" shell am start -W -a android.settings.SETTINGS`. Dump the hierarchy as shown below. Find the Display row in `com.android.settings`. Calculate the center of its observed bounds.
-4. Capture `before.png` with `android_device.py`. Tap the observed center with the helper. Refresh the hierarchy until `Brightness level` appears in `com.android.settings`, or fail at the deadline. Resolve labels from the image and locale in use.
-5. Capture `after.png` and `after-repeat.png` once the screen settles. Compare before with after. Require exit `1` and a diff mask. Compare after with the repeat capture. Require exit `0` and zero changed pixels.
+4. Capture `before.png` with `android_device.py`. Tap the observed center. Wait until the expected display setting appears or the deadline expires. Use the label from the selected image and locale.
+5. Capture `after.png` and `after-repeat.png` after the screen settles. Compare before and after. Expect exit `1` and a diff mask. Compare the two settled captures. Expect exit `0` and zero changed pixels.
 6. Keep the screenshots and diff mask. Stop the owned emulator and verify its serial disappears.
 
 ## Control and test the app
@@ -88,7 +88,7 @@ python3 scripts/android_device.py --serial "$SERIAL" tap "$X" "$Y"
 python3 scripts/android_device.py --serial "$SERIAL" capture "$ACTUAL"
 ```
 
-Read [android_device.py](scripts/android_device.py) before use. For shell or other scripting languages, apply the same serial binding and timeouts. Capture binary PNG data with `adb -s "$SERIAL" exec-out screencap -p`. Wait for the expected UI state before capture. Apply a whole-process deadline and a worker cap to the suite.
+Review [android_device.py](scripts/android_device.py) before use. Apply its serial selection and timeouts to equivalent shell commands. Wait for the expected UI state before capture. For PNG bytes, use `adb -s "$SERIAL" exec-out screencap -p`. Bound the suite's total runtime and workers.
 
 ## Compare pixels
 
@@ -107,14 +107,14 @@ Use masks or tolerance only when the visual contract explicitly permits them. Us
 
 ## Do not
 
-- Send input to an unverified target. Avoid shared adb server resets, global emulator shutdown, device wipes, and app data resets during ordinary checks.
+- Send input to an unverified target. Avoid shared adb server resets, global emulator shutdown, device wipes, and app data resets during ordinary test runs.
 - Circumvent protected capture or collect personal screen contents. Keep sensitive screenshots and logs out of public artifacts.
 - Treat boot, install, launch, or screenshot capture as proof that a journey passed. Verify the expected outcome.
 
 ## Verify
 
 - Record target profile, app build, scenarios, assertions, result, and artifact paths. Report unavailable targets or unexecuted scenarios.
-- For visual checks, record baseline identity, image dimensions, changed pixel count, and diff path when available.
+- For screenshot comparisons, record baseline identity, image dimensions, changed pixel count, and diff path when available.
 - Verify that a missing device fails and that one changed pixel fails before relying on a new regression flow.
 
 References: [ADB](https://developer.android.com/tools/adb), [Emulator flags](https://developer.android.com/studio/run/emulator-commandline), [UI Automator](https://developer.android.com/training/testing/other-components/ui-automator), [Pillow channel operations](https://pillow.readthedocs.io/en/stable/reference/ImageChops.html).

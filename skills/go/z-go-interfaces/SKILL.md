@@ -1,13 +1,13 @@
 ---
 name: z-go-interfaces
-description: Interface design, struct embedding, type assertions, compile-time checks, receiver rules, generics vs interfaces in Go. Use when designing types, defining interfaces, embedding structs, or choosing receivers. Triggers on "accept interfaces return structs", "compile-time interface check", "var _ Interface", "type assertion", "pointer receiver". Also covers functional-options constructors. Does not cover layer direction/DI; see [[z-go-clean-arch-di]].
+description: "Design Go interfaces, type constraints, receiver methods, and embedding. Use for method sets, typed nils, type switches, or constructor options. See [[z-go-clean-arch-di]] for service wiring."
 ---
 
 # Go Interfaces & Type Design
 
 ## Interface design
 
-**Keep interfaces focused.** Prefer small consumer contracts; split unrelated capabilities rather than enforcing a universal method count:
+Keep each interface focused on operations the consumer needs. Split unrelated capabilities.
 
 ```go
 type Reader interface{ Read(p []byte) (n int, err error) }
@@ -15,7 +15,7 @@ type Writer interface{ Write(p []byte) (n int, err error) }
 type ReadWriter interface{ Reader; Writer }
 ```
 
-**Prefer consumer-owned interfaces.** Define a narrow contract where its caller needs it:
+Define a narrow contract in the consuming package.
 
 ```go
 // package notification — only what it needs
@@ -24,22 +24,15 @@ type Sender interface{ Send(to, body string) error }
 type Service struct{ sender Sender }
 ```
 
-In this example, the `email` package exports a concrete `Client` without declaring `Sender`.
-Shared or generated protocol contracts can own interfaces outside the consumer package.
-Preserve that ownership when the contract requires it.
+The email package can return a concrete client. Keep shared or generated interfaces with the protocol that owns them.
 
-**Prefer concrete return types.** Callers retain the full API and can assign results to their own interfaces:
+Return a concrete value when callers need its methods.
 
 ```go
 func NewService(store UserStore) *Service { ... }
 ```
 
-Return an interface for required shared protocols, runtime implementation selection, or deliberate API restriction that serves callers.
-Use these exceptions for a concrete requirement, not to hide every implementation behind an interface.
-
-**Don't extract interfaces prematurely.** Start concrete.
-Extract an interface for an established boundary, test seam, or caller that needs interchangeable implementations.
-Neither implementation count nor consumer count decides this alone.
+Return an interface for a shared protocol, runtime selection, or deliberate API restriction. Extract one for an actual boundary or test seam.
 
 ## Compile-time interface check
 
@@ -47,12 +40,11 @@ Neither implementation count nor consumer count decides this alone.
 var _ io.ReadWriter = (*MyBuffer)(nil)
 ```
 
-Zero runtime cost. Breaks the build the moment the type drifts from the contract.
-Place it next to the type definition.
+Place the assertion near the implementation. The package fails to build if the method set changes.
 
 ## Type assertions & switches
 
-Always comma-ok — bare assertions panic:
+Use the comma-ok form when a value can have another dynamic type.
 
 ```go
 s, ok := val.(string)   // good
@@ -73,25 +65,24 @@ Type switch:
 switch v := val.(type) {
 case string:  ...
 case int:     ...
-case io.Reader: io.Copy(os.Stdout, v)
-default:      fmt.Errorf("unexpected type %T", v)
+case io.Reader:
+    _, err := io.Copy(os.Stdout, v)
+    return err
+default:
+    return fmt.Errorf("unexpected type %T", v)
 }
 ```
 
 ## Embedding
 
-Embedding promotes the inner type's full API — use it when the outer type *is*
-an enhanced version. Use a named field when the outer type only *uses* the inner:
+Embed a type when the outer type must expose its promoted members. Use a named field for an internal dependency.
 
 | | Use case |
 |---|---|
 | **Embed** | Outer type exposes the inner type's API (`Server` embeds `http.Handler`) |
 | **Named field** | Outer type hides it (`Server` holds `store *DataStore`) |
 
-The receiver of a promoted method is the embedded value. An outer method with
-the same name shadows that selector; calls inside the embedded type still use
-its own methods. Embedding does not provide virtual dispatch. Equal-depth
-selector collisions can prevent promotion and change interface satisfaction.
+A promoted method runs with its original receiver. An outer method can shadow its name. Calls inside the embedded type still use its own methods. Equal-depth selector conflicts can prevent promotion.
 
 ## Receivers
 
@@ -101,24 +92,15 @@ selector collisions can prevent promotion and change interface satisfaction.
 | Receiver contains a mutex | Receiver is a basic type |
 | Large struct | Map / function value (already a reference) |
 
-**Pick one and stay consistent.** If any method uses a pointer receiver, all
-methods should.
+Prefer consistent receivers for related methods. Use a pointer when copying the value would break its contract.
 
-For a defined non-interface, non-pointer type `T`, the method set of `T` contains value-receiver
-methods; `*T` also has pointer-receiver methods. An addressable `t.M()` can be
-shorthand for `(&t).M()`; this does not make `T` implement an interface requiring
-that pointer method. Map elements and concrete values stored in interfaces are
-not addressable through those expressions.
+For a defined non-pointer, non-interface type `T`, the method set of `T` contains its value-receiver methods. The method set of `*T` also includes pointer-receiver methods. An addressable value can call a pointer method without satisfying its interface. Map elements and concrete interface values are not addressable through those expressions.
 
-A method value `f := x.M` saves its receiver at creation: a value receiver is a
-copy, a pointer receiver keeps the pointer. Later reassignment of `x` does not
-rebind `f`. For explicit receiver selection at call time, use a method expression
-such as `(*T).M`. Value-receiver copies can still alias nested data; see [[z-go-safety]].
+A method value captures its receiver when created. A value receiver copies the value and can still share nested storage. A pointer receiver captures the pointer. Use `(*T).M` to select the receiver at call time. See [[z-go-safety]].
 
 ## Zero value
 
-Design structs to work without explicit initialization. Lazy-init guards the nil
-case when you can't avoid a map or slice:
+Make the zero value usable where practical. Initialize a nil map before the first write. A nil slice already supports append.
 
 ```go
 func (r *Registry) Register(name string, item Item) {
@@ -131,44 +113,20 @@ func (r *Registry) Register(name string, item Item) {
 
 ## Generics vs interfaces
 
-Use an interface when types share *behaviour* (method set). Use generics when
-types share *identical logic* with no useful shared interface. Decision: if
-there's a shared method set, use an interface; if same algorithm over unrelated
-types, use generics; otherwise stay concrete.
-
-Don't genericize when an interface already fits:
+Use an interface for common behavior. Use a type parameter when the same algorithm needs to preserve a caller's type or use constraint operations.
 
 ```go
 func Process[T io.Reader](r T) error { ... }  // bad — T adds nothing
 func Process(r io.Reader) error { ... }        // good
 ```
 
-Choose constraints from the operations required: `comparable` permits `==` and
-map keys, not ordering or arithmetic. Use `~T` when accepting defined types with
-underlying type `T`; a bare non-interface `T` term admits only that type. Unions admit
-alternatives; embedded constraint elements intersect their type sets. Interfaces
-whose type sets cannot be expressed entirely by methods are constraints, not
-ordinary runtime value types.
+Select a constraint from the operations the algorithm uses. `comparable` permits equality and map keys. Use `~T` to admit defined types with underlying type `T`. A union admits alternatives. Embedded constraint elements intersect their type sets. Interfaces with non-method type restrictions serve as constraints only.
 
-Since Go 1.20, `any` can satisfy `comparable`; this is not a panic-free comparison
-guarantee. Equality of two interfaces with the same non-comparable dynamic type
-(such as `[]int`) panics; an interface map key with such a value also panics.
-This can occur inside `Equal[T comparable]` instantiated with `any`, or through
-interface fields in structs. Prefer strictly comparable key types when inputs
-must be accepted without runtime panics: their compared fields/elements must
-exclude interfaces, including within nested structs and arrays.
-
-Start concrete; generalize only when a second real call site appears.
+Since Go 1.20, `any` satisfies `comparable`. Equality can still panic when both operands contain the same non-comparable dynamic type. A map key containing a slice can panic for the same reason. Reject such inputs or use strictly comparable keys, including their nested fields.
 
 ## Constructor configuration
 
-Start with ordinary parameters for required dependencies and simple inputs.
-Use a config struct for related settings that callers commonly supply together.
-Consider functional options for actual caller needs: selective overrides, defaults, or reusable option composition.
-Use them only when simpler forms cannot express those needs clearly.
-Choose from actual call sites, not parameter counts or anticipated growth.
-
-When functional options meet that need, apply defaults before the supplied options:
+Pass required dependencies as ordinary parameters. Use a config struct for related settings. Use functional options when callers need selective overrides or reusable option composition. Apply defaults before the options.
 
 ```go
 type Option func(*Server)
@@ -184,34 +142,14 @@ func New(opts ...Option) *Server {
 }
 ```
 
-Keep required dependencies explicit rather than hiding them in optional configuration.
-
-## Quick Reference
-
-| Rule | Do | Don't |
-|---|---|---|
-| Interface size | Focused capabilities | Unrelated methods or universal method limits |
-| Interface placement | Consumer by default. Respect shared/generated protocol ownership | Mirror every implementation with an interface |
-| Constructors | Concrete by default. Interface for protocol, runtime selection, or deliberate API restriction | Hide implementations without a caller need |
-| Constructor configuration | Ordinary params first. Choose config structs or options from actual callers | Numeric thresholds or anticipated growth |
-| Premature interface | Extract for a real boundary, test seam, or interchangeable implementations | Decide from implementation or consumer count alone |
-| Compile-time check | `var _ Iface = (*Type)(nil)` | Skip it |
-| Type assertion | Always comma-ok | Bare `val.(T)` |
-| Receivers | Consistent per type; pointer if mutates/large | Mix pointer + value |
-| Embed vs field | Embed to expose API, field to hide | Embed to "save typing" |
-| Constraints | `any` unless operations need more; `comparable` for equality/map keys | Assume `comparable` makes interface values panic-free |
-| Generics | Shared logic, no useful interface | Genericize when interface fits |
-
-## Verify
+## Checks
 
 ```sh
 go vet ./...
 golangci-lint run
 ```
 
-Check interface satisfaction for the intended `T` or `*T`, not only whether a
-method call compiles. For generic comparisons accepting interface values, test
-non-comparable dynamic values at the boundary.
+Check the intended method set at compile time. Test a typed nil pointer stored in an interface. That interface still has a dynamic type and differs from nil. Test non-comparable dynamic inputs where generic APIs accept interface values.
 
 ## Sources
 

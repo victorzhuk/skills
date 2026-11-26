@@ -1,82 +1,40 @@
 ---
 name: z-fuck-slop
-description: De-slop pass for any text — detects and erases AI-writing fingerprints (negative parallelism, em-dash abuse, rule-of-three, false ranges, puffery, uniform cadence) and rewrites into its target register — article, tweet, email, blog. Use when the user says "fuck slop", "deslop", "remove the AI tells", "humanize this", or before publishing agent-drafted prose. Terse technical docs are [[z-concise-human-docs]].
+description: "Edit stock phrasing, unsupported claims, and repetitive cadence in public prose. Use for deslop, humanize, or voice cleanup. Use [[z-concise-human-docs]] for technical instructions."
 ---
 
-# F*ck Slop
+# Edit stock phrasing
 
-Remove distracting stock phrasing and fit the requested genre. Treat the catalog as house-style heuristics, not proof of a text’s origin.
+## Establish the target
 
-## Why this is a loop, not a style guide
+Identify the genre, audience, author’s position, length limit, and citation requirements.
+Use a supplied voice sample for formality, rhythm, and punctuation. Preserve quotations and the author's claims.
+Use [genre profiles](references/voices.md) when the expected register is unclear.
 
-Use a repeatable scan followed by semantic review:
+## Find candidates
 
-1. **Scan for candidates.** Regex surfaces phrases to inspect; meaning and genre decide whether each is a defect.
-2. **Rewriting reintroduces slop.** Ask a model to remove "it's not just X, it's Y" and it produces "this is less about X than Y" — the same move in a wig. So every rewrite gets re-scanned, and the loop runs until the scan is clean.
+Use the search patterns in [the editing guide](references/tells.md). Inspect each match in context.
+Also inspect repeated sentence structures, unsupported generalizations, and claims without a named source.
+Record each candidate, its location, and its category. When the requested format permits, give the category, count, and clearest example before rewriting.
+A phrase match cannot establish who wrote a passage.
 
-Workflow: **Scan → Diagnose → Rewrite by meaning → Re-scan → (repeat) → Register check.**
+## Edit by meaning
 
-## Phase 0: Fix the target
+| Finding | Action |
+|---|---|
+| Unnecessary contrast | State the claim directly. Retain a real distinction when it affects the reader's decision. |
+| Empty claim | Delete it. |
+| Vague attribution | Name the actual source. Mark missing evidence for the author. |
+| Inflated language | Replace it with the concrete action, observation, or result. |
+| Formulaic list or range | Keep each distinct item. Describe a range only when the endpoints share a meaningful scale. |
+| Repetitive cadence | Adjust the sentence that obscures emphasis or meaning. Preserve the requested register. |
+| Stock opening or conclusion | Start with the subject. End when the reader has the requested result. |
 
-Before touching the text, establish:
+Preserve genuine uncertainty and qualifications. Never add an example, number, source, or opinion to simulate specificity.
+Keep meaningful counterarguments. Retain necessary terms, quotations, and the author's voice.
 
-- **Genre and venue** — academic article, tweet, reddit post, LinkedIn, email, blog, docs, marketing. If not stated and not obvious from the text, ask. Genre decides which tells are fatal and what "good" means; see [references/voices.md](references/voices.md).
-- **Audience and stance** — who reads it, and what the author actually claims. Slop is what fills the space where a claim should be; you cannot remove it without knowing the claim.
-- **Constraints** — length limits, required citations, house style.
-- **Voice sample** — if the user provides one, match sentence length, formality, punctuation habits, paragraph starts, and transition style. Do not copy catchphrases unless the user asks.
+## Verify
 
-## Phase 1: Mechanical scan
-
-Run the detection patterns from [references/tells.md](references/tells.md) against the text. If the text is in a file (or you can write it to a temp file), run the grep commands in that reference literally — the catalog is written as runnable `grep -Ein` patterns. Otherwise apply each pattern by hand, line by line.
-
-Produce a finding list: line/sentence, matched pattern, tell category. Also run the two structural checks that regex can't fully catch:
-
-- **Cadence**: flag any run of 3+ consecutive sentences within ±4 words of the same length, and any paragraph where every sentence has the same shape (subject–verb–elaboration).
-- **Formatting**: bold scattered through prose, emoji-decorated headers or bullets, "**Term:** definition" bullet lists, headers on a text too short to need them, a tidy intro–three-points–conclusion skeleton.
-
-Report the findings to the user as a short table before rewriting (category, count, worst example). This is the diagnosis; the user should see what was wrong.
-
-## Phase 2: Rewrite by meaning, not by frame
-
-Go finding by finding. The cardinal rule: **never fix a pattern by paraphrasing the pattern.** Fix it by deciding what the sentence actually asserts, then asserting that.
-
-### The "not X but Y" family — three-way triage
-
-Every negative parallelism gets exactly one of these treatments:
-
-1. **The negation is a strawman** (nobody believes X). Delete the X half entirely and assert Y directly, with whatever evidence the text has.
-   - *"It's not just a tool, it's a fundamental shift in how teams work"* → *"It changes how teams work. [ADD: observed change and source]"*
-2. **The contrast is real** (people genuinely hold X). Then earn it: name who holds X, say concretely why Y beats it. A real contrast survives being made specific; slop doesn't.
-3. **The sentence asserts nothing** (the contrast is decoration on an empty claim). Delete the whole sentence. Most cases are this one.
-
-Banned escape hatches — these are the same move and count as new findings: "less about X than Y", "X matters, but Y matters more", "the real X is Y", "the question isn't X, it's Y", "X? Y." (rhetorical-question variant), and the em-dash variant "— not X, but Y".
-
-### Everything else
-
-- **Puffery and inflated vocabulary** (pivotal, seismic, testament, tapestry, landscape, delve…): replace with the plain word, or with the concrete fact the puffery was hiding. "Plays a vital role in" → "does".
-- **Promotional language** (boasts, vibrant, rich, renowned, breathtaking, must-visit, in the heart of): convert to sourced facts or cut.
-- **Vague attribution** (experts say, observers note, studies show, industry reports): name the source from the text/context, or leave `[ADD: source]` instead of inventing one.
-- **Superficial -ing add-ons** (highlighting, ensuring, reflecting, showcasing): split into a real sentence only if it adds a concrete fact; otherwise delete.
-- **Rule-of-three lists**: keep the strongest item, cut the rest — unless all three carry distinct information, in which case keep them and break the rhythm (different lengths, different syntax).
-- **False ranges** ("from X to Y"): if you can't name a meaningful midpoint between X and Y, it's not a range — name the two things or cut one.
-- **Hedged both-sidesing** ("it's worth noting", auto-counterpoints, "while X, it's also true that Y"): commit. One opinion, stated, owned. A counterpoint stays only if the author genuinely concedes it.
-- **Uniform cadence**: vary deliberately. Follow a long sentence with a short one. Fragments are legal. Don't apply a formula (alternating long/short is its own tell) — read the paragraph aloud and break wherever the rhythm is metronomic.
-- **Low specificity**: replace "many companies" / "studies show" / "recent research" with the actual names, numbers, and dates — **only from the source text, the conversation, or verifiable research you actually do**. Never invent specifics. If the author needs to supply one, leave a marked placeholder: `[ADD: which study?]`.
-- **Stock skeleton**: kill throat-clearing openers ("In today's fast-paced world…"), summary conclusions ("In conclusion… Ultimately…"), and engagement-bait endings ("What do you think?"). Start where the point starts; stop when it's made.
-
-### What not to do — overcorrection is also slop
-
-- No fake typos, forced slang, or manufactured "voice". Humanizer-tool output is its own genre of slop.
-- Em dashes are not banned. Humans use them. The tell is density and the double-dash "— not X, but —" move. Budget: at most one em dash per ~150 words, never two in a sentence.
-- Don't trade precision for personality in academic, technical, legal, or reference text. There, de-slopping means cutting puffery and committing to claims — not adding attitude.
-- Preserve the author's meaning, claims, and facts exactly. This is a style pass, not a content edit. Flag, don't silently fix, anything that looks factually wrong.
-
-## Phase 3: Verify loop
-
-Re-run the full Phase 1 scan **on your rewritten text**. This step is not optional and not a formality — expect your own rewrite to contain new tells, because the model writing it has the same priors that created them. Stop when no untriaged findings remain and the genre check passes. Keep justified contrasts, real ranges, required terminology, quotations, and useful structure. Record why an accepted match stays. Cap at four passes; report unresolved issues rather than sacrificing meaning to clear a regex.
-
-## Phase 4: Register check
-
-Check the clean text against its genre profile in [references/voices.md](references/voices.md): right length, right formality, right person, genre-specific tells gone (e.g. on reddit: no bold, no bullet essay; in academic prose: no first-person hot takes added). Then the final test — read it aloud. Anywhere you wouldn't say it to the actual audience, rewrite that sentence.
-
-Deliver: the rewritten text, plus a brief change log (categories fixed, counts, and number of verify passes it took).
+Repeat the scan on the edited passage. Review each remaining match and retain it when context warrants it.
+Stop when the findings have dispositions and the passage suits its audience. After four passes, report any unresolved issue.
+Return the edited text. Include a brief account of categories, counts, and passes when the requested format permits it.
