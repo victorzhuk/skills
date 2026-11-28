@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0
+
+### Minor Changes
+
+- [`7e55f2a`](https://github.com/victorzhuk/skills/commit/7e55f2af153eaeb6a9bf5be685851b5ece69cb57) Thanks [@victorzhuk](https://github.com/victorzhuk)! - Add Rapid state-machine testing, Ephyra metamorphic testing, and a shell adapter for failure evidence.
+
 ## 0.15.0
 
 ### Minor Changes
