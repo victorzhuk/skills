@@ -7,6 +7,8 @@ description: "Write Go tests with table cases, testify, parallel subtests, fuzzi
 
 Use the agreed test depth and behavior contract. See [[z-testing-strategy]].
 
+Use [[z-go-rapid]] for model-based action sequences and replay.
+
 ## Structure
 
 ```

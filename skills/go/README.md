@@ -41,6 +41,7 @@ Model- or user-reachable via skill name and trigger phrasing.
 - **[z-go-ogen](./z-go-ogen/SKILL.md)** — Generate a Go HTTP transport from OpenAPI using ogen.
 - **[z-go-perf-gate](./z-go-perf-gate/SKILL.md)** — Compare Go CI benchmarks against calibrated thresholds and report inconclusive results.
 - **[z-go-performance](./z-go-performance/SKILL.md)** — Measure and optimize Go allocation, memory retention, CPU cost, and contention after locating the bottleneck.
+- **[z-go-rapid](./z-go-rapid/SKILL.md)** — Test state transitions against an independent model and replay shrunk Rapid traces.
 - **[z-go-pgvector](./z-go-pgvector/SKILL.md)** — Store embeddings and query pgvector from Go.
 - **[z-go-pkg](./z-go-pkg/SKILL.md)** — Query the pkg.go.dev API for modules, packages, symbols, importers, and vulnerability records.
 - **[z-go-safety](./z-go-safety/SKILL.md)** — Prevent Go panics, aliasing, numeric overflow, and shared-state corruption.

@@ -7,6 +7,10 @@ It owns readable acceptance contracts and execution evidence across UI, API, and
 `z-go-bdd` retains Go harness details. Test selection belongs to `z-testing-strategy`.
 The catalog is the source for these reusable skills. Installed copies are deployment outputs.
 
+## Property testing
+
+The catalog adds [Go state-machine testing](../skills/go/z-go-rapid/SKILL.md) and [Rust metamorphic testing](../skills/rust/z-rust-ephyra/SKILL.md). Both use the optional failure adapter in the QA debugger.
+
 ## Android device QA
 
 [`z-qa-android`](../skills/qa/z-qa-android/SKILL.md) was authored in this catalog.

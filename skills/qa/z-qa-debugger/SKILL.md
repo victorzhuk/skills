@@ -46,3 +46,16 @@ For each failure, include its signature, relevant path, evidence for the cause o
 Identify incomplete checks and approved quarantine. Reproduce each repaired failure before claiming success.
 
 [Playwright retry outcomes](https://playwright.dev/docs/test-retries). See [[z-systematic-debugging]] for diagnosis.
+
+## Capture a property failure
+
+Invoke [property-failure.sh](scripts/property-failure.sh) from the target project. Supply the script's installed path and a bounded command after `--`.
+
+```sh
+"$adapter" -- timeout 60s go test -count=1 -timeout=45s -p=1 -parallel=1 -run '^TestQueueModel$' .
+"$adapter" -- timeout 60s cargo test --locked -j 1 --test properties -- --test-threads=1
+```
+
+The script returns the runner status and combines stdout and stderr. Success prints one line.
+For large failures it prints replay hints and excerpts totaling up to 16 KiB.
+Read the retained private log for omitted details, then delete it when finished.

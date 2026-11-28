@@ -175,6 +175,7 @@ Go engineering discipline: architecture, testing, database, observability, secur
 - **[z-go-ogen](./skills/go/z-go-ogen/SKILL.md)** — Generate a Go HTTP transport from OpenAPI using ogen.
 - **[z-go-perf-gate](./skills/go/z-go-perf-gate/SKILL.md)** — Compare Go CI benchmarks against calibrated thresholds and report inconclusive results.
 - **[z-go-performance](./skills/go/z-go-performance/SKILL.md)** — Measure and optimize Go allocation, memory retention, CPU cost, and contention after locating the bottleneck.
+- **[z-go-rapid](./skills/go/z-go-rapid/SKILL.md)** — Test state transitions against an independent model and replay shrunk Rapid traces.
 - **[z-go-pgvector](./skills/go/z-go-pgvector/SKILL.md)** — Store embeddings and query pgvector from Go.
 - **[z-go-pkg](./skills/go/z-go-pkg/SKILL.md)** — Query the pkg.go.dev API for modules, packages, symbols, importers, and vulnerability records.
 - **[z-go-safety](./skills/go/z-go-safety/SKILL.md)** — Prevent Go panics, aliasing, numeric overflow, and shared-state corruption.
@@ -260,6 +261,7 @@ QA planning and autonomous API, browser, performance, and failure-triage workflo
 Rust core, web, and GTK/libadwaita desktop guidance.
 
 - **[z-rust-core](./skills/rust/z-rust-core/SKILL.md)** — Design Rust ownership, lifetimes, traits, error types, and async tasks.
+- **[z-rust-ephyra](./skills/rust/z-rust-ephyra/SKILL.md)** — Check Rust metamorphic relations and replay reduced Ephyra counterexamples.
 - **[z-rust-gtk4](./skills/rust/z-rust-gtk4/SKILL.md)** — Build GTK4 desktop interfaces in Rust with relm4 and libadwaita.
 - **[z-rust-web](./skills/rust/z-rust-web/SKILL.md)** — Review Rust HTTP routes, middleware, or adapters with the project's framework and runtime.
 

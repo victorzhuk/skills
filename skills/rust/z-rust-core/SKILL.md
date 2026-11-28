@@ -5,6 +5,8 @@ description: "Design Rust ownership, lifetimes, traits, error types, and async t
 
 # Rust design and verification
 
+Use [[z-rust-ephyra]] for metamorphic properties and counterexample replay.
+
 ## Establish ownership
 
 Borrow values when the callee only needs access. Transfer ownership when the callee must retain the value.
